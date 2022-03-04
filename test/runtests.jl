@@ -23,7 +23,7 @@ using Printf
 
   ψ0 = randomMPS(s; linkdims=10)
 
-  ψ1 = tdvp(H, ψ0, -0.1im; cutoff)
+  ψ1 = tdvp(H, ψ0, -0.1im; cutoff, nsite=1)
 
   @test norm(ψ1) ≈ 1.0
 
@@ -81,18 +81,29 @@ end
   Nsteps = Int(ttotal / tau)
   Sz1 = zeros(Nsteps)
   Sz2 = zeros(Nsteps)
+  En1 = zeros(Nsteps)
+  En2 = zeros(Nsteps)
 
   for step in 1:Nsteps
     psi = apply(gates, psi; cutoff)
     normalize!(psi)
 
-    phi = tdvp(H,phi,-tau*im; cutoff, exponentiate_krylovdim=12)
+    nsite = (step <= 3 ? 2 : 1)
+    phi = tdvp(H,phi,-tau*im; cutoff, nsite, exponentiate_krylovdim=15)
 
     Sz1[step] = expect(psi, "Sz"; site_range=c:c)
     Sz2[step] = expect(phi, "Sz"; site_range=c:c)
+    En1[step] = real(inner(psi,H,psi))
+    En2[step] = real(inner(phi,H,phi))
   end
 
+  #display(En1)
+  #display(En2)
+  #display(Sz1)
+  #display(Sz2)
+
   @test norm(Sz1-Sz2) < 1E-3
+  @test norm(En1-En2) < 1E-3
 
 end
 
