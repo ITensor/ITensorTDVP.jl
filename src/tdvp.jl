@@ -53,7 +53,13 @@ function tdvp(Hs::Vector{MPO}, psi0::MPS, t::Number, sweeps::Sweeps; kwargs...):
   return tdvp(PHS, psi0, t, sweeps; kwargs...)
 end
 
-function tdvp(PH, psi0::MPS, t::Number, sweeps::Sweeps; kwargs...)::MPS
+
+function tdvp(PH,
+              psi0::MPS,
+              t::Number,
+              sweeps;
+              kwargs...)::MPS
+
   if length(psi0) == 1
     error(
       "`tdvp` currently does not support system sizes of 1. You can diagonalize the MPO tensor directly with tools like `LinearAlgebra.eigen`, `KrylovKit.exponentiate`, etc.",
@@ -67,9 +73,9 @@ function tdvp(PH, psi0::MPS, t::Number, sweeps::Sweeps; kwargs...)::MPS
     checkflux(PH)
   end
 
-  do_normalize::Bool = get(kwargs, :normalize, true)
   nsite::Int = get(kwargs, :nsite, 2)
-  outputlevel::Int = get(kwargs, :outputlevel, 1)
+  do_normalize::Bool = get(kwargs, :normalize, true)
+  outputlevel::Int = get(kwargs, :outputlevel, 0)
   which_decomp::Union{String,Nothing} = get(kwargs, :which_decomp, nothing)
   svd_alg::String = get(kwargs, :svd_alg, "divide_and_conquer")
   obs = get(kwargs, :observer, NoObserver())
@@ -80,7 +86,7 @@ function tdvp(PH, psi0::MPS, t::Number, sweeps::Sweeps; kwargs...)::MPS
 
   # exponentiate kwargs
   exponentiate_tol::Float64 = get(kwargs, :exponentiate_tol, 1e-14)
-  exponentiate_krylovdim::Int = get(kwargs, :exponentiate_krylovdim, 30)
+  exponentiate_krylovdim::Int = get(kwargs, :exponentiate_krylovdim, 20)
   exponentiate_maxiter::Int = get(kwargs, :exponentiate_maxiter, 1)
   exponentiate_verbosity::Int = get(kwargs, :exponentiate_verbosity, 0)
 
@@ -95,108 +101,122 @@ function tdvp(PH, psi0::MPS, t::Number, sweeps::Sweeps; kwargs...)::MPS
   position!(PH, psi, 1)
 
   for sw in 1:nsweep(sweeps)
-    sw_time = @elapsed begin
-      maxtruncerr = 0.0
+    maxtruncerr = 0.0
 
-      if !isnothing(write_when_maxdim_exceeds) &&
-        maxdim(sweeps, sw) > write_when_maxdim_exceeds
-        if outputlevel >= 2
-          println(
-            "write_when_maxdim_exceeds = $write_when_maxdim_exceeds and maxdim(sweeps, sw) = $(maxdim(sweeps, sw)), writing environment tensors to disk",
-          )
-        end
-        PH = disk(PH)
+    if !isnothing(write_when_maxdim_exceeds) &&
+      maxdim(sweeps, sw) > write_when_maxdim_exceeds
+      if outputlevel >= 2
+        println(
+          "write_when_maxdim_exceeds = $write_when_maxdim_exceeds and maxdim(sweeps, sw) = $(maxdim(sweeps, sw)), writing environment tensors to disk",
+        )
+      end
+      PH = disk(PH)
+    end
+
+    for (b, ha) in sweepnext(N; ncenter=nsite)
+      PH.nsite = nsite
+      position!(PH, psi, b)
+
+      if nsite == 1
+        phi1 = psi[b]
+      elseif nsite == 2
+        phi1 = psi[b]*psi[b+1]
       end
 
-      for (b, ha) in sweepnext(N)
+      phi1, info = exponentiate(PH, t/2, phi1; 
+                               tol=exponentiate_tol,
+                               krylovdim=exponentiate_krylovdim,
+                               maxiter=exponentiate_maxiter)
 
-        position!(PH, psi, b)
+      do_normalize && (phi1 /= norm(phi1))
 
-        phi = psi[b] * psi[b + 1]
-
-        phi, info = exponentiate(
-          PH,
-          t,
-          phi;
-          tol=exponentiate_tol,
-          krylovdim=exponentiate_krylovdim,
-          maxiter=exponentiate_maxiter,
-        )
-
-        if do_normalize
-          phi /= norm(phi)
-        end
-
+      spec = nothing
+      if nsite == 1
+        psi[b] = phi1
+      elseif nsite == 2
         ortho = ha == 1 ? "left" : "right"
 
         drho = nothing
-        if noise(sweeps, sw) > 0.0 && (ha==1)
+        if noise(sweeps, sw) > 0.0 && ha==1
           drho = noise(sweeps, sw) * noiseterm(PH, phi, ortho)
         end
 
         spec = replacebond!(
           psi,
           b,
-          phi;
+          phi1;
           maxdim=maxdim(sweeps, sw),
           mindim=mindim(sweeps, sw),
           cutoff=cutoff(sweeps, sw),
           eigen_perturbation=drho,
           ortho=ortho,
-          normalize=true,
+          normalize=do_normalize,
           which_decomp=which_decomp,
           svd_alg=svd_alg,
         )
         maxtruncerr = max(maxtruncerr, spec.truncerr)
-
-        # Evolve one site for time -t
-
-        PH.nsite = 1
-        phi = psi[b]
-        position!(PH, psi, b)
-        phi, info = exponentiate(
-          PH,
-          -t,
-          phi;
-          tol=exponentiate_tol,
-          krylovdim=exponentiate_krylovdim,
-          maxiter=exponentiate_maxiter,
-        )
-
-        if do_normalize
-          phi /= norm(phi)
-        end
-
-        PH.nsite = 2
-
-        if outputlevel >= 2
-          @printf(
-            "Sweep %d, half %d, bond (%d,%d) \n", sw, ha, b, b + 1
-          )
-          @printf(
-            "  Truncated using cutoff=%.1E maxdim=%d mindim=%d\n",
-            cutoff(sweeps, sw),
-            maxdim(sweeps, sw),
-            mindim(sweeps, sw)
-          )
-          @printf(
-            "  Trunc. err=%.2E, bond dimension %d\n", spec.truncerr, dim(linkind(psi, b))
-          )
-          flush(stdout)
-        end
-
-        sweep_is_done = (b == 1 && ha == 2)
-        measure!(
-          obs;
-          psi=psi,
-          bond=b,
-          sweep=sw,
-          half_sweep=ha,
-          spec=spec,
-          outputlevel=outputlevel,
-          sweep_is_done=sweep_is_done,
-        )
       end
+
+
+      #
+      # Do backwards evolution step
+      #
+      if (ha==1 && b!=N) || (ha==2 && b!=1)
+        b1 = (ha == 1 ? b+1 : b)
+        Δ = (ha==1 ? +1 : -1)
+        if nsite == 2
+          phi0 = psi[b1]
+        elseif nsite == 1
+          uinds = uniqueinds(phi1,psi[b+Δ])
+          U,S,V = svd(phi1,uinds)
+          psi[b] = U
+          phi0 = S*V
+        end
+
+        PH.nsite = nsite-1
+        position!(PH,psi,b1)
+        phi0,info = exponentiate(PH, -t/2, phi0; 
+                                 tol=exponentiate_tol,
+                                 krylovdim=exponentiate_krylovdim,
+                                 maxiter=exponentiate_maxiter)
+        do_normalize && (phi0 ./= norm(phi0))
+
+        if nsite == 2
+          psi[b1] = phi0
+        elseif nsite == 1
+          psi[b+Δ] *= phi0
+        end
+        PH.nsite = nsite
+      end
+
+      if outputlevel >= 2
+        @printf(
+          "Sweep %d, half %d, bond (%d,%d) \n", sw, ha, b, b + 1
+        )
+        @printf(
+          "  Truncated using cutoff=%.1E maxdim=%d mindim=%d\n",
+          cutoff(sweeps, sw),
+          maxdim(sweeps, sw),
+          mindim(sweeps, sw)
+        )
+        @printf(
+          "  Trunc. err=%.2E, bond dimension %d\n", spec.truncerr, dim(linkind(psi, b))
+        )
+        flush(stdout)
+      end
+
+      sweep_is_done = (b == 1 && ha == 2)
+      measure!(
+        obs;
+        psi=psi,
+        bond=b,
+        sweep=sw,
+        half_sweep=ha,
+        spec=spec,
+        outputlevel=outputlevel,
+        sweep_is_done=sweep_is_done,
+      )
+
     end
 
     if outputlevel >= 1
@@ -213,10 +233,12 @@ function tdvp(PH, psi0::MPS, t::Number, sweeps::Sweeps; kwargs...)::MPS
 
     isdone && break
   end
+
   return psi
 end
 
-function _tdvp_sweeps(; nsweeps, maxdim, mindim=1, cutoff=1e-8, noise=0.0, kwargs...)
+
+function _tdvp_sweeps(; nsweeps=1, maxdim=5000, mindim=1, cutoff=1E-8, noise=0.0, kwargs...)
   sweeps = Sweeps(nsweeps)
   setmaxdim!(sweeps, maxdim...)
   setmindim!(sweeps, mindim...)
