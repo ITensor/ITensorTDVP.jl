@@ -184,7 +184,7 @@ function tdvp(PH,
         if nsite == 2
           psi[b1] = phi0
         elseif nsite == 1
-          psi[b+Δ] *= phi0
+          psi[b+Δ] = phi0*psi[b+Δ]
         end
         PH.nsite = nsite
       end
