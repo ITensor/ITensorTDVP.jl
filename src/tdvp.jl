@@ -68,6 +68,7 @@ function tdvp(PH, psi0::MPS, t::Number, sweeps::Sweeps; kwargs...)::MPS
   end
 
   do_normalize::Bool = get(kwargs, :normalize, true)
+  nsite::Int = get(kwargs, :nsite, 2)
   outputlevel::Int = get(kwargs, :outputlevel, 1)
   which_decomp::Union{String,Nothing} = get(kwargs, :which_decomp, nothing)
   svd_alg::String = get(kwargs, :svd_alg, "divide_and_conquer")
@@ -79,7 +80,7 @@ function tdvp(PH, psi0::MPS, t::Number, sweeps::Sweeps; kwargs...)::MPS
 
   # exponentiate kwargs
   exponentiate_tol::Float64 = get(kwargs, :exponentiate_tol, 1e-14)
-  exponentiate_krylovdim::Int = get(kwargs, :exponentiate_krylovdim, 20)
+  exponentiate_krylovdim::Int = get(kwargs, :exponentiate_krylovdim, 30)
   exponentiate_maxiter::Int = get(kwargs, :exponentiate_maxiter, 1)
   exponentiate_verbosity::Int = get(kwargs, :exponentiate_verbosity, 0)
 
