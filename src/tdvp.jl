@@ -12,7 +12,7 @@ Returns:
 
 Optional keyword arguments:
 * `outputlevel::Int = 1` - larger outputlevel values resulting in printing more information and 0 means no output
-* `observer` - object implementing the [Observer](@ref observer) interface which can perform measurements and stop DMRG early
+* `observer` - object implementing the [Observer](@ref observer) interface which can perform measurements and stop early
 * `write_when_maxdim_exceeds::Int` - when the allowed maxdim exceeds this value, begin saving tensors to disk to free memory in large calculations
 """
 function tdvp(H::MPO, psi0::MPS, t::Number, sweeps::Sweeps; kwargs...)::MPS
@@ -38,7 +38,7 @@ Vector of MPOs, Hs = [H1,H2,H3,...] such that H is defined
 as H = H1+H2+H3+...
 Note that this sum of MPOs is not actually computed; rather
 the set of MPOs [H1,H2,H3,..] is efficiently looped over at 
-each step of the DMRG algorithm when optimizing the MPS.
+each step of the algorithm when optimizing the MPS.
 
 Returns:
 * `psi::MPS` - time-evolved MPS
@@ -129,7 +129,7 @@ function tdvp(PH, psi0::MPS, t::Number, sweeps::Sweeps; kwargs...)::MPS
         ortho = ha == 1 ? "left" : "right"
 
         drho = nothing
-        if noise(sweeps, sw) > 0.0
+        if noise(sweeps, sw) > 0.0 && (ha==1)
           drho = noise(sweeps, sw) * noiseterm(PH, phi, ortho)
         end
 
@@ -148,7 +148,7 @@ function tdvp(PH, psi0::MPS, t::Number, sweeps::Sweeps; kwargs...)::MPS
         )
         maxtruncerr = max(maxtruncerr, spec.truncerr)
 
-        # One-site update
+        # Evolve one site for time -t
 
         PH.nsite = 1
         phi = psi[b]

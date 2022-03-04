@@ -6,7 +6,6 @@ using Test
 
 @testset "Basic TDVP" begin
   N = 10
-  exponentiate_krylovdim = 20
   s = siteinds("S=1/2", N)
 
   os = OpSum()
@@ -20,8 +19,9 @@ using Test
 
   ψ0 = randomMPS(s, "↑"; linkdims=10)
 
-  ψ1 = tdvp(H, ψ0, -0.1im; exponentiate_krylovdim=exponentiate_krylovdim,
-                             nsweeps=1, maxdim=50, cutoff=1e-10)
+  ψ1 = tdvp(H, ψ0, -0.1im; nsweeps=1, maxdim=50, cutoff=1e-10)
+
+  @test norm(ψ1) ≈ 1.0
 
   # Should lose fidelity:
   @test abs(inner(ψ0,ψ1)) < 0.5
@@ -32,9 +32,10 @@ using Test
   # Time evolve backwards:
   ψ2 = tdvp(H, ψ1, +0.1im; nsweeps=1, maxdim=50, cutoff=1e-10)
 
+  @test norm(ψ2) ≈ 1.0
+
   # Should rotate back to original state:
   @test abs(inner(ψ0,ψ2)) ≈ 1.0
-
 end
 
 
