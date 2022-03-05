@@ -74,7 +74,7 @@ function tdvp(PH,
   end
 
   nsite::Int = get(kwargs, :nsite, 2)
-  do_normalize::Bool = get(kwargs, :normalize, true)
+  normalize::Bool = get(kwargs, :normalize, false)
   outputlevel::Int = get(kwargs, :outputlevel, 0)
   which_decomp::Union{String,Nothing} = get(kwargs, :which_decomp, nothing)
   svd_alg::String = get(kwargs, :svd_alg, "divide_and_conquer")
