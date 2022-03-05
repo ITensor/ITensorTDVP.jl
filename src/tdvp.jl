@@ -238,7 +238,7 @@ function tdvp(PH,
 end
 
 
-function _tdvp_sweeps(; nsweeps=1, maxdim=5000, mindim=1, cutoff=1E-8, noise=0.0, kwargs...)
+function _tdvp_sweeps(; nsweeps=1, maxdim=typemax(Int), mindim=1, cutoff=1E-8, noise=0.0, kwargs...)
   sweeps = Sweeps(nsweeps)
   setmaxdim!(sweeps, maxdim...)
   setmindim!(sweeps, mindim...)
