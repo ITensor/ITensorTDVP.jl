@@ -66,6 +66,7 @@ function tdvp(PH,
     )
   end
 
+
   @debug_check begin
     # Debug level checks
     # Enable with ITensors.enable_debug_checks()
@@ -166,7 +167,7 @@ function tdvp(PH,
       #
       # Do backwards evolution step
       #
-      if (ha==1 && b!=N) || (ha==2 && b!=1)
+      if (ha==1 && (b+nsite-1 != N)) || (ha==2 && b!=1)
         b1 = (ha == 1 ? b+1 : b)
         Δ = (ha==1 ? +1 : -1)
         if nsite == 2

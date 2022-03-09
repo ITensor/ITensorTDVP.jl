@@ -1,3 +1,4 @@
+using Test
 using ITensors
 using ITensorTDVP
 using Printf
@@ -37,6 +38,80 @@ using Printf
 
   # Should rotate back to original state:
   @test abs(inner(ψ0,ψ2)) > 0.99
+end
+
+@testset "Accuracy Test" begin
+
+  N = 4
+  tau = 0.02
+  ttotal = 1.0
+  cutoff = 1E-12
+  use_trotter = false
+
+  method = use_trotter ? "tebd" : "tdvp"
+
+  s = siteinds("S=1/2", N; conserve_qns=false)
+
+  os = OpSum()
+  for j in 1:(N - 1)
+    os += 0.5, "S+", j, "S-", j + 1
+    os += 0.5, "S-", j, "S+", j + 1
+    os += "Sz", j, "Sz", j + 1
+  end
+  H = MPO(os, s)
+  HM = prod(H)
+
+  if use_trotter
+    gates = ITensor[]
+    for j in 1:(N - 1)
+      s1 = s[j]
+      s2 = s[j + 1]
+      hj =
+        op("Sz", s1) * op("Sz", s2) +
+        1 / 2 * op("S+", s1) * op("S-", s2) +
+        1 / 2 * op("S-", s1) * op("S+", s2)
+      Gj = exp(-1.0im * tau / 2 * hj)
+      push!(gates, Gj)
+    end
+    append!(gates, reverse(gates))
+  end
+
+  Ut = exp(-im*tau*HM)
+
+  psi = productMPS(s, n -> isodd(n) ? "Up" : "Dn")
+  psix = prod(psi)
+
+  Sz_tdvp = Float64[]
+  Sz_exact = Float64[]
+
+  c = div(N,2)
+  Szc = op("Sz",s[c])
+  Nsteps = Int(ttotal / tau)
+  for step in 1:Nsteps
+    psix = noprime(Ut*psix)
+    psix /= norm(psix)
+
+    if use_trotter
+      psi = apply(gates,psi; cutoff)
+      normalize!(psi)
+    else
+      psi = tdvp(H,psi,-tau*im; cutoff, 
+                                normalize=true,
+                                exponentiate_tol=1E-12,
+                                exponentiate_maxiter=500,
+                                exponentiate_krylovdim=100)
+    end
+
+
+    push!(Sz_tdvp, real(expect(psi, "Sz"; site_range=c:c)))
+    push!(Sz_exact, real(scalar(dag(prime(psix,s[c]))*Szc*psix)))
+    #F = abs(scalar(dag(psix)*prod(psi)))
+    #@printf("%s=%.10f  exact=%.10f  F=%.10f\n",method,Sz_tdvp[end],Sz_exact[end],F)
+  end
+
+  #@show norm(Sz_tdvp-Sz_exact)
+  @test norm(Sz_tdvp-Sz_exact) < 1E-5
+
 end
 
 
@@ -135,7 +210,7 @@ end
                            exponentiate_krylovdim=15)
     @printf("%.3f energy = %.12f\n",step*tau,inner(psi,H,psi))
   end
-  @show maxlinkdim(psi)
+  #@show maxlinkdim(psi)
 
   @test inner(psi,H,psi) < -4.25
 
