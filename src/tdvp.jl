@@ -1,16 +1,9 @@
-function tdvp(solver,
-              PH,
-              psi0::MPS,
-              t::Number,
-              sweeps;
-              kwargs...)::MPS
-
+function tdvp(solver, PH, psi0::MPS, t::Number, sweeps; kwargs...)::MPS
   if length(psi0) == 1
     error(
       "`tdvp` currently does not support system sizes of 1. You can diagonalize the MPO tensor directly with tools like `LinearAlgebra.eigen`, `KrylovKit.exponentiate`, etc.",
     )
   end
-
 
   @debug_check begin
     # Debug level checks
@@ -43,125 +36,113 @@ function tdvp(solver,
 
   for sw in 1:nsweep(sweeps)
     sw_time = @elapsed begin
-    maxtruncerr = 0.0
+      maxtruncerr = 0.0
 
-    if !isnothing(write_when_maxdim_exceeds) &&
-      maxdim(sweeps, sw) > write_when_maxdim_exceeds
-      if outputlevel >= 2
-        println(
-          "write_when_maxdim_exceeds = $write_when_maxdim_exceeds and maxdim(sweeps, sw) = $(maxdim(sweeps, sw)), writing environment tensors to disk",
-        )
-      end
-      PH = disk(PH)
-    end
-
-    for (b, ha) in sweepnext(N; ncenter=nsite)
-      PH.nsite = nsite
-      position!(PH, psi, b)
-
-      if nsite == 1
-        phi1 = psi[b]
-      elseif nsite == 2
-        phi1 = psi[b]*psi[b+1]
+      if !isnothing(write_when_maxdim_exceeds) &&
+        maxdim(sweeps, sw) > write_when_maxdim_exceeds
+        if outputlevel >= 2
+          println(
+            "write_when_maxdim_exceeds = $write_when_maxdim_exceeds and maxdim(sweeps, sw) = $(maxdim(sweeps, sw)), writing environment tensors to disk",
+          )
+        end
+        PH = disk(PH)
       end
 
-      phi1, info = solver(PH, t/2, phi1)
-
-      ## if info.converged == 0
-      ##   println("exponentiate not converged (b,ha)=($b,$ha)")
-      ##   ITensors.pause()
-      ## end
-
-      normalize && (phi1 /= norm(phi1))
-
-      spec = nothing
-      if nsite == 1
-        psi[b] = phi1
-      elseif nsite == 2
-        ortho = ha == 1 ? "left" : "right"
-
-        drho = nothing
-        if noise(sweeps, sw) > 0.0 && ha==1
-          drho = noise(sweeps, sw) * noiseterm(PH, phi, ortho)
-        end
-
-        spec = replacebond!(
-          psi,
-          b,
-          phi1;
-          maxdim=maxdim(sweeps, sw),
-          mindim=mindim(sweeps, sw),
-          cutoff=cutoff(sweeps, sw),
-          eigen_perturbation=drho,
-          ortho=ortho,
-          normalize,
-          which_decomp,
-          svd_alg
-        )
-        maxtruncerr = max(maxtruncerr, spec.truncerr)
-      end
-
-
-      #
-      # Do backwards evolution step
-      #
-      if reverse_step && (ha==1 && (b+nsite-1 != N)) || (ha==2 && b!=1)
-        b1 = (ha == 1 ? b+1 : b)
-        Δ = (ha==1 ? +1 : -1)
-        if nsite == 2
-          phi0 = psi[b1]
-        elseif nsite == 1
-          uinds = uniqueinds(phi1,psi[b+Δ])
-          U,S,V = svd(phi1,uinds)
-          psi[b] = U
-          phi0 = S*V
-        end
-
-        PH.nsite = nsite-1
-        position!(PH,psi,b1)
-
-        phi0, info = solver(PH, -t/2, phi0)
-
-        normalize && (phi0 ./= norm(phi0))
-
-        if nsite == 2
-          psi[b1] = phi0
-        elseif nsite == 1
-          psi[b+Δ] = phi0*psi[b+Δ]
-        end
+      for (b, ha) in sweepnext(N; ncenter=nsite)
         PH.nsite = nsite
+        position!(PH, psi, b)
+
+        if nsite == 1
+          phi1 = psi[b]
+        elseif nsite == 2
+          phi1 = psi[b] * psi[b + 1]
+        end
+
+        phi1, info = solver(PH, t / 2, phi1)
+
+        ## if info.converged == 0
+        ##   println("exponentiate not converged (b,ha)=($b,$ha)")
+        ##   ITensors.pause()
+        ## end
+
+        normalize && (phi1 /= norm(phi1))
+
+        spec = nothing
+        if nsite == 1
+          psi[b] = phi1
+        elseif nsite == 2
+          ortho = ha == 1 ? "left" : "right"
+
+          drho = nothing
+          if noise(sweeps, sw) > 0.0 && ha == 1
+            drho = noise(sweeps, sw) * noiseterm(PH, phi, ortho)
+          end
+
+          spec = replacebond!(
+            psi,
+            b,
+            phi1;
+            maxdim=maxdim(sweeps, sw),
+            mindim=mindim(sweeps, sw),
+            cutoff=cutoff(sweeps, sw),
+            eigen_perturbation=drho,
+            ortho=ortho,
+            normalize,
+            which_decomp,
+            svd_alg,
+          )
+          maxtruncerr = max(maxtruncerr, spec.truncerr)
+        end
+
+        #
+        # Do backwards evolution step
+        #
+        if reverse_step && (ha == 1 && (b + nsite - 1 != N)) || (ha == 2 && b != 1)
+          b1 = (ha == 1 ? b + 1 : b)
+          Δ = (ha == 1 ? +1 : -1)
+          if nsite == 2
+            phi0 = psi[b1]
+          elseif nsite == 1
+            uinds = uniqueinds(phi1, psi[b + Δ])
+            U, S, V = svd(phi1, uinds)
+            psi[b] = U
+            phi0 = S * V
+          end
+
+          PH.nsite = nsite - 1
+          position!(PH, psi, b1)
+
+          phi0, info = solver(PH, -t / 2, phi0)
+
+          normalize && (phi0 ./= norm(phi0))
+
+          if nsite == 2
+            psi[b1] = phi0
+          elseif nsite == 1
+            psi[b + Δ] = phi0 * psi[b + Δ]
+          end
+          PH.nsite = nsite
+        end
+
+        if outputlevel >= 2
+          @printf("Sweep %d, half %d, bond (%d,%d) \n", sw, ha, b, b + 1)
+          @printf(
+            "  Truncated using cutoff=%.1E maxdim=%d mindim=%d\n",
+            cutoff(sweeps, sw),
+            maxdim(sweeps, sw),
+            mindim(sweeps, sw)
+          )
+          @printf(
+            "  Trunc. err=%.2E, bond dimension %d\n", spec.truncerr, dim(linkind(psi, b))
+          )
+          flush(stdout)
+        end
+
+        sweep_is_done = (b == 1 && ha == 2)
+        measure!(
+          obs; psi, bond=b, sweep=sw, half_sweep=ha, spec, outputlevel, sweep_is_done
+        )
       end
-
-      if outputlevel >= 2
-        @printf(
-          "Sweep %d, half %d, bond (%d,%d) \n", sw, ha, b, b + 1
-        )
-        @printf(
-          "  Truncated using cutoff=%.1E maxdim=%d mindim=%d\n",
-          cutoff(sweeps, sw),
-          maxdim(sweeps, sw),
-          mindim(sweeps, sw)
-        )
-        @printf(
-          "  Trunc. err=%.2E, bond dimension %d\n", spec.truncerr, dim(linkind(psi, b))
-        )
-        flush(stdout)
-      end
-
-      sweep_is_done = (b == 1 && ha == 2)
-      measure!(
-        obs;
-        psi,
-        bond=b,
-        sweep=sw,
-        half_sweep=ha,
-        spec,
-        outputlevel,
-        sweep_is_done
-      )
-
-    end
-
     end #@elapsed for sw_time
 
     if outputlevel >= 1
@@ -185,7 +166,9 @@ function tdvp(solver,
   return psi
 end
 
-function _tdvp_sweeps(; nsweeps=1, maxdim=typemax(Int), mindim=1, cutoff=1E-8, noise=0.0, kwargs...)
+function _tdvp_sweeps(;
+  nsweeps=1, maxdim=typemax(Int), mindim=1, cutoff=1E-8, noise=0.0, kwargs...
+)
   sweeps = Sweeps(nsweeps)
   setmaxdim!(sweeps, maxdim...)
   setmindim!(sweeps, mindim...)
@@ -257,11 +240,13 @@ function tdvp(solver, Hs::Vector{MPO}, psi0::MPS, t::Number, sweeps::Sweeps; kwa
 end
 
 function tdvp(PH, psi0::MPS, t::Number; reverse_step=true, kwargs...)
-  solver_kwargs = (; ishermitian=get(kwargs, :ishermitian, true),
-                     tol=get(kwargs, :exponentiate_tol, 1e-12),
-                     krylovdim=get(kwargs, :exponentiate_krylovdim, 30),
-                     maxiter=get(kwargs, :exponentiate_maxiter, 100),
-                     verbosity=get(kwargs, :exponentiate_verbosity, 0))
+  solver_kwargs = (;
+    ishermitian=get(kwargs, :ishermitian, true),
+    tol=get(kwargs, :exponentiate_tol, 1e-12),
+    krylovdim=get(kwargs, :exponentiate_krylovdim, 30),
+    maxiter=get(kwargs, :exponentiate_maxiter, 100),
+    verbosity=get(kwargs, :exponentiate_verbosity, 0),
+  )
   function solver(PH, t, psi0)
     psi, info = exponentiate(PH, t, psi0; solver_kwargs...)
     return psi, info
@@ -273,11 +258,13 @@ function dmrg(PH, psi0::MPS; reverse_step=false, kwargs...)
   t = Inf # DMRG is TDVP with an infinite timestep and no reverse step
   howmany = 1
   which = get(kwargs, :eigsolve_which_eigenvalue, :SR)
-  solver_kwargs = (; ishermitian=get(kwargs, :ishermitian, true),
-                     tol=get(kwargs, :eigsolve_tol, 1e-14),
-                     krylovdim=get(kwargs, :eigsolve_krylovdim, 3),
-                     maxiter=get(kwargs, :eigsolve_maxiter, 1),
-                     verbosity=get(kwargs, :eigsolve_verbosity, 0))
+  solver_kwargs = (;
+    ishermitian=get(kwargs, :ishermitian, true),
+    tol=get(kwargs, :eigsolve_tol, 1e-14),
+    krylovdim=get(kwargs, :eigsolve_krylovdim, 3),
+    maxiter=get(kwargs, :eigsolve_maxiter, 1),
+    verbosity=get(kwargs, :eigsolve_verbosity, 0),
+  )
   function solver(PH, t, psi0)
     vals, vecs, info = eigsolve(PH, psi0, howmany, which; solver_kwargs...)
     psi = vecs[1]

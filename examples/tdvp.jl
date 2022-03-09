@@ -19,7 +19,17 @@ H = MPO(heisenberg(n), s)
 
 @show inner(ψ', H, ψ) / inner(ψ, ψ)
 
-ϕ = tdvp(H, ψ, -1; nsweeps=10, reverse_step=false, normalize=true, maxdim=20, cutoff=1e-10, outputlevel=1)
+ϕ = tdvp(
+  H,
+  ψ,
+  -1;
+  nsweeps=10,
+  reverse_step=false,
+  normalize=true,
+  maxdim=20,
+  cutoff=1e-10,
+  outputlevel=1,
+)
 
 @show inner(ϕ', H, ϕ) / inner(ϕ, ϕ)
 

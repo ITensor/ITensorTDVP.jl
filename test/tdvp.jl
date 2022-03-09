@@ -1,12 +1,12 @@
 using Test
 using ITensors
 using ITensorTDVP
+using KrylovKit
 using Printf
-
 
 @testset "Basic TDVP" begin
   N = 10
-  cutoff = 1E-10
+  cutoff = 1e-10
 
   s = siteinds("S=1/2", N)
 
@@ -29,7 +29,7 @@ using Printf
   #@test abs(inner(ψ0,ψ1)) < 0.9
 
   # Average energy should be conserved:
-  @test real(inner(ψ1,H,ψ1)) ≈ inner(ψ0,H,ψ0)
+  @test real(inner(ψ1, H, ψ1)) ≈ inner(ψ0, H, ψ0)
 
   # Time evolve backwards:
   ψ2 = tdvp(H, ψ1, +0.1im; cutoff)
@@ -37,12 +37,12 @@ using Printf
   @test norm(ψ2) ≈ 1.0
 
   # Should rotate back to original state:
-  @test abs(inner(ψ0,ψ2)) > 0.99
+  @test abs(inner(ψ0, ψ2)) > 0.99
 end
 
 @testset "Custom solver in TDVP" begin
   N = 10
-  cutoff = 1E-10
+  cutoff = 1e-10
 
   s = siteinds("S=1/2", N)
 
@@ -58,11 +58,7 @@ end
   ψ0 = randomMPS(s; linkdims=10)
 
   function solver(PH, t, psi0)
-    solver_kwargs = (; ishermitian=true,
-                     tol=1e-12,
-                     krylovdim=30,
-                     maxiter=100,
-                     verbosity=0)
+    solver_kwargs = (; ishermitian=true, tol=1e-12, krylovdim=30, maxiter=100, verbosity=0)
     psi, info = exponentiate(PH, t, psi0; solver_kwargs...)
     return psi, info
   end
@@ -75,7 +71,7 @@ end
   #@test abs(inner(ψ0,ψ1)) < 0.9
 
   # Average energy should be conserved:
-  @test real(inner(ψ1,H,ψ1)) ≈ inner(ψ0,H,ψ0)
+  @test real(inner(ψ1, H, ψ1)) ≈ inner(ψ0, H, ψ0)
 
   # Time evolve backwards:
   ψ2 = tdvp(H, ψ1, +0.1im; cutoff)
@@ -83,15 +79,14 @@ end
   @test norm(ψ2) ≈ 1.0
 
   # Should rotate back to original state:
-  @test abs(inner(ψ0,ψ2)) > 0.99
+  @test abs(inner(ψ0, ψ2)) > 0.99
 end
 
 @testset "Accuracy Test" begin
-
   N = 4
   tau = 0.02
   ttotal = 1.0
-  cutoff = 1E-12
+  cutoff = 1e-12
   use_trotter = false
 
   method = use_trotter ? "tebd" : "tdvp"
@@ -122,7 +117,7 @@ end
     append!(gates, reverse(gates))
   end
 
-  Ut = exp(-im*tau*HM)
+  Ut = exp(-im * tau * HM)
 
   psi = productMPS(s, n -> isodd(n) ? "Up" : "Dn")
   psix = prod(psi)
@@ -130,40 +125,42 @@ end
   Sz_tdvp = Float64[]
   Sz_exact = Float64[]
 
-  c = div(N,2)
-  Szc = op("Sz",s[c])
+  c = div(N, 2)
+  Szc = op("Sz", s[c])
   Nsteps = Int(ttotal / tau)
   for step in 1:Nsteps
-    psix = noprime(Ut*psix)
+    psix = noprime(Ut * psix)
     psix /= norm(psix)
 
     if use_trotter
-      psi = apply(gates,psi; cutoff)
+      psi = apply(gates, psi; cutoff)
       normalize!(psi)
     else
-      psi = tdvp(H,psi,-tau*im; cutoff, 
-                                normalize=true,
-                                exponentiate_tol=1E-12,
-                                exponentiate_maxiter=500,
-                                exponentiate_krylovdim=100)
+      psi = tdvp(
+        H,
+        psi,
+        -tau * im;
+        cutoff,
+        normalize=true,
+        exponentiate_tol=1e-12,
+        exponentiate_maxiter=500,
+        exponentiate_krylovdim=100,
+      )
     end
 
-
     push!(Sz_tdvp, real(expect(psi, "Sz"; site_range=c:c)))
-    push!(Sz_exact, real(scalar(dag(prime(psix,s[c]))*Szc*psix)))
+    push!(Sz_exact, real(scalar(dag(prime(psix, s[c])) * Szc * psix)))
     #F = abs(scalar(dag(psix)*prod(psi)))
     #@printf("%s=%.10f  exact=%.10f  F=%.10f\n",method,Sz_tdvp[end],Sz_exact[end],F)
   end
 
   #@show norm(Sz_tdvp-Sz_exact)
-  @test norm(Sz_tdvp-Sz_exact) < 1E-5
-
+  @test norm(Sz_tdvp - Sz_exact) < 1e-5
 end
-
 
 @testset "TEBD Comparison" begin
   N = 10
-  cutoff = 1E-12
+  cutoff = 1e-12
   tau = 0.1
   ttotal = 1.0
 
@@ -207,15 +204,12 @@ end
     normalize!(psi)
 
     nsite = (step <= 3 ? 2 : 1)
-    phi = tdvp(H,phi,-tau*im; cutoff, 
-                              nsite, 
-                              normalize=true,
-                              exponentiate_krylovdim=15)
+    phi = tdvp(H, phi, -tau * im; cutoff, nsite, normalize=true, exponentiate_krylovdim=15)
 
     Sz1[step] = expect(psi, "Sz"; site_range=c:c)
     Sz2[step] = expect(phi, "Sz"; site_range=c:c)
-    En1[step] = real(inner(psi,H,psi))
-    En2[step] = real(inner(phi,H,phi))
+    En1[step] = real(inner(psi, H, psi))
+    En2[step] = real(inner(phi, H, phi))
   end
 
   #display(En1)
@@ -223,14 +217,13 @@ end
   #display(Sz1)
   #display(Sz2)
 
-  @test norm(Sz1-Sz2) < 1E-3
-  @test norm(En1-En2) < 1E-3
-
+  @test norm(Sz1 - Sz2) < 1e-3
+  @test norm(En1 - En2) < 1e-3
 end
 
 @testset "Imaginary Time Evolution" begin
   N = 10
-  cutoff = 1E-12
+  cutoff = 1e-12
   tau = 1.0
   ttotal = 50.0
 
@@ -245,21 +238,45 @@ end
 
   H = MPO(os, s)
 
-  psi = randomMPS(s;linkdims=2)
+  psi = randomMPS(s; linkdims=2)
 
   Nsteps = Int(ttotal / tau)
   for step in 1:Nsteps
     nsite = (step <= 10 ? 2 : 1)
-    psi = tdvp(H,psi,-tau; cutoff, 
-                           nsite, 
-                           normalize=true,
-                           exponentiate_krylovdim=15)
-    @printf("%.3f energy = %.12f\n",step*tau,inner(psi,H,psi))
+    psi = tdvp(H, psi, -tau; cutoff, nsite, normalize=true, exponentiate_krylovdim=15)
+    @printf("%.3f energy = %.12f\n", step * tau, inner(psi, H, psi))
   end
   #@show maxlinkdim(psi)
 
-  @test inner(psi,H,psi) < -4.25
+  @test inner(psi, H, psi) < -4.25
+end
 
+@testset "DMRG" begin
+  N = 10
+  cutoff = 1e-12
+
+  s = siteinds("S=1/2", N)
+
+  os = OpSum()
+  for j in 1:(N - 1)
+    os += 0.5, "S+", j, "S-", j + 1
+    os += 0.5, "S-", j, "S+", j + 1
+    os += "Sz", j, "Sz", j + 1
+  end
+
+  H = MPO(os, s)
+
+  psi = randomMPS(s; linkdims=2)
+
+  Nsteps = 10
+  nsite = 2
+  psi = ITensorTDVP.dmrg(
+    H, psi; nsweeps=Nsteps, cutoff, nsite, eigsolve_krylovdim=3, eigsolve_maxiter=1
+  )
+
+  e2, psi2 = dmrg(H, psi; nsweeps=Nsteps, cutoff, normalize=true)
+
+  @test inner(psi, H, psi) ≈ inner(psi2, H, psi2)
 end
 
 nothing
