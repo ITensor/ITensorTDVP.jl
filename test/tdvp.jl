@@ -43,10 +43,12 @@ end
 @testset "Accuracy Test" begin
 
   N = 4
-  tau = 0.1
+  tau = 0.02
   ttotal = 1.0
   cutoff = 1E-12
   use_trotter = false
+
+  method = use_trotter ? "tebd" : "tdvp"
 
   s = siteinds("S=1/2", N; conserve_qns=false)
 
@@ -86,6 +88,9 @@ end
   Szc = op("Sz",s[c])
   Nsteps = Int(ttotal / tau)
   for step in 1:Nsteps
+    psix = noprime(Ut*psix)
+    psix /= norm(psix)
+
     if use_trotter
       psi = apply(gates,psi; cutoff)
       normalize!(psi)
@@ -97,17 +102,15 @@ end
                                 exponentiate_krylovdim=100)
     end
 
-    psix = noprime(Ut*psix)
-    psix /= norm(psix)
 
     push!(Sz_tdvp, expect(psi, "Sz"; site_range=c:c))
     push!(Sz_exact, scalar(dag(prime(psix,s[c]))*Szc*psix))
-    F = abs(scalar(dag(psix)*prod(psi)))
-    @printf("tdvp=%.10f  exact=%.10f  F=%.10f\n",Sz_tdvp[end],Sz_exact[end],F)
+    #F = abs(scalar(dag(psix)*prod(psi)))
+    #@printf("%s=%.10f  exact=%.10f  F=%.10f\n",method,Sz_tdvp[end],Sz_exact[end],F)
   end
 
   #@show norm(Sz_tdvp-Sz_exact)
-  @test norm(Sz_tdvp-Sz_exact) < 1E-3
+  @test norm(Sz_tdvp-Sz_exact) < 1E-5
 
 end
 
@@ -204,7 +207,7 @@ end
                            exponentiate_krylovdim=15)
     #@printf("%.3f energy = %.12f\n",step*tau,inner(psi,H,psi))
   end
-  @show maxlinkdim(psi)
+  #@show maxlinkdim(psi)
 
   @test inner(psi,H,psi) < -4.25
 
