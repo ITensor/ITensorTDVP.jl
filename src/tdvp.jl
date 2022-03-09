@@ -66,6 +66,7 @@ function tdvp(PH,
     )
   end
 
+
   @debug_check begin
     # Debug level checks
     # Enable with ITensors.enable_debug_checks()
@@ -101,6 +102,7 @@ function tdvp(PH,
   position!(PH, psi, 1)
 
   for sw in 1:nsweep(sweeps)
+    sw_time = @elapsed begin
     maxtruncerr = 0.0
 
     if !isnothing(write_when_maxdim_exceeds) &&
@@ -124,9 +126,10 @@ function tdvp(PH,
       end
 
       phi1, info = exponentiate(PH, t/2, phi1; 
-                               tol=exponentiate_tol,
-                               krylovdim=exponentiate_krylovdim,
-                               maxiter=exponentiate_maxiter)
+                                tol=exponentiate_tol,
+                                krylovdim=exponentiate_krylovdim,
+                                maxiter=exponentiate_maxiter)
+
 
       do_normalize && (phi1 /= norm(phi1))
 
@@ -161,7 +164,7 @@ function tdvp(PH,
       #
       # Do backwards evolution step
       #
-      if (ha==1 && b!=N) || (ha==2 && b!=1)
+      if (ha==1 && (b+nsite-1 != N)) || (ha==2 && b!=1)
         b1 = (ha == 1 ? b+1 : b)
         Δ = (ha==1 ? +1 : -1)
         if nsite == 2
@@ -216,6 +219,8 @@ function tdvp(PH,
         outputlevel=outputlevel,
         sweep_is_done=sweep_is_done,
       )
+
+    end
 
     end
 
