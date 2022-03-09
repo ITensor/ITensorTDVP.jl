@@ -103,8 +103,8 @@ end
     end
 
 
-    push!(Sz_tdvp, expect(psi, "Sz"; site_range=c:c))
-    push!(Sz_exact, scalar(dag(prime(psix,s[c]))*Szc*psix))
+    push!(Sz_tdvp, real(expect(psi, "Sz"; site_range=c:c)))
+    push!(Sz_exact, real(scalar(dag(prime(psix,s[c]))*Szc*psix)))
     #F = abs(scalar(dag(psix)*prod(psi)))
     #@printf("%s=%.10f  exact=%.10f  F=%.10f\n",method,Sz_tdvp[end],Sz_exact[end],F)
   end
