@@ -85,10 +85,11 @@ function tdvp(PH,
   )
 
   # exponentiate keyword args
+  tol = get(kwargs, :exponentiate_tol, 1E-12)
   exponentiate_kw = (;ishermitian= get(kwargs, :exponentiate_ishermitian, true),
-                      tol= get(kwargs, :exponentiate_tol, 1e-14),
-                      krylovdim= get(kwargs, :exponentiate_krylovdim, 20),
-                      maxiter= get(kwargs, :exponentiate_maxiter, 1),
+                      tol = get(kwargs, :exponentiate_tol, tol),
+                      krylovdim= get(kwargs, :exponentiate_krylovdim, 30),
+                      maxiter= get(kwargs, :exponentiate_maxiter, 100),
                       verbosity= get(kwargs, :exponentiate_verbosity, 0))
 
   psi = copy(psi0)
