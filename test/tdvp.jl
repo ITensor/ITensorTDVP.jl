@@ -40,6 +40,52 @@ using Printf
   @test abs(inner(ψ0,ψ2)) > 0.99
 end
 
+@testset "Custom solver in TDVP" begin
+  N = 10
+  cutoff = 1E-10
+
+  s = siteinds("S=1/2", N)
+
+  os = OpSum()
+  for j in 1:(N - 1)
+    os += 0.5, "S+", j, "S-", j + 1
+    os += 0.5, "S-", j, "S+", j + 1
+    os += "Sz", j, "Sz", j + 1
+  end
+
+  H = MPO(os, s)
+
+  ψ0 = randomMPS(s; linkdims=10)
+
+  function solver(PH, t, psi0)
+    solver_kwargs = (; ishermitian=true,
+                     tol=1e-12,
+                     krylovdim=30,
+                     maxiter=100,
+                     verbosity=0)
+    psi, info = exponentiate(PH, t, psi0; solver_kwargs...)
+    return psi, info
+  end
+
+  ψ1 = tdvp(solver, H, ψ0, -0.1im; cutoff, nsite=1)
+
+  @test norm(ψ1) ≈ 1.0
+
+  ## Should lose fidelity:
+  #@test abs(inner(ψ0,ψ1)) < 0.9
+
+  # Average energy should be conserved:
+  @test real(inner(ψ1,H,ψ1)) ≈ inner(ψ0,H,ψ0)
+
+  # Time evolve backwards:
+  ψ2 = tdvp(H, ψ1, +0.1im; cutoff)
+
+  @test norm(ψ2) ≈ 1.0
+
+  # Should rotate back to original state:
+  @test abs(inner(ψ0,ψ2)) > 0.99
+end
+
 @testset "Accuracy Test" begin
 
   N = 4
