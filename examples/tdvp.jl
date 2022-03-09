@@ -17,10 +17,26 @@ end
 H = MPO(heisenberg(n), s)
 ψ = randomMPS(s, "↑"; linkdims=10)
 
-@show inner(ψ', H, ψ)
+@show inner(ψ', H, ψ) / inner(ψ, ψ)
 
-_, ϕ = tdvp(H, ψ; t=-0.1*im, exponentiate_krylovdim=30, nsweeps=10, maxdim=50, cutoff=1e-10)
+ϕ = tdvp(
+  H,
+  ψ,
+  -1;
+  nsweeps=10,
+  reverse_step=false,
+  normalize=true,
+  maxdim=20,
+  cutoff=1e-10,
+  outputlevel=1,
+)
+
+@show inner(ϕ', H, ϕ) / inner(ϕ, ϕ)
 
 e2, ϕ2 = dmrg(H, ψ; nsweeps=10, maxdim=20, cutoff=1e-10)
 
-@show inner(ϕ', H, ϕ)
+@show inner(ϕ2', H, ϕ2) / inner(ϕ2, ϕ2)
+
+ϕ3 = ITensorTDVP.dmrg(H, ψ; nsweeps=10, maxdim=20, cutoff=1e-10, outputlevel=1)
+
+@show inner(ϕ3', H, ϕ3) / inner(ϕ3, ϕ3)
