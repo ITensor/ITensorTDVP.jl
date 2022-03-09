@@ -86,7 +86,10 @@ end
     normalize!(psi)
 
     nsite = (step <= 3 ? 2 : 1)
-    phi = tdvp(H,phi,-tau*im; cutoff, nsite, exponentiate_krylovdim=15)
+    phi = tdvp(H,phi,-tau*im; cutoff, 
+                              nsite, 
+                              normalize=true,
+                              exponentiate_krylovdim=15)
 
     Sz1[step] = expect(psi, "Sz"; site_range=c:c)
     Sz2[step] = expect(phi, "Sz"; site_range=c:c)
@@ -126,7 +129,10 @@ end
   Nsteps = Int(ttotal / tau)
   for step in 1:Nsteps
     nsite = (step <= 10 ? 2 : 1)
-    psi = tdvp(H,psi,-tau; cutoff, nsite, exponentiate_krylovdim=15)
+    psi = tdvp(H,psi,-tau; cutoff, 
+                           nsite, 
+                           normalize=true,
+                           exponentiate_krylovdim=15)
     @printf("%.3f energy = %.12f\n",step*tau,inner(psi,H,psi))
   end
   @show maxlinkdim(psi)

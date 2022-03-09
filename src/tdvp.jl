@@ -74,7 +74,7 @@ function tdvp(PH,
   end
 
   nsite::Int = get(kwargs, :nsite, 2)
-  do_normalize::Bool = get(kwargs, :normalize, true)
+  normalize::Bool = get(kwargs, :normalize, false)
   outputlevel::Int = get(kwargs, :outputlevel, 0)
   which_decomp::Union{String,Nothing} = get(kwargs, :which_decomp, nothing)
   svd_alg::String = get(kwargs, :svd_alg, "divide_and_conquer")
@@ -84,11 +84,13 @@ function tdvp(PH,
     kwargs, :write_when_maxdim_exceeds, nothing
   )
 
-  # exponentiate kwargs
-  exponentiate_tol::Float64 = get(kwargs, :exponentiate_tol, 1e-14)
-  exponentiate_krylovdim::Int = get(kwargs, :exponentiate_krylovdim, 20)
-  exponentiate_maxiter::Int = get(kwargs, :exponentiate_maxiter, 1)
-  exponentiate_verbosity::Int = get(kwargs, :exponentiate_verbosity, 0)
+  # exponentiate keyword args
+  tol = get(kwargs, :exponentiate_tol, 1E-12)
+  exponentiate_kw = (;ishermitian= get(kwargs, :exponentiate_ishermitian, true),
+                      tol = get(kwargs, :exponentiate_tol, tol),
+                      krylovdim= get(kwargs, :exponentiate_krylovdim, 30),
+                      maxiter= get(kwargs, :exponentiate_maxiter, 100),
+                      verbosity= get(kwargs, :exponentiate_verbosity, 0))
 
   psi = copy(psi0)
   N = length(psi)
@@ -101,6 +103,7 @@ function tdvp(PH,
   position!(PH, psi, 1)
 
   for sw in 1:nsweep(sweeps)
+    sw_time = @elapsed begin
     maxtruncerr = 0.0
 
     if !isnothing(write_when_maxdim_exceeds) &&
@@ -123,12 +126,14 @@ function tdvp(PH,
         phi1 = psi[b]*psi[b+1]
       end
 
-      phi1, info = exponentiate(PH, t/2, phi1; 
-                               tol=exponentiate_tol,
-                               krylovdim=exponentiate_krylovdim,
-                               maxiter=exponentiate_maxiter)
+      phi1, info = exponentiate(PH, t/2, phi1; exponentiate_kw...)
 
-      do_normalize && (phi1 /= norm(phi1))
+      if info.converged == 0
+        println("exponentiate not converged (b,ha)=($b,$ha)")
+        ITensors.pause()
+      end
+
+      normalize && (phi1 /= norm(phi1))
 
       spec = nothing
       if nsite == 1
@@ -150,9 +155,9 @@ function tdvp(PH,
           cutoff=cutoff(sweeps, sw),
           eigen_perturbation=drho,
           ortho=ortho,
-          normalize=do_normalize,
-          which_decomp=which_decomp,
-          svd_alg=svd_alg,
+          normalize,
+          which_decomp,
+          svd_alg
         )
         maxtruncerr = max(maxtruncerr, spec.truncerr)
       end
@@ -175,11 +180,10 @@ function tdvp(PH,
 
         PH.nsite = nsite-1
         position!(PH,psi,b1)
-        phi0,info = exponentiate(PH, -t/2, phi0; 
-                                 tol=exponentiate_tol,
-                                 krylovdim=exponentiate_krylovdim,
-                                 maxiter=exponentiate_maxiter)
-        do_normalize && (phi0 ./= norm(phi0))
+
+        phi0,info = exponentiate(PH, -t/2, phi0; exponentiate_kw...)
+
+        normalize && (phi0 ./= norm(phi0))
 
         if nsite == 2
           psi[b1] = phi0
@@ -208,16 +212,18 @@ function tdvp(PH,
       sweep_is_done = (b == 1 && ha == 2)
       measure!(
         obs;
-        psi=psi,
+        psi,
         bond=b,
         sweep=sw,
         half_sweep=ha,
-        spec=spec,
-        outputlevel=outputlevel,
-        sweep_is_done=sweep_is_done,
+        spec,
+        outputlevel,
+        sweep_is_done
       )
 
     end
+
+    end #@elapsed for sw_time
 
     if outputlevel >= 1
       @printf(
@@ -229,10 +235,13 @@ function tdvp(PH,
       )
       flush(stdout)
     end
-    isdone = checkdone!(obs; psi=psi, sweep=sw, outputlevel=outputlevel)
+    isdone = checkdone!(obs; psi, sweep=sw, outputlevel)
 
     isdone && break
   end
+
+  # Just to be sure:
+  normalize && normalize!(psi)
 
   return psi
 end
