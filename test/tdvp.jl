@@ -274,7 +274,7 @@ end
     H, psi; nsweeps=Nsteps, cutoff, nsite, eigsolve_krylovdim=3, eigsolve_maxiter=1
   )
 
-  e2, psi2 = dmrg(H, psi; nsweeps=Nsteps, cutoff, normalize=true)
+  e2, psi2 = dmrg(H, psi; nsweeps=Nsteps, maxdim=100, cutoff, normalize=true)
 
   @test inner(psi, H, psi) ≈ inner(psi2, H, psi2)
 end
