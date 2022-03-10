@@ -1,4 +1,4 @@
-function tdvp(solver, PH, psi0::MPS, t::Number, sweeps; kwargs...)::MPS
+function tdvp_iteration(solver, PH, psi0::MPS, time_step::Number, sweeps::Sweeps; kwargs...)
   if length(psi0) == 1
     error(
       "`tdvp` currently does not support system sizes of 1. You can diagonalize the MPO tensor directly with tools like `LinearAlgebra.eigen`, `KrylovKit.exponentiate`, etc.",
@@ -20,6 +20,7 @@ function tdvp(solver, PH, psi0::MPS, t::Number, sweeps; kwargs...)::MPS
   svd_alg::String = get(kwargs, :svd_alg, "divide_and_conquer")
   obs = get(kwargs, :observer, NoObserver())
 
+
   write_when_maxdim_exceeds::Union{Int,Nothing} = get(
     kwargs, :write_when_maxdim_exceeds, nothing
   )
@@ -33,6 +34,10 @@ function tdvp(solver, PH, psi0::MPS, t::Number, sweeps; kwargs...)::MPS
   @assert isortho(psi) && orthocenter(psi) == 1
 
   position!(PH, psi, 1)
+
+  #@show time_step
+  #@show nsweep(sweeps)
+  #@show time_step/nsweep(sweeps)
 
   for sw in 1:nsweep(sweeps)
     sw_time = @elapsed begin
@@ -58,7 +63,7 @@ function tdvp(solver, PH, psi0::MPS, t::Number, sweeps; kwargs...)::MPS
           phi1 = psi[b] * psi[b + 1]
         end
 
-        phi1, info = solver(PH, t / 2, phi1)
+        phi1, info = solver(PH, time_step / 2, phi1)
 
         ## if info.converged == 0
         ##   println("exponentiate not converged (b,ha)=($b,$ha)")
@@ -112,7 +117,7 @@ function tdvp(solver, PH, psi0::MPS, t::Number, sweeps; kwargs...)::MPS
           PH.nsite = nsite - 1
           position!(PH, psi, b1)
 
-          phi0, info = solver(PH, -t / 2, phi0)
+          phi0, info = solver(PH, -time_step / 2, phi0)
 
           normalize && (phi0 ./= norm(phi0))
 
@@ -163,56 +168,99 @@ function tdvp(solver, PH, psi0::MPS, t::Number, sweeps; kwargs...)::MPS
   # Just to be sure:
   normalize && normalize!(psi)
 
+  return psi, PH
+end
+
+
+function exponentiate_solver(;kwargs...)
+  solver_kwargs = (;
+    ishermitian=get(kwargs, :ishermitian, true),
+    tol=get(kwargs, :exponentiate_tol, 1e-12),
+    krylovdim=get(kwargs, :exponentiate_krylovdim, 30),
+    maxiter=get(kwargs, :exponentiate_maxiter, 100),
+    verbosity=get(kwargs, :exponentiate_verbosity, 0),
+  )
+  function solver(H, t, psi0)
+    psi, info = exponentiate(H, t, psi0; solver_kwargs...)
+    return psi, info
+  end
+  return solver
+end
+
+function eigsolve_solver(;kwargs...)
+  howmany = 1
+  which = get(kwargs, :eigsolve_which_eigenvalue, :SR)
+  solver_kwargs = (;
+    ishermitian=get(kwargs, :ishermitian, true),
+    tol=get(kwargs, :eigsolve_tol, 1E-14),
+    krylovdim=get(kwargs, :eigsolve_krylovdim, 3),
+    maxiter=get(kwargs, :eigsolve_maxiter, 1),
+    verbosity=get(kwargs, :eigsolve_verbosity, 0),
+  )
+  function solver(H, t, psi0)
+    vals, vecs, info = eigsolve(H, psi0, howmany, which; solver_kwargs...)
+    psi = vecs[1]
+    return psi, info
+  end
+  return solver
+end
+
+function _tdvp_compute_sweeps(t; kwargs...)
+  time_step::Number = get(kwargs,:time_step, t)
+  nsweeps::Integer = get(kwargs,:nsweeps, 0)
+
+  if nsweeps > 0 && time_step != t
+    error("Cannot specify both time_step and nsweeps in tdvp")
+  elseif isfinite(time_step) && abs(time_step) > 0.0 && nsweeps == 0
+    nsweeps = convert(Int,ceil(abs(t/time_step)))
+    if !(nsweeps*time_step ≈ t)
+      error("Time step $time_step not commensurate with total time t=$t")
+    end
+  end
+
+  return Sweeps(nsweeps; maxdim=get(kwargs,:maxdim,typemax(Int)),
+                   mindim=get(kwargs,:mindim,1),
+                   cutoff=get(kwargs,:cutoff,1E-8),
+                   noise=get(kwargs,:noise,0.0)
+               )
+end
+
+
+function tdvp(solver, H, psi0::MPS, t::Number, sweeps::Sweeps=Sweeps(); kwargs...)
+  reverse_step = true
+  isempty(sweeps) && (sweeps = _tdvp_compute_sweeps(t; kwargs...))
+  time_step::Number = get(kwargs,:time_step, t)
+  psi,_ = tdvp_iteration(solver, H, psi0, time_step, sweeps; reverse_step, kwargs...)
   return psi
 end
 
-function _tdvp_sweeps(;
-  nsweeps=1, maxdim=typemax(Int), mindim=1, cutoff=1E-8, noise=0.0, kwargs...
-)
-  sweeps = Sweeps(nsweeps)
-  setmaxdim!(sweeps, maxdim...)
-  setmindim!(sweeps, mindim...)
-  setcutoff!(sweeps, cutoff...)
-  setnoise!(sweeps, noise...)
-  return sweeps
+function tdvp(H, psi0::MPS, t::Number, sweeps::Sweeps=Sweeps(); kwargs...)
+  return tdvp(exponentiate_solver(), H, psi0, t, sweeps; kwargs...)
 end
 
-function tdvp(solver, x1, x2, psi0::MPS, t::Number; kwargs...)
-  return tdvp(solver, x1, x2, psi0, t, _tdvp_sweeps(; kwargs...); kwargs...)
+
+function dmrg(H, psi0::MPS, sweeps::Sweeps=Sweeps(); kwargs...)
+  t = Inf # DMRG is TDVP with an infinite timestep and no reverse step
+  isempty(sweeps) && (sweeps = _tdvp_compute_sweeps(t; kwargs...))
+  reverse_step = false
+  psi,_ = tdvp_iteration(eigsolve_solver(), H, psi0, t, sweeps; reverse_step, kwargs...)
+  return psi
 end
 
-function tdvp(solver, x1, psi0::MPS, t::Number; kwargs...)
-  return tdvp(solver, x1, psi0, t, _tdvp_sweeps(; kwargs...); kwargs...)
-end
-
-"""
-    tdvp(H::MPO,psi0::MPS,t::Number,sweeps::Sweeps; kwargs...)
-
-Use the time dependent variational principle (TDVP) algorithm
-to compute `exp(t*H)*psi0` using an efficient algorithm based
-on alternating optimization of the MPS tensors and local Krylov
-exponentiation of H.
-                    
-Returns:
-* `psi::MPS` - time-evolved MPS
-
-Optional keyword arguments:
-* `outputlevel::Int = 1` - larger outputlevel values resulting in printing more information and 0 means no output
-* `observer` - object implementing the [Observer](@ref observer) interface which can perform measurements and stop early
-* `write_when_maxdim_exceeds::Int` - when the allowed maxdim exceeds this value, begin saving tensors to disk to free memory in large calculations
-"""
-function tdvp(solver, H::MPO, psi0::MPS, t::Number, sweeps::Sweeps; kwargs...)::MPS
+function dmrg(H::MPO, psi0::MPS, sweeps::Sweeps=Sweeps(); kwargs...)
   check_hascommoninds(siteinds, H, psi0)
   check_hascommoninds(siteinds, H, psi0')
   # Permute the indices to have a better memory layout
   # and minimize permutations
   H = ITensors.permute(H, (linkind, siteinds, linkind))
   PH = ProjMPO(H)
-  return tdvp(solver, PH, psi0, t, sweeps; kwargs...)
+  return dmrg(PH, psi0, sweeps; kwargs...)
 end
 
+
 """
-    tdvp(Hs::Vector{MPO},psi0::MPS,t::Number,sweeps::Sweeps;kwargs...)
+    tdvp(Hs::Vector{MPO},psi0::MPS,t::Number; kwargs...)
+    tdvp(Hs::Vector{MPO},psi0::MPS,t::Number, sweeps::Sweeps; kwargs...)
 
 Use the time dependent variational principle (TDVP) algorithm
 to compute `exp(t*H)*psi0` using an efficient algorithm based
@@ -229,46 +277,50 @@ each step of the algorithm when optimizing the MPS.
 Returns:
 * `psi::MPS` - time-evolved MPS
 """
-function tdvp(solver, Hs::Vector{MPO}, psi0::MPS, t::Number, sweeps::Sweeps; kwargs...)::MPS
+function tdvp(solver, Hs::Vector{MPO}, psi0::MPS, t::Number, sweeps::Sweeps=Sweeps(); kwargs...)
   for H in Hs
     check_hascommoninds(siteinds, H, psi0)
     check_hascommoninds(siteinds, H, psi0')
   end
   Hs .= ITensors.permute.(Hs, Ref((linkind, siteinds, linkind)))
-  PHS = ProjMPOSum(Hs)
-  return tdvp(solver, PHS, psi0, t, sweeps; kwargs...)
+  PHs = ProjMPOSum(Hs)
+  return tdvp(solver,PHs, psi0, t, sweeps; kwargs...)
 end
 
-function tdvp(PH, psi0::MPS, t::Number; reverse_step=true, kwargs...)
-  solver_kwargs = (;
-    ishermitian=get(kwargs, :ishermitian, true),
-    tol=get(kwargs, :exponentiate_tol, 1e-12),
-    krylovdim=get(kwargs, :exponentiate_krylovdim, 30),
-    maxiter=get(kwargs, :exponentiate_maxiter, 100),
-    verbosity=get(kwargs, :exponentiate_verbosity, 0),
-  )
-  function solver(PH, t, psi0)
-    psi, info = exponentiate(PH, t, psi0; solver_kwargs...)
-    return psi, info
-  end
-  return tdvp(solver, PH, psi0, t; reverse_step, kwargs...)
+function tdvp(H::Vector{MPO}, psi0::MPS, t::Number, sweeps::Sweeps=Sweeps(); kwargs...)
+  return tdvp(exponentiate_solver(), H, psi0, t, sweeps; kwargs...)
 end
 
-function dmrg(PH, psi0::MPS; reverse_step=false, kwargs...)
-  t = Inf # DMRG is TDVP with an infinite timestep and no reverse step
-  howmany = 1
-  which = get(kwargs, :eigsolve_which_eigenvalue, :SR)
-  solver_kwargs = (;
-    ishermitian=get(kwargs, :ishermitian, true),
-    tol=get(kwargs, :eigsolve_tol, 1e-14),
-    krylovdim=get(kwargs, :eigsolve_krylovdim, 3),
-    maxiter=get(kwargs, :eigsolve_maxiter, 1),
-    verbosity=get(kwargs, :eigsolve_verbosity, 0),
-  )
-  function solver(PH, t, psi0)
-    vals, vecs, info = eigsolve(PH, psi0, howmany, which; solver_kwargs...)
-    psi = vecs[1]
-    return psi, info
-  end
-  return tdvp(solver, PH, psi0, t; reverse_step, kwargs...)
+
+
+"""
+    tdvp(H::MPO,psi0::MPS,t::Number; kwargs...)
+    tdvp(H::MPO,psi0::MPS,t::Number,sweeps::Sweeps; kwargs...)
+
+Use the time dependent variational principle (TDVP) algorithm
+to compute `exp(t*H)*psi0` using an efficient algorithm based
+on alternating optimization of the MPS tensors and local Krylov
+exponentiation of H.
+                    
+Returns:
+* `psi::MPS` - time-evolved MPS
+
+Optional keyword arguments:
+* `outputlevel::Int = 1` - larger outputlevel values resulting in printing more information and 0 means no output
+* `observer` - object implementing the [Observer](@ref observer) interface which can perform measurements and stop early
+* `write_when_maxdim_exceeds::Int` - when the allowed maxdim exceeds this value, begin saving tensors to disk to free memory in large calculations
+"""
+function tdvp(solver, H::MPO, psi0::MPS, t::Number, sweeps::Sweeps=Sweeps(); kwargs...)
+  check_hascommoninds(siteinds, H, psi0)
+  check_hascommoninds(siteinds, H, psi0')
+  # Permute the indices to have a better memory layout
+  # and minimize permutations
+  H = ITensors.permute(H, (linkind, siteinds, linkind))
+  PH = ProjMPO(H)
+  return tdvp(solver, PH, psi0, t, sweeps; kwargs...)
 end
+
+function tdvp(H::MPO, psi0::MPS, t::Number, sweeps::Sweeps=Sweeps(); kwargs...)
+  return tdvp(exponentiate_solver(), H, psi0, t, sweeps; kwargs...)
+end
+
