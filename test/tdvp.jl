@@ -191,7 +191,7 @@ end
 
   psi = productMPS(s, n -> isodd(n) ? "Up" : "Dn")
 
-  c = div(N, 2) # center site
+  c = div(N, 2)
 
   #
   # Evolve using TEBD
