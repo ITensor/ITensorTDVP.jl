@@ -20,7 +20,6 @@ function tdvp_iteration(solver, PH, psi0::MPS, time_step::Number, sweeps::Sweeps
   svd_alg::String = get(kwargs, :svd_alg, "divide_and_conquer")
   obs = get(kwargs, :observer, NoObserver())
 
-
   write_when_maxdim_exceeds::Union{Int,Nothing} = get(
     kwargs, :write_when_maxdim_exceeds, nothing
   )
@@ -171,8 +170,7 @@ function tdvp_iteration(solver, PH, psi0::MPS, time_step::Number, sweeps::Sweeps
   return psi, PH
 end
 
-
-function exponentiate_solver(;kwargs...)
+function exponentiate_solver(; kwargs...)
   solver_kwargs = (;
     ishermitian=get(kwargs, :ishermitian, true),
     tol=get(kwargs, :exponentiate_tol, 1e-12),
@@ -187,7 +185,7 @@ function exponentiate_solver(;kwargs...)
   return solver
 end
 
-function eigsolve_solver(;kwargs...)
+function eigsolve_solver(; kwargs...)
   howmany = 1
   which = get(kwargs, :eigsolve_which_eigenvalue, :SR)
   solver_kwargs = (;
@@ -206,31 +204,32 @@ function eigsolve_solver(;kwargs...)
 end
 
 function _tdvp_compute_sweeps(t; kwargs...)
-  time_step::Number = get(kwargs,:time_step, t)
-  nsweeps::Integer = get(kwargs,:nsweeps, 0)
+  time_step::Number = get(kwargs, :time_step, t)
+  nsweeps::Integer = get(kwargs, :nsweeps, 0)
 
   if nsweeps > 0 && time_step != t
     error("Cannot specify both time_step and nsweeps in tdvp")
   elseif isfinite(time_step) && abs(time_step) > 0.0 && nsweeps == 0
-    nsweeps = convert(Int,ceil(abs(t/time_step)))
-    if !(nsweeps*time_step ≈ t)
+    nsweeps = convert(Int, ceil(abs(t / time_step)))
+    if !(nsweeps * time_step ≈ t)
       error("Time step $time_step not commensurate with total time t=$t")
     end
   end
 
-  return Sweeps(nsweeps; maxdim=get(kwargs,:maxdim,typemax(Int)),
-                   mindim=get(kwargs,:mindim,1),
-                   cutoff=get(kwargs,:cutoff,1E-8),
-                   noise=get(kwargs,:noise,0.0)
-               )
+  return Sweeps(
+    nsweeps;
+    maxdim=get(kwargs, :maxdim, typemax(Int)),
+    mindim=get(kwargs, :mindim, 1),
+    cutoff=get(kwargs, :cutoff, 1E-8),
+    noise=get(kwargs, :noise, 0.0),
+  )
 end
-
 
 function tdvp(solver, H, psi0::MPS, t::Number, sweeps::Sweeps=Sweeps(); kwargs...)
   reverse_step = true
   isempty(sweeps) && (sweeps = _tdvp_compute_sweeps(t; kwargs...))
-  time_step::Number = get(kwargs,:time_step, t)
-  psi,_ = tdvp_iteration(solver, H, psi0, time_step, sweeps; reverse_step, kwargs...)
+  time_step::Number = get(kwargs, :time_step, t)
+  psi, _ = tdvp_iteration(solver, H, psi0, time_step, sweeps; reverse_step, kwargs...)
   return psi
 end
 
@@ -238,12 +237,11 @@ function tdvp(H, psi0::MPS, t::Number, sweeps::Sweeps=Sweeps(); kwargs...)
   return tdvp(exponentiate_solver(), H, psi0, t, sweeps; kwargs...)
 end
 
-
 function dmrg(H, psi0::MPS, sweeps::Sweeps=Sweeps(); kwargs...)
   t = Inf # DMRG is TDVP with an infinite timestep and no reverse step
   isempty(sweeps) && (sweeps = _tdvp_compute_sweeps(t; kwargs...))
   reverse_step = false
-  psi,_ = tdvp_iteration(eigsolve_solver(), H, psi0, t, sweeps; reverse_step, kwargs...)
+  psi, _ = tdvp_iteration(eigsolve_solver(), H, psi0, t, sweeps; reverse_step, kwargs...)
   return psi
 end
 
@@ -256,7 +254,6 @@ function dmrg(H::MPO, psi0::MPS, sweeps::Sweeps=Sweeps(); kwargs...)
   PH = ProjMPO(H)
   return dmrg(PH, psi0, sweeps; kwargs...)
 end
-
 
 """
     tdvp(Hs::Vector{MPO},psi0::MPS,t::Number; kwargs...)
@@ -277,21 +274,21 @@ each step of the algorithm when optimizing the MPS.
 Returns:
 * `psi::MPS` - time-evolved MPS
 """
-function tdvp(solver, Hs::Vector{MPO}, psi0::MPS, t::Number, sweeps::Sweeps=Sweeps(); kwargs...)
+function tdvp(
+  solver, Hs::Vector{MPO}, psi0::MPS, t::Number, sweeps::Sweeps=Sweeps(); kwargs...
+)
   for H in Hs
     check_hascommoninds(siteinds, H, psi0)
     check_hascommoninds(siteinds, H, psi0')
   end
   Hs .= ITensors.permute.(Hs, Ref((linkind, siteinds, linkind)))
   PHs = ProjMPOSum(Hs)
-  return tdvp(solver,PHs, psi0, t, sweeps; kwargs...)
+  return tdvp(solver, PHs, psi0, t, sweeps; kwargs...)
 end
 
 function tdvp(H::Vector{MPO}, psi0::MPS, t::Number, sweeps::Sweeps=Sweeps(); kwargs...)
   return tdvp(exponentiate_solver(), H, psi0, t, sweeps; kwargs...)
 end
-
-
 
 """
     tdvp(H::MPO,psi0::MPS,t::Number; kwargs...)
@@ -323,4 +320,3 @@ end
 function tdvp(H::MPO, psi0::MPS, t::Number, sweeps::Sweeps=Sweeps(); kwargs...)
   return tdvp(exponentiate_solver(), H, psi0, t, sweeps; kwargs...)
 end
-

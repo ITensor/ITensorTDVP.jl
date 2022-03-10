@@ -151,7 +151,7 @@ end
 
     push!(Sz_tdvp, real(expect(psi, "Sz"; site_range=c:c)))
     push!(Sz_exact, real(scalar(dag(prime(psix, s[c])) * Szc * psix)))
-    F = abs(scalar(dag(psix)*prod(psi)))
+    F = abs(scalar(dag(psix) * prod(psi)))
     #@printf("%s=%.10f  exact=%.10f  F=%.10f\n",method,Sz_tdvp[end],Sz_exact[end],F)
   end
 
@@ -217,7 +217,7 @@ end
   Sz2 = zeros(Nsteps)
   En2 = zeros(Nsteps)
   function ITensors.measure!(obs::TDVPObserver; sweep, bond, half_sweep, psi, kwargs...)
-    if bond==1 && half_sweep == 2
+    if bond == 1 && half_sweep == 2
       Sz2[sweep] = expect(psi, "Sz"; site_range=c:c)
       En2[sweep] = real(inner(psi, H, psi))
       #@printf("sweep %d Sz=%.12f energy=%.12f\n",sweep,Sz2[sweep],En2[sweep])
@@ -226,8 +226,15 @@ end
 
   phi = productMPS(s, n -> isodd(n) ? "Up" : "Dn")
 
-  phi = tdvp(H, phi, -ttotal*im; time_step=-tau*im, cutoff, 
-                                 normalize=true, observer=TDVPObserver())
+  phi = tdvp(
+    H,
+    phi,
+    -ttotal * im;
+    time_step=-tau * im,
+    cutoff,
+    normalize=true,
+    observer=TDVPObserver(),
+  )
 
   #display(En1)
   #display(En2)
