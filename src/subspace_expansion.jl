@@ -11,39 +11,45 @@ end
 ###the most general implementation may be passing MPS, lims, and bondtensor (defaulting to the Id-matrix)
 ###then we can tensorsum both left and right tensor, and just apply the bondtensor to restore input gauge
 ###ideally we would also be able to apply tensorsum to the bond tensor instead of that loop below
-function subspace_expansion_sweep!(ψ::MPS,PH::Union{ProjMPO,ProjMPOSum};maxdim, cutoff, atol=1e-2, kwargs...
-  )
-  N = length(psi)
-  if !isortho(psi) || orthocenter(psi) != 1
-    orthogonalize!(psi, 1)
+"""
+expand subspace (2-site like) in a sweep 
+"""
+function subspace_expansion_sweep!(ψ::MPS,PH::Union{ProjMPO,ProjMPOSum};maxdim, cutoff, atol=1e-2, kwargs...)
+  N = length(ψ)
+  if !isortho(ψ) || orthocenter(ψ) != 1
+    orthogonalize!(ψ, 1)
   end
   PH.nsite=2
-  position!(PH, psi, 1)
+  nsite=2
+  position!(PH, ψ, 1)
   for (b, ha) in sweepnext(N; ncenter=2)
-    orthogonalize!(psi,b)
-    position!(PH, psi, b)
+    println(b)
+    orthogonalize!(ψ,b)
+    position!(PH, ψ, b)
     
     if (ha == 1 && (b + nsite - 1 != N)) || (ha == 2 && b != 1)
       b1 = (ha == 1 ? b + 1 : b)
       Δ = (ha == 1 ? +1 : -1)
-      _=subspace_expansion!(ψ,PH,(ψ.llim,ψ.rlim),(b,b+Δ);maxdim, cutoff, atol=1e-2, kwargs...
+      println("")
+      _=subspace_expansion!(ψ,PH,(ψ.llim,ψ.rlim),(b,b+Δ);maxdim, cutoff, atol=atol, kwargs...
       )
     end
   end
+  return nothing
 end
 
-function subspace_expansion!(ψ::MPS,PH::Union{ProjMPO,ProjMPOSum},lims::Tuple{Int,Int},b::Tuple{Int,Int};bondtensor=nothing,maxdim, cutoff, atol=1e-2, kwargs...
-  )
+function subspace_expansion!(ψ::MPS,PH,lims::Tuple{Int,Int},b::Tuple{Int,Int};bondtensor=nothing,maxdim, cutoff, atol=1e-2, kwargs...)
   ##this should only work for the case where rlim-llim > 1
   ##not a valid MPS otherwise anyway (since bond matrix not part of MPS unless so defined like in VidalMPS struct)
   llim,rlim = lims
   n1, n2 = b
   @assert n1 + 1 == n2
   PH.nsite=2
-  position!(PH,psi,n1)
-  linkind=commoninds(ψ[n1],ψ[n2])
-  NL=nullspace(ψ[n1],linkind)
-  NR=nullspace(ψ[n2],linkind)
+  position!(PH,ψ,n1)
+  linkind=commonind(ψ[n1],ψ[n2])
+  @show ψ[n1]
+  NL=nullspace(ψ[n1],linkind;atol=1e-6)
+  NR=nullspace(ψ[n2],linkind;atol=1e-6)
   ϕ=ψ[n1]*ψ[n2]
   ψ[n1]=prime(ψ[n1],linkind)
   if isnothing(bondtensor)
@@ -77,22 +83,16 @@ function subspace_expansion!(ψ::MPS,PH::Union{ProjMPO,ProjMPOSum},lims::Tuple{I
   return C
 end 
 
-
-
-function _subspace_expand_core(centerwf::Vector{ITensor}, env,NL,NR;maxdim, cutoff, atol=1e-2, kwargs...
-  )
+function _subspace_expand_core(centerwf::Vector{ITensor}, env,NL,NR;maxdim, cutoff, atol=1e-2, kwargs...)
   ϕ = ITensor(1.0)
   for atensor in centerwf
     ϕ *= atensor
   end
-
-  return _subspace_expand_core(ϕ, env, NL, NR;maxdim, cutoff, atol=1e-2, kwargs...)
-  
+  return _subspace_expand_core(ϕ, env, NL, NR;maxdim, cutoff, atol=1e-2, kwargs...)  
 end
 
-function _subspace_expand_core(ϕ::ITensor, env,NL,NR;maxdim, cutoff, atol=1e-2, kwargs...
-  )
-  ϕH = env * ϕ  #add noprime?
+function _subspace_expand_core(ϕ::ITensor, env,NL,NR;maxdim, cutoff, atol=1e-2, kwargs...)
+  ϕH = env*ϕ   #add noprime?
   ϕH = NL * ϕH * NR
   U,S,V=svd(ϕH,commoninds(ϕH,NL);maxdim=maxdim, cutoff=cutoff, kwargs...)
   NL *= dag(U)

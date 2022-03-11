@@ -1,8 +1,7 @@
 using ITensors
 using ITensorTDVP
-
 n = 10
-s = siteinds("S=1/2", n)
+s = siteinds("S=1/2", n,conserve_qns=true)
 
 function heisenberg(n)
   os = OpSum()
@@ -15,16 +14,17 @@ function heisenberg(n)
 end
 
 H = MPO(heisenberg(n), s)
-ψ = randomMPS(s, "↑"; linkdims=10)
+ψ = randomMPS(s,i -> isodd(i) ? "Up" : "Dn"; linkdims=10)
 
 @show inner(ψ', H, ψ) / inner(ψ, ψ)
 
 ϕ = tdvp(
   H,
   ψ,
-  -1;
-  nsweeps=10,
-  reverse_step=false,
+  0.05im;
+  nsweeps=1,
+  nsite=1,
+  reverse_step=true,
   normalize=true,
   maxdim=20,
   cutoff=1e-10,

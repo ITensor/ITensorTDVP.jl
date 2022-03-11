@@ -19,7 +19,8 @@ function tdvp(solver, PH, psi0::MPS, t::Number, sweeps; kwargs...)::MPS
   which_decomp::Union{String,Nothing} = get(kwargs, :which_decomp, nothing)
   svd_alg::String = get(kwargs, :svd_alg, "divide_and_conquer")
   obs = get(kwargs, :observer, NoObserver())
-
+  atol = get(kwargs, :atol,1e-6)
+  maxdim=get(kwargs,:maxdim,100)
   write_when_maxdim_exceeds::Union{Int,Nothing} = get(
     kwargs, :write_when_maxdim_exceeds, nothing
   )
@@ -31,10 +32,15 @@ function tdvp(solver, PH, psi0::MPS, t::Number, sweeps; kwargs...)::MPS
     orthogonalize!(psi, 1)
   end
   @assert isortho(psi) && orthocenter(psi) == 1
+  #PH.nsite=1
+  #position!(PH, psi, 1)
+  #psid=PH * psi
 
-  position!(PH, psi, 1)
-
+  #println("did a successful env itensor mult")
   for sw in 1:nsweep(sweeps)
+    if nsite==1
+      subspace_expansion_sweep!(psi,PH;maxdim, cutoff, atol=atol, kwargs...)
+    end
     sw_time = @elapsed begin
       maxtruncerr = 0.0
 
@@ -57,7 +63,8 @@ function tdvp(solver, PH, psi0::MPS, t::Number, sweeps; kwargs...)::MPS
         elseif nsite == 2
           phi1 = psi[b] * psi[b + 1]
         end
-
+        phiprime=PH*phi1
+        println("did a successful env itensor mult")
         phi1, info = solver(PH, t / 2, phi1)
 
         ## if info.converged == 0
@@ -248,6 +255,7 @@ function tdvp(PH, psi0::MPS, t::Number; reverse_step=true, kwargs...)
     verbosity=get(kwargs, :exponentiate_verbosity, 0),
   )
   function solver(PH, t, psi0)
+    #psidot=PH*psi0
     psi, info = exponentiate(PH, t, psi0; solver_kwargs...)
     return psi, info
   end
