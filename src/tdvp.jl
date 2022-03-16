@@ -182,16 +182,35 @@ end
 function exponentiate_solver(; kwargs...)
   solver_kwargs = (;
     ishermitian=get(kwargs, :ishermitian, true),
-    tol=get(kwargs, :exponentiate_tol, 1e-12),
+    issymmetric=get(kwargs, :issymmetric, true),
+    tol=get(kwargs, :exponentiate_tol, 1E-12),
     krylovdim=get(kwargs, :exponentiate_krylovdim, 30),
     maxiter=get(kwargs, :exponentiate_maxiter, 100),
     verbosity=get(kwargs, :exponentiate_verbosity, 0),
+    eager=true,
   )
-  function solver(H, t, psi0)
-    psi, info = exponentiate(H, t, psi0; solver_kwargs...)
+  function solver(H, t, psi0; kws...)
+    psi, info = exponentiate(H, t, psi0; solver_kwargs..., kws...)
     return psi, info
   end
   return solver
+end
+
+function applyexp_solver(; kwargs...)
+  solver_kwargs = (;
+    tol=get(kwargs, :exponentiate_tol, 1E-12),
+    maxiter=get(kwargs, :exponentiate_krylovdim, 30),
+    outputlevel=get(kwargs, :exponentiate_verbosity, 0),
+  )
+  function solver(H, t, psi0; kws...)
+    psi, info = apply_exp(H, t, psi0; solver_kwargs..., kws...)
+    return psi, info
+  end
+  return solver
+end
+
+function default_tdvp_solver(; kwargs...)
+  return applyexp_solver(; kwargs...)
 end
 
 function eigsolve_solver(; kwargs...)
@@ -204,8 +223,8 @@ function eigsolve_solver(; kwargs...)
     maxiter=get(kwargs, :eigsolve_maxiter, 1),
     verbosity=get(kwargs, :eigsolve_verbosity, 0),
   )
-  function solver(H, t, psi0)
-    vals, vecs, info = eigsolve(H, psi0, howmany, which; solver_kwargs...)
+  function solver(H, t, psi0; kws...)
+    vals, vecs, info = eigsolve(H, psi0, howmany, which; solver_kwargs..., kws...)
     psi = vecs[1]
     return psi, info
   end
@@ -243,14 +262,14 @@ function tdvp(solver, H, psi0::MPS, t::Number, sweeps::Sweeps=Sweeps(); kwargs..
 end
 
 function tdvp(H, psi0::MPS, t::Number, sweeps::Sweeps=Sweeps(); kwargs...)
-  return tdvp(exponentiate_solver(), H, psi0, t, sweeps; kwargs...)
+  return tdvp(default_tdvp_solver(;kwargs...), H, psi0, t, sweeps; kwargs...)
 end
 
 function dmrg(H, psi0::MPS, sweeps::Sweeps=Sweeps(); kwargs...)
   t = Inf # DMRG is TDVP with an infinite timestep and no reverse step
   isempty(sweeps) && (sweeps = _tdvp_compute_sweeps(t; kwargs...))
   reverse_step = false
-  psi, _ = tdvp_iteration(eigsolve_solver(), H, psi0, t, sweeps; reverse_step, kwargs...)
+  psi, _ = tdvp_iteration(eigsolve_solver(;kwargs...), H, psi0, t, sweeps; reverse_step, kwargs...)
   return psi
 end
 
@@ -296,7 +315,7 @@ function tdvp(
 end
 
 function tdvp(H::Vector{MPO}, psi0::MPS, t::Number, sweeps::Sweeps=Sweeps(); kwargs...)
-  return tdvp(exponentiate_solver(), H, psi0, t, sweeps; kwargs...)
+  return tdvp(default_tdvp_solver(;kwargs...), H, psi0, t, sweeps; kwargs...)
 end
 
 """
@@ -327,5 +346,6 @@ function tdvp(solver, H::MPO, psi0::MPS, t::Number, sweeps::Sweeps=Sweeps(); kwa
 end
 
 function tdvp(H::MPO, psi0::MPS, t::Number, sweeps::Sweeps=Sweeps(); kwargs...)
-  return tdvp(exponentiate_solver(), H, psi0, t, sweeps; kwargs...)
+  return tdvp(default_tdvp_solver(;kwargs...), H, psi0, t, sweeps; kwargs...)
+  #return tdvp(exponentiate_solver(;kwargs...), H, psi0, t, sweeps; kwargs...)
 end
