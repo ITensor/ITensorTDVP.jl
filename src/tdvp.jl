@@ -1,4 +1,9 @@
-function tdvp_iteration(solver, PH, psi0::MPS, time_step::Number, sweeps::Sweeps; kwargs...)
+function tdvp_iteration(solver, 
+                        PH, 
+                        psi0::MPS, 
+                        time_step::Number, 
+                        sweeps::Sweeps; 
+                        kwargs...)
   if length(psi0) == 1
     error(
       "`tdvp` currently does not support system sizes of 1. You can diagonalize the MPO tensor directly with tools like `LinearAlgebra.eigen`, `KrylovKit.exponentiate`, etc.",
@@ -12,6 +17,7 @@ function tdvp_iteration(solver, PH, psi0::MPS, time_step::Number, sweeps::Sweeps
   which_decomp::Union{String,Nothing} = get(kwargs, :which_decomp, nothing)
   svd_alg::String = get(kwargs, :svd_alg, "divide_and_conquer")
   obs = get(kwargs, :observer, NoObserver())
+  checkdone = get(kwargs, :checkdone, nothing)
 
   write_when_maxdim_exceeds::Union{Int,Nothing} = get(
     kwargs, :write_when_maxdim_exceeds, nothing
@@ -155,9 +161,14 @@ function tdvp_iteration(solver, PH, psi0::MPS, time_step::Number, sweeps::Sweeps
       )
       flush(stdout)
     end
-    isdone = checkdone!(obs; psi, sweep=sw, outputlevel)
 
+    if checkdone != nothing
+      isdone = checkdone(; psi, sweep=sw, outputlevel, kwargs...)
+    else
+      isdone = checkdone!(obs; psi, sweep=sw, outputlevel)
+    end
     isdone && break
+
   end
 
   # Just to be sure:
