@@ -25,13 +25,7 @@ function tdvp_iteration(solver, PH, psi0::MPS, time_step::Number, sweeps::Sweeps
   end
   @assert isortho(psi) && orthocenter(psi) == 1
 
-  @timeit NDTensors.timer "tdvp: initial position!" begin
   position!(PH, psi, 1)
-  end
-
-  #@show time_step
-  #@show nsweep(sweeps)
-  #@show time_step/nsweep(sweeps)
 
   for sw in 1:nsweep(sweeps)
     sw_time = @elapsed begin
@@ -49,9 +43,7 @@ function tdvp_iteration(solver, PH, psi0::MPS, time_step::Number, sweeps::Sweeps
 
       for (b, ha) in sweepnext(N; ncenter=nsite)
         PH.nsite = nsite
-        @timeit NDTensors.timer "tdvp: position!" begin
         position!(PH, psi, b)
-        end
 
         if nsite == 1
           phi1 = psi[b]
@@ -59,7 +51,6 @@ function tdvp_iteration(solver, PH, psi0::MPS, time_step::Number, sweeps::Sweeps
           phi1 = psi[b] * psi[b + 1]
         end
 
-        @timeit NDTensors.timer "tdvp: forward solver" begin
         phi1, info = solver(PH, time_step / 2, phi1)
 
         #if ha==1 && b==div(N,2)
@@ -67,7 +58,7 @@ function tdvp_iteration(solver, PH, psi0::MPS, time_step::Number, sweeps::Sweeps
         #  println(info)
         #end
 
-        end
+        #end
 
         ## if info.converged == 0
         ##   println("exponentiate not converged (b,ha)=($b,$ha)")
@@ -87,7 +78,6 @@ function tdvp_iteration(solver, PH, psi0::MPS, time_step::Number, sweeps::Sweeps
             drho = noise(sweeps, sw) * noiseterm(PH, phi, ortho)
           end
 
-        @timeit NDTensors.timer "tdvp: replacebond" begin
           spec = replacebond!(
             psi,
             b,
@@ -101,7 +91,6 @@ function tdvp_iteration(solver, PH, psi0::MPS, time_step::Number, sweeps::Sweeps
             which_decomp,
             svd_alg,
           )
-        end
           maxtruncerr = max(maxtruncerr, spec.truncerr)
         end
 
@@ -123,9 +112,7 @@ function tdvp_iteration(solver, PH, psi0::MPS, time_step::Number, sweeps::Sweeps
           PH.nsite = nsite - 1
           position!(PH, psi, b1)
 
-          @timeit NDTensors.timer "tdvp: backwards solver" begin
           phi0, info = solver(PH, -time_step / 2, phi0)
-          end
 
           normalize && (phi0 ./= norm(phi0))
 
