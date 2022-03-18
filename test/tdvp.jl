@@ -58,7 +58,7 @@ end
   ψ0 = randomMPS(s; linkdims=10)
 
   function solver(PH, t, psi0)
-    solver_kwargs = (; ishermitian=true, tol=1e-12, krylovdim=30, maxiter=100, verbosity=0)
+    solver_kwargs = (; ishermitian=true, tol=1e-12, krylovdim=30, maxiter=100, verbosity=0, eager=true)
     psi, info = exponentiate(PH, t, psi0; solver_kwargs...)
     return psi, info
   end
@@ -143,9 +143,9 @@ end
         -tau * im;
         cutoff,
         normalize=true,
-        exponentiate_tol=1e-12,
-        exponentiate_maxiter=500,
-        exponentiate_krylovdim=100,
+        solver_tol=1e-12,
+        solver_maxiter=500,
+        solver_krylovdim=100,
       )
     end
 
@@ -269,7 +269,7 @@ end
   Nsteps = Int(ttotal / tau)
   for step in 1:Nsteps
     nsite = (step <= 10 ? 2 : 1)
-    psi = tdvp(H, psi, -tau; cutoff, nsite, normalize=true, exponentiate_krylovdim=15)
+    psi = tdvp(H, psi, -tau; cutoff, nsite, normalize=true, solver_krylovdim=15)
     #@printf("%.3f energy = %.12f\n", step * tau, inner(psi, H, psi))
   end
   #@show maxlinkdim(psi)
