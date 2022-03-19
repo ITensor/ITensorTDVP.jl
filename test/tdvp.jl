@@ -21,7 +21,8 @@ using Printf
 
   ψ0 = randomMPS(s; linkdims=10)
 
-  ψ1 = tdvp(H, ψ0, -0.1im; cutoff, nsite=1)
+  # Time evolve forward:
+  ψ1 = tdvp(H, -0.1im, ψ0; cutoff, nsite=1)
 
   @test norm(ψ1) ≈ 1.0
 
@@ -32,7 +33,7 @@ using Printf
   @test real(inner(ψ1, H, ψ1)) ≈ inner(ψ0, H, ψ0)
 
   # Time evolve backwards:
-  ψ2 = tdvp(H, ψ1, +0.1im; cutoff)
+  ψ2 = tdvp(H, +0.1im, ψ1; cutoff)
 
   @test norm(ψ2) ≈ 1.0
 
@@ -63,7 +64,7 @@ end
     return psi, info
   end
 
-  ψ1 = tdvp(solver, H, ψ0, -0.1im; cutoff, nsite=1)
+  ψ1 = tdvp(solver, H, -0.1im, ψ0; cutoff, nsite=1)
 
   @test norm(ψ1) ≈ 1.0
 
@@ -74,7 +75,7 @@ end
   @test real(inner(ψ1, H, ψ1)) ≈ inner(ψ0, H, ψ0)
 
   # Time evolve backwards:
-  ψ2 = tdvp(H, ψ1, +0.1im; cutoff)
+  ψ2 = tdvp(H, +0.1im, ψ1; cutoff)
 
   @test norm(ψ2) ≈ 1.0
 
@@ -87,9 +88,6 @@ end
   tau = 0.02
   ttotal = 1.0
   cutoff = 1e-12
-  use_trotter = false
-
-  method = use_trotter ? "tebd" : "tdvp"
 
   s = siteinds("S=1/2", N; conserve_qns=false)
 
@@ -101,21 +99,6 @@ end
   end
   H = MPO(os, s)
   HM = prod(H)
-
-  if use_trotter
-    gates = ITensor[]
-    for j in 1:(N - 1)
-      s1 = s[j]
-      s2 = s[j + 1]
-      hj =
-        op("Sz", s1) * op("Sz", s2) +
-        1 / 2 * op("S+", s1) * op("S-", s2) +
-        1 / 2 * op("S-", s1) * op("S+", s2)
-      Gj = exp(-1.0im * tau / 2 * hj)
-      push!(gates, Gj)
-    end
-    append!(gates, reverse(gates))
-  end
 
   Ut = exp(-im * tau * HM)
 
@@ -133,21 +116,16 @@ end
     psix = noprime(Ut * psix)
     psix /= norm(psix)
 
-    if use_trotter
-      psi = apply(gates, psi; cutoff)
-      normalize!(psi)
-    else
-      psi = tdvp(
-        H,
-        psi,
-        -tau * im;
-        cutoff,
-        normalize=true,
-        solver_tol=1e-12,
-        solver_maxiter=500,
-        solver_krylovdim=100,
-      )
-    end
+    psi = tdvp(
+      H,
+      -im*tau,
+      psi;
+      cutoff,
+      normalize=true,
+      solver_tol=1e-12,
+      solver_maxiter=500,
+      solver_krylovdim=100,
+    )
 
     push!(Sz_tdvp, real(expect(psi, "Sz"; sites=c)))
     push!(Sz_exact, real(scalar(dag(prime(psix, s[c])) * Szc * psix)))
@@ -197,11 +175,11 @@ end
   # Evolve using TEBD
   # 
 
-  Nsteps = Int(ttotal / tau)
+  Nsteps = convert(Int, ceil(abs(ttotal / tau)))
   Sz1 = zeros(Nsteps)
   En1 = zeros(Nsteps)
 
-  for step in 1:Nsteps
+  for step=1:Nsteps
     psi = apply(gates, psi; cutoff)
     normalize!(psi)
 
@@ -228,9 +206,9 @@ end
 
   phi = tdvp(
     H,
-    phi,
-    -ttotal * im;
-    time_step=-tau * im,
+    -im*ttotal,
+    phi;
+    time_step=-im*tau,
     cutoff,
     normalize=true,
     observer=TDVPObserver(),
@@ -266,10 +244,10 @@ end
 
   psi = randomMPS(s; linkdims=2)
 
-  Nsteps = Int(ttotal / tau)
-  for step in 1:Nsteps
+  trange = 0.0:tau:ttotal
+  for (step,t) in enumerate(trange)
     nsite = (step <= 10 ? 2 : 1)
-    psi = tdvp(H, psi, -tau; cutoff, nsite, normalize=true, solver_krylovdim=15)
+    psi = tdvp(H, -tau, psi; cutoff, nsite, normalize=true)
     #@printf("%.3f energy = %.12f\n", step * tau, inner(psi, H, psi))
   end
   #@show maxlinkdim(psi)
@@ -297,7 +275,7 @@ end
   Nsteps = 10
   nsite = 2
   psi = ITensorTDVP.dmrg(
-    H, psi; nsweeps=Nsteps, cutoff, nsite, eigsolve_krylovdim=3, eigsolve_maxiter=1
+    H, psi; nsweeps=Nsteps, cutoff, nsite, solver_krylovdim=3, solver_maxiter=1
   )
 
   e2, psi2 = dmrg(H, psi; nsweeps=Nsteps, maxdim=100, cutoff, normalize=true, outputlevel=0)
