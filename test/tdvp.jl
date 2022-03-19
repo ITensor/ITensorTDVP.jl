@@ -3,6 +3,7 @@ using ITensors
 using ITensorTDVP
 using KrylovKit
 using Printf
+using Observers
 
 @testset "Basic TDVP" begin
   N = 10
@@ -283,6 +284,90 @@ end
   e2, psi2 = dmrg(H, psi; nsweeps=Nsteps, maxdim=100, cutoff, normalize=true, outputlevel=0)
 
   @test inner(psi, H, psi) ≈ inner(psi2, H, psi2)
+end
+
+@testset "Observers" begin
+  N = 10
+  cutoff = 1e-12
+  tau = 0.1
+  ttotal = 1.0
+
+  s = siteinds("S=1/2", N; conserve_qns=true)
+
+  os = OpSum()
+  for j in 1:(N - 1)
+    os += 0.5, "S+", j, "S-", j + 1
+    os += 0.5, "S-", j, "S+", j + 1
+    os += "Sz", j, "Sz", j + 1
+  end
+  H = MPO(os, s)
+
+  c = div(N, 2)
+
+  #
+  # Using the ITensors observer system
+  # 
+  struct TDVPObserver <: AbstractObserver end
+
+  Nsteps = convert(Int, ceil(abs(ttotal / tau)))
+  Sz1 = zeros(Nsteps)
+  En1 = zeros(Nsteps)
+  function ITensors.measure!(obs::TDVPObserver; sweep, bond, half_sweep, psi, kwargs...)
+    if bond == 1 && half_sweep == 2
+      Sz1[sweep] = expect(psi, "Sz"; sites=c)
+      En1[sweep] = real(inner(psi, H, psi))
+      #@printf("sweep %d Sz=%.12f energy=%.12f\n",sweep,Sz2[sweep],En2[sweep])
+    end
+  end
+
+  psi1 = productMPS(s, n -> isodd(n) ? "Up" : "Dn")
+  tdvp(
+    H,
+    -im * ttotal,
+    psi1;
+    time_step=-im * tau,
+    cutoff,
+    normalize=true,
+    observer=TDVPObserver(),
+  )
+
+  #
+  # Using Observers.jl
+  # 
+
+  function measure_sz(; psi, bond, half_sweep)
+    if bond == 1 && half_sweep == 2
+      return expect(psi, "Sz"; sites=c)
+    end
+    return nothing
+  end
+
+  function measure_en(; psi, bond, half_sweep)
+    if bond == 1 && half_sweep == 2
+      return real(inner(psi, H, psi))
+    end
+    return nothing
+  end
+
+  obs = Observer("Sz" => measure_sz, "En" => measure_en)
+
+  psi2 = productMPS(s, n -> isodd(n) ? "Up" : "Dn")
+  tdvp(H, -im * ttotal, psi2; time_step=-im * tau, cutoff, normalize=true, observer=obs)
+
+  # Using filter here just due to the current
+  # behavior of Observers that nothing gets appended:
+  Sz2 = filter(!isnothing, results(obs)["Sz"])
+  En2 = filter(!isnothing, results(obs)["En"])
+
+  #display(En1)
+  #display(En2)
+  #display(Sz1)
+  #display(Sz2)
+  #@show norm(Sz1 - Sz2)
+  #@show norm(En1 - En2)
+
+  @test Sz1 ≈ Sz2
+  @test En1 ≈ En2
 end
 
 nothing

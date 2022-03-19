@@ -15,7 +15,7 @@ function tdvp_iteration(solver, PH, time_step::Number, psi0::MPS; kwargs...)
   normalize::Bool = get(kwargs, :normalize, false)
   which_decomp::Union{String,Nothing} = get(kwargs, :which_decomp, nothing)
   svd_alg::String = get(kwargs, :svd_alg, "divide_and_conquer")
-  obs = get(kwargs, :observer, NoObserver())
+  observer = get(kwargs, :observer, NoObserver())
   outputlevel = get(kwargs, :outputlevel, 0)
   sw = get(kwargs, :sweep, 1)
 
@@ -121,7 +121,17 @@ function tdvp_iteration(solver, PH, time_step::Number, psi0::MPS; kwargs...)
     end
 
     sweep_is_done = (b == 1 && ha == 2)
-    measure!(obs; psi, bond=b, sweep=sw, half_sweep=ha, spec, outputlevel, sweep_is_done)
+    if observer isa Observers.Observer
+      update!(
+        observer; psi, bond=b, sweep=sw, half_sweep=ha, spec, outputlevel, sweep_is_done
+      )
+    elseif observer isa ITensors.AbstractObserver
+      measure!(
+        observer; psi, bond=b, sweep=sw, half_sweep=ha, spec, outputlevel, sweep_is_done
+      )
+    else
+      error("observer has unrecognized type ($(typeof(observer)))")
+    end
   end
 
   # Just to be sure:
@@ -222,7 +232,7 @@ function tdvp(solver, PH, t::Number, psi0::MPS, sweeps::Sweeps=Sweeps(); kwargs.
   write_when_maxdim_exceeds::Union{Int,Nothing} = get(
     kwargs, :write_when_maxdim_exceeds, nothing
   )
-  obs = get(kwargs, :observer, NoObserver())
+  observer = get(kwargs, :observer, NoObserver())
   outputlevel::Int = get(kwargs, :outputlevel, 0)
 
   psi = copy(psi0)
@@ -255,10 +265,11 @@ function tdvp(solver, PH, t::Number, psi0::MPS, sweeps::Sweeps=Sweeps(); kwargs.
       flush(stdout)
     end
 
+    isdone = false
     if checkdone != nothing
       isdone = checkdone(; psi, sweep=sw, outputlevel, kwargs...)
-    else
-      isdone = checkdone!(obs; psi, sweep=sw, outputlevel)
+    elseif observer isa ITensors.AbstractObserver
+      isdone = checkdone!(observer; psi, sweep=sw, outputlevel)
     end
     isdone && break
   end
