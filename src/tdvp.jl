@@ -3,11 +3,7 @@ struct TDVPInfo
   maxtruncerr::Float64
 end
 
-function tdvp_iteration(solver, 
-                        PH, 
-                        time_step::Number, 
-                        psi0::MPS;
-                        kwargs...)
+function tdvp_iteration(solver, PH, time_step::Number, psi0::MPS; kwargs...)
   if length(psi0) == 1
     error(
       "`tdvp` currently does not support system sizes of 1. You can diagonalize the MPO tensor directly with tools like `LinearAlgebra.eigen`, `KrylovKit.exponentiate`, etc.",
@@ -114,10 +110,7 @@ function tdvp_iteration(solver,
     if outputlevel >= 2
       @printf("Sweep %d, half %d, bond (%d,%d) \n", sw, ha, b, b + 1)
       @printf(
-        "  Truncated using cutoff=%.1E maxdim=%d mindim=%d\n",
-        cutoff,
-        maxdim,
-        mindim,
+        "  Truncated using cutoff=%.1E maxdim=%d mindim=%d\n", cutoff, maxdim, mindim,
       )
       if spec != nothing
         @printf(
@@ -128,9 +121,7 @@ function tdvp_iteration(solver,
     end
 
     sweep_is_done = (b == 1 && ha == 2)
-    measure!(
-      obs; psi, bond=b, sweep=sw, half_sweep=ha, spec, outputlevel, sweep_is_done
-    )
+    measure!(obs; psi, bond=b, sweep=sw, half_sweep=ha, spec, outputlevel, sweep_is_done)
   end
 
   # Just to be sure:
@@ -170,13 +161,15 @@ function applyexp_solver(; kwargs...)
 end
 
 function tdvp_solver(; kwargs...)
-  solver_backend = get(kwargs,:solver_backend,"applyexp")
-  if solver_backend=="applyexp"
+  solver_backend = get(kwargs, :solver_backend, "applyexp")
+  if solver_backend == "applyexp"
     return applyexp_solver(; kwargs...)
-  elseif solver_backend=="exponentiate"
+  elseif solver_backend == "exponentiate"
     return exponentiate_solver(; kwargs...)
   else
-    error("solver_backend=$solver_backend not recognized (options are \"applyexp\" or \"exponentiate\")")
+    error(
+      "solver_backend=$solver_backend not recognized (options are \"applyexp\" or \"exponentiate\")",
+    )
   end
 end
 
@@ -221,7 +214,6 @@ function _tdvp_compute_sweeps(t; kwargs...)
 end
 
 function tdvp(solver, PH, t::Number, psi0::MPS, sweeps::Sweeps=Sweeps(); kwargs...)
-
   reverse_step = true
   isempty(sweeps) && (sweeps = _tdvp_compute_sweeps(t; kwargs...))
   time_step::Number = get(kwargs, :time_step, t)
@@ -232,11 +224,10 @@ function tdvp(solver, PH, t::Number, psi0::MPS, sweeps::Sweeps=Sweeps(); kwargs.
   )
   obs = get(kwargs, :observer, NoObserver())
   outputlevel::Int = get(kwargs, :outputlevel, 0)
-  
+
   psi = copy(psi0)
 
   for sw in 1:nsweep(sweeps)
-
     if !isnothing(write_when_maxdim_exceeds) &&
       maxdim(sweeps, sw) > write_when_maxdim_exceeds
       if outputlevel >= 2
@@ -248,9 +239,9 @@ function tdvp(solver, PH, t::Number, psi0::MPS, sweeps::Sweeps=Sweeps(); kwargs.
     end
 
     sw_time = @elapsed begin
-
-      psi, PH, info = tdvp_iteration(solver, PH, time_step, psi; sweep=sw, reverse_step, kwargs...)
-
+      psi, PH, info = tdvp_iteration(
+        solver, PH, time_step, psi; sweep=sw, reverse_step, kwargs...
+      )
     end
 
     if outputlevel >= 1
@@ -275,14 +266,14 @@ function tdvp(solver, PH, t::Number, psi0::MPS, sweeps::Sweeps=Sweeps(); kwargs.
 end
 
 function tdvp(H, t::Number, psi0::MPS, sweeps::Sweeps=Sweeps(); kwargs...)
-  return tdvp(tdvp_solver(;kwargs...), H, t, psi0, sweeps; kwargs...)
+  return tdvp(tdvp_solver(; kwargs...), H, t, psi0, sweeps; kwargs...)
 end
 
 function dmrg(H, psi0::MPS, sweeps::Sweeps=Sweeps(); kwargs...)
   t = Inf # DMRG is TDVP with an infinite timestep and no reverse step
   isempty(sweeps) && (sweeps = _tdvp_compute_sweeps(t; kwargs...))
   reverse_step = false
-  psi = tdvp(eigsolve_solver(;kwargs...), H, t, psi0, sweeps; reverse_step, kwargs...)
+  psi = tdvp(eigsolve_solver(; kwargs...), H, t, psi0, sweeps; reverse_step, kwargs...)
   return psi
 end
 
@@ -328,7 +319,7 @@ function tdvp(
 end
 
 function tdvp(H::Vector{MPO}, t::Number, psi0::MPS, sweeps::Sweeps=Sweeps(); kwargs...)
-  return tdvp(tdvp_solver(;kwargs...), H, t, psi0, sweeps; kwargs...)
+  return tdvp(tdvp_solver(; kwargs...), H, t, psi0, sweeps; kwargs...)
 end
 
 """
@@ -359,5 +350,5 @@ function tdvp(solver, H::MPO, t::Number, psi0::MPS, sweeps::Sweeps=Sweeps(); kwa
 end
 
 function tdvp(H::MPO, t::Number, psi0::MPS, sweeps::Sweeps=Sweeps(); kwargs...)
-  return tdvp(tdvp_solver(;kwargs...), H, t, psi0, sweeps; kwargs...)
+  return tdvp(tdvp_solver(; kwargs...), H, t, psi0, sweeps; kwargs...)
 end

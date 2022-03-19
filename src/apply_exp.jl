@@ -4,16 +4,14 @@
 # - check slice ranges - change end value by 1?
 #
 
-function assemble_Lanczos_vecs(lanczos_vectors,
-                               linear_comb,
-                               norm)
+function assemble_Lanczos_vecs(lanczos_vectors, linear_comb, norm)
   #if length(lanczos_vectors) != length(linear_comb)
   #  @show length(lanczos_vectors)
   #  @show length(linear_comb)
   #end
-  xt = norm*linear_comb[1]*lanczos_vectors[1]
-  for i=2:length(lanczos_vectors)
-    xt += norm*linear_comb[i]*lanczos_vectors[i]
+  xt = norm * linear_comb[1] * lanczos_vectors[1]
+  for i in 2:length(lanczos_vectors)
+    xt += norm * linear_comb[i] * lanczos_vectors[i]
   end
   return xt
 end
@@ -22,13 +20,11 @@ struct ApplyExpInfo
   numops::Int
 end
 
-
 function apply_exp(H, tau::Number, x0; kwargs...)
-
-  maxiter = get(kwargs,:maxiter,30)
-  tol = get(kwargs,:tol,1E-12)
-  outputlevel = get(kwargs,:outputlevel,0)
-  beta_tol = get(kwargs,:normcutoff,1E-7)
+  maxiter = get(kwargs, :maxiter, 30)
+  tol = get(kwargs, :tol, 1E-12)
+  outputlevel = get(kwargs, :outputlevel, 0)
+  beta_tol = get(kwargs, :normcutoff, 1E-7)
 
   # Initialize Lanczos vectors
   v1 = copy(x0)
@@ -36,17 +32,16 @@ function apply_exp(H, tau::Number, x0; kwargs...)
   v1 /= nrm
   lanczos_vectors = [v1]
 
-  ElT = promote_type(typeof(tau),eltype(x0))
+  ElT = promote_type(typeof(tau), eltype(x0))
 
-  bigTmat = zeros(ElT,maxiter + 2, maxiter + 2)
+  bigTmat = zeros(ElT, maxiter + 2, maxiter + 2)
 
   nmatvec = 0
 
   v0 = nothing
   beta = 0.0
-  for iter=1:maxiter
-
-    tmat_size=iter+1
+  for iter in 1:maxiter
+    tmat_size = iter + 1
 
     # Matrix-vector multiplication
     w = H(v1)
@@ -68,44 +63,44 @@ function apply_exp(H, tau::Number, x0; kwargs...)
     # check for Lanczos sequence exhaustion
     if abs(beta) < beta_tol
       # Assemble the time evolved state
-      tmat = bigTmat[1:tmat_size,1:tmat_size]
-      tmat_exp = exp(tau*tmat)
-      linear_comb = tmat_exp[:,1]
+      tmat = bigTmat[1:tmat_size, 1:tmat_size]
+      tmat_exp = exp(tau * tmat)
+      linear_comb = tmat_exp[:, 1]
       xt = assemble_Lanczos_vecs(lanczos_vectors, linear_comb, nrm)
-      return xt,ApplyExpInfo(nmatvec)
+      return xt, ApplyExpInfo(nmatvec)
     end
 
     # update next lanczos vector
     v1 = copy(w)
     v1 /= beta
-    push!(lanczos_vectors,v1)
-    bigTmat[iter+1, iter] = beta
-    bigTmat[iter, iter+1] = beta
+    push!(lanczos_vectors, v1)
+    bigTmat[iter + 1, iter] = beta
+    bigTmat[iter, iter + 1] = beta
 
     # Convergence check
     if iter > 0
       # Prepare extended T-matrix for exponentiation
       tmat_ext_size = tmat_size + 2
-      tmat_ext = bigTmat[1:tmat_ext_size,1:tmat_ext_size]
+      tmat_ext = bigTmat[1:tmat_ext_size, 1:tmat_ext_size]
 
-      tmat_ext[tmat_size-1, tmat_size] = 0.0
-      tmat_ext[tmat_size+1, tmat_size] = 1.0
+      tmat_ext[tmat_size - 1, tmat_size] = 0.0
+      tmat_ext[tmat_size + 1, tmat_size] = 1.0
 
       # Exponentiate extended T-matrix
-      tmat_ext_exp = exp(tau*tmat_ext)
+      tmat_ext_exp = exp(tau * tmat_ext)
 
-      ϕ1 = abs( nrm*tmat_ext_exp[tmat_size, 1] )
-      ϕ2 = abs( nrm*tmat_ext_exp[tmat_size + 1, 1] * avnorm )
+      ϕ1 = abs(nrm * tmat_ext_exp[tmat_size, 1])
+      ϕ2 = abs(nrm * tmat_ext_exp[tmat_size + 1, 1] * avnorm)
 
-      if ϕ1 > 10*ϕ2 
+      if ϕ1 > 10 * ϕ2
         error = ϕ2
-      elseif (ϕ1 > ϕ2) 
-        error = (ϕ1*ϕ2)/(ϕ1-ϕ2)
-      else 
+      elseif (ϕ1 > ϕ2)
+        error = (ϕ1 * ϕ2) / (ϕ1 - ϕ2)
+      else
         error = ϕ1
       end
 
-      if outputlevel >= 2 
+      if outputlevel >= 2
         println("  Iteration: ", iter, ", Error: ", error)
       end
 
@@ -115,22 +110,20 @@ function apply_exp(H, tau::Number, x0; kwargs...)
         end
 
         # Assemble the time evolved state
-        linear_comb = tmat_ext_exp[:,1]
+        linear_comb = tmat_ext_exp[:, 1]
         xt = assemble_Lanczos_vecs(lanczos_vectors, linear_comb, nrm)
 
         if outputlevel >= 1
           println("  Number of iterations: $iter")
         end
 
-        return xt,ApplyExpInfo(nmatvec)
+        return xt, ApplyExpInfo(nmatvec)
       end
-
     end  # end convergence test
-
   end # iter
 
   if outputlevel >= 0
-    println("In apply_exp, number of matrix-vector multiplies: ", nmatvec);
+    println("In apply_exp, number of matrix-vector multiplies: ", nmatvec)
   end
 
   return x0

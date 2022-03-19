@@ -59,7 +59,9 @@ end
   ψ0 = randomMPS(s; linkdims=10)
 
   function solver(PH, t, psi0)
-    solver_kwargs = (; ishermitian=true, tol=1e-12, krylovdim=30, maxiter=100, verbosity=0, eager=true)
+    solver_kwargs = (;
+      ishermitian=true, tol=1e-12, krylovdim=30, maxiter=100, verbosity=0, eager=true
+    )
     psi, info = exponentiate(PH, t, psi0; solver_kwargs...)
     return psi, info
   end
@@ -118,7 +120,7 @@ end
 
     psi = tdvp(
       H,
-      -im*tau,
+      -im * tau,
       psi;
       cutoff,
       normalize=true,
@@ -179,7 +181,7 @@ end
   Sz1 = zeros(Nsteps)
   En1 = zeros(Nsteps)
 
-  for step=1:Nsteps
+  for step in 1:Nsteps
     psi = apply(gates, psi; cutoff)
     normalize!(psi)
 
@@ -206,9 +208,9 @@ end
 
   phi = tdvp(
     H,
-    -im*ttotal,
+    -im * ttotal,
     phi;
-    time_step=-im*tau,
+    time_step=-im * tau,
     cutoff,
     normalize=true,
     observer=TDVPObserver(),
@@ -245,7 +247,7 @@ end
   psi = randomMPS(s; linkdims=2)
 
   trange = 0.0:tau:ttotal
-  for (step,t) in enumerate(trange)
+  for (step, t) in enumerate(trange)
     nsite = (step <= 10 ? 2 : 1)
     psi = tdvp(H, -tau, psi; cutoff, nsite, normalize=true)
     #@printf("%.3f energy = %.12f\n", step * tau, inner(psi, H, psi))
