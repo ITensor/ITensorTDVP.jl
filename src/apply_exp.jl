@@ -101,7 +101,7 @@ function apply_exp(H, tau::Number, x0; kwargs...)
       end
 
       if outputlevel >= 2
-        println("  Iteration: ", iter, ", Error: ", error)
+        @printf("  Iteration: %d, Error: %.2E\n", iter, error)
       end
 
       if ((error < tol) || (iter == maxiter))

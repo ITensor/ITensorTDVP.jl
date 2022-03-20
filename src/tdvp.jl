@@ -158,13 +158,15 @@ function exponentiate_solver(; kwargs...)
 end
 
 function applyexp_solver(; kwargs...)
+  tol_per_unit_time = get(kwargs, :solver_tol, 1E-8)
   solver_kwargs = (;
-    tol=get(kwargs, :solver_tol, 1E-12),
     maxiter=get(kwargs, :solver_krylovdim, 30),
     outputlevel=get(kwargs, :solver_outputlevel, 0),
   )
   function solver(H, t, psi0; kws...)
-    psi, info = apply_exp(H, t, psi0; solver_kwargs..., kws...)
+    #apply_exp tol is absolute, compute from tol_per_unit_time:
+    tol = abs(t)*tol_per_unit_time
+    psi, info = apply_exp(H, t, psi0; tol, solver_kwargs..., kws...)
     return psi, info
   end
   return solver
