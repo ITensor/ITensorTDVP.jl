@@ -38,8 +38,9 @@ function tdvp(solver, PH, psi0::MPS, t::Number, sweeps; kwargs...)::MPS
 
   #println("did a successful env itensor mult")
   for sw in 1:nsweep(sweeps)
+    orthogonalize!(psi, 1)
     if nsite==1
-      subspace_expansion_sweep!(psi,PH;maxdim, cutoff, atol=atol, kwargs...)
+      subspace_expansion_sweep!(psi,PH;maxdim, cutoff, atol=1E-10, kwargs...)
     end
     sw_time = @elapsed begin
       maxtruncerr = 0.0
@@ -63,8 +64,8 @@ function tdvp(solver, PH, psi0::MPS, t::Number, sweeps; kwargs...)::MPS
         elseif nsite == 2
           phi1 = psi[b] * psi[b + 1]
         end
-        phiprime=PH*phi1
-        println("did a successful env itensor mult")
+        #phiprime=PH(phi1)
+        #println("did a successful env itensor mult")
         phi1, info = solver(PH, t / 2, phi1)
 
         ## if info.converged == 0
@@ -255,7 +256,7 @@ function tdvp(PH, psi0::MPS, t::Number; reverse_step=true, kwargs...)
     verbosity=get(kwargs, :exponentiate_verbosity, 0),
   )
   function solver(PH, t, psi0)
-    #psidot=PH*psi0
+    #psidot=PH(psi0)
     psi, info = exponentiate(PH, t, psi0; solver_kwargs...)
     return psi, info
   end

@@ -30,8 +30,8 @@ function subspace_expansion_sweep!(ψ::MPS,PH::Union{ProjMPO,ProjMPOSum};maxdim,
     if (ha == 1 && (b + nsite - 1 != N)) || (ha == 2 && b != 1)
       b1 = (ha == 1 ? b + 1 : b)
       Δ = (ha == 1 ? +1 : -1)
-      println("")
-      _=subspace_expansion!(ψ,PH,(ψ.llim,ψ.rlim),(b,b+Δ);maxdim, cutoff, atol=atol, kwargs...
+      inds = (ha == 1 ? (b,b+Δ) : (b+Δ,b))
+      _=subspace_expansion!(ψ,PH,(ψ.llim,ψ.rlim),inds;maxdim, cutoff, atol=atol, kwargs...
       )
     end
   end
@@ -43,31 +43,72 @@ function subspace_expansion!(ψ::MPS,PH,lims::Tuple{Int,Int},b::Tuple{Int,Int};b
   ##not a valid MPS otherwise anyway (since bond matrix not part of MPS unless so defined like in VidalMPS struct)
   llim,rlim = lims
   n1, n2 = b
-  @assert n1 + 1 == n2
+  #@assert n1 + 1 == n2 || n1 -1 == n2
   PH.nsite=2
-  position!(PH,ψ,n1)
-  linkind=commonind(ψ[n1],ψ[n2])
-  @show ψ[n1]
-  NL=nullspace(ψ[n1],linkind;atol=1e-6)
-  NR=nullspace(ψ[n2],linkind;atol=1e-6)
-  ϕ=ψ[n1]*ψ[n2]
-  ψ[n1]=prime(ψ[n1],linkind)
-  if isnothing(bondtensor)
-    bondtensor=diagITensor(1.0,prime(linkind,1),linkind)
+  if llim == n1
+    @assert rlim == n2+1
+    U,S,V=svd(ψ[n2],uniqueinds(ψ[n2],ψ[n1]);maxdim=maxdim, cutoff=0., kwargs...)  ##lookup svd interface again
+    ϕ_1=ψ[n1]
+    ϕ_2=U
+    bondtensor = S * V
+    
+  elseif rlim==n2
+    @assert llim == n1-1
+    U,S,V=svd(ψ[n1],uniqueinds(ψ[n1],ψ[n2]);maxdim=maxdim, cutoff=0., kwargs...)
+    ϕ_1=U
+    ϕ_2=ψ[n2]
+    bondtensor = S * V
+  end
+  position!(PH,ψ,min(n1,n2))
+  @show PH.lpos
+  @show PH.rpos
+  @show ψ.llim
+  @show ψ.rlim
+  @show llim, rlim
+  @show n1,n2
+  
+  
+  #orthogonalize(ψ,n1)
+  linkind_l=commonind(ϕ_1,bondtensor)
+  linkind_r=commonind(ϕ_2,bondtensor)
+  
+  NL=nullspace(ϕ_1,linkind_l;atol=1e-9)
+  NR=nullspace(ϕ_2,linkind_r;atol=1e-9)
+
+  #@show norm(NL)
+  #@show norm(NR)
+  ###this is a crucial decision, justified for MPS, but will fail for rank-1 trees with physical DOFs on leafs
+  ###vanishing norm should trigger a one-sided subspace expansion
+  if norm(NL)==0.0 || norm(NR)==0.
+    return bondtensor
   end
   
-  newL,S,newR=_subspace_expand_core(ϕ,PH,NL,NR,;maxdim, cutoff, atol=1e-2, kwargs...)
-  nullbond=diagITensor(0.0,uniqueinds(newL, ψ[n1]),uniqueinds(newR, ψ[n2]))
-
-
+  ϕ=ϕ_1 * bondtensor * ϕ_2
+  #ψ[n1]=prime(ψ[n1],linkind)
+  
+  
+  newL,S,newR,success=_subspace_expand_core(ϕ,PH,NL,NR,;maxdim, cutoff, atol=1e-2, kwargs...)
+  if success == false
+    return nothing
+  end
   ALⁿ¹, newl = ITensors.directsum(
-    ψ[n1], dag(newL), uniqueinds(ψ[n1], newL), uniqueinds(newL, ψ[n1]); tags=("Left",)
+    ϕ_1, dag(newL), uniqueinds(ϕ_1, newL), uniqueinds(newL, ϕ_1); tags=("Left",)
   )
   ARⁿ², newr = ITensors.directsum(
-    ψ.AR[n2], dag(newR), uniqueinds(ψ[n2], newR), uniqueinds(newR, ψ[n2]); tags=("Right",)
+    ϕ_2, dag(newR), uniqueinds(ϕ_2, newR), uniqueinds(newR, ϕ_2); tags=("Right",)
   )
-  C,newlr=ITensors.directsum(bondtensor => (prime(linkind,1), linkind), nullbond => (uniqueinds(newL, ψ[n1]),  uniqueinds(newR, ψ[n2])),tags=("Left","Right"))
-  
+  #C,newlr=ITensors.directsum(bondtensor => (prime(linkind_l,1), linkind_r), nullbond => (uniqueinds(newL, ϕ_1),  uniqueinds(newR, ϕ_2)),tags=("Left","Right"))  
+  C = ITensor(dag(newl)..., dag(newr)...)
+  ψC = permute(bondtensor, linkind_l, linkind_r)
+  for I in eachindex(ψC)
+    v = ψC[I]
+    if !iszero(v)
+      C[I] = ψC[I]
+    end
+  end
+  println("before")
+  @show inds(ψ[n1])
+  @show inds(ψ[n2])
   if rlim==n2
     ψ[n2]=ARⁿ²
   elseif rlim>n2
@@ -79,6 +120,10 @@ function subspace_expansion!(ψ::MPS,PH,lims::Tuple{Int,Int},b::Tuple{Int,Int};b
   elseif llim<n1
     ψ[n1]=noprime(ALⁿ¹*C)
   end
+  println("after")
+  
+  @show inds(ψ[n1])
+  @show inds(ψ[n2])
   
   return C
 end 
@@ -92,10 +137,21 @@ function _subspace_expand_core(centerwf::Vector{ITensor}, env,NL,NR;maxdim, cuto
 end
 
 function _subspace_expand_core(ϕ::ITensor, env,NL,NR;maxdim, cutoff, atol=1e-2, kwargs...)
-  ϕH = env*ϕ   #add noprime?
+  println("core")
+  @show inds(ϕ)
+  #@show env
+  ϕH = noprime(env(ϕ))   #add noprime?
   ϕH = NL * ϕH * NR
+  @show norm(ϕH)
+  if norm(ϕH) == 0.0
+    return false,false,false,false
+  end
   U,S,V=svd(ϕH,commoninds(ϕH,NL);maxdim=maxdim, cutoff=cutoff, kwargs...)
+  #@show inds(U)
+  #@show inds(S)
+  #@show inds(NL)
+  
   NL *= dag(U)
   NR *= dag(V)
-  return NL,S,NR
+  return NL,S,NR,true
 end
