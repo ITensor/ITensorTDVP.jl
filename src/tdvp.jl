@@ -19,10 +19,10 @@ function tdvp_iteration(solver, PH, time_step::Number, psi0::MPS; kwargs...)
   outputlevel = get(kwargs, :outputlevel, 0)
   sw = get(kwargs, :sweep, 1)
 
-  maxdim = get(kwargs, :maxdim, typemax(Int))
-  mindim = get(kwargs, :mindim, 1)
-  cutoff = get(kwargs, :cutoff, 1E-16)
-  noise = get(kwargs, :noise, 0.0)
+  maxdim::Integer = get(kwargs, :maxdim, typemax(Int))
+  mindim::Integer = get(kwargs, :mindim, 1)
+  cutoff::Real = get(kwargs, :cutoff, 1E-16)
+  noise::Real = get(kwargs, :noise, 0.0)
 
   psi = copy(psi0)
   N = length(psi)
@@ -165,7 +165,7 @@ function applyexp_solver(; kwargs...)
   )
   function solver(H, t, psi0; kws...)
     #apply_exp tol is absolute, compute from tol_per_unit_time:
-    tol = abs(t)*tol_per_unit_time
+    tol = abs(t) * tol_per_unit_time
     psi, info = apply_exp(H, t, psi0; tol, solver_kwargs..., kws...)
     return psi, info
   end
@@ -203,7 +203,7 @@ function eigsolve_solver(; kwargs...)
   return solver
 end
 
-function _tdvp_compute_sweeps(t; kwargs...)
+function _tdvp_compute_nsweeps(t; kwargs...)
   time_step::Number = get(kwargs, :time_step, t)
   nsweeps::Integer = get(kwargs, :nsweeps, 0)
 
@@ -216,18 +216,42 @@ function _tdvp_compute_sweeps(t; kwargs...)
     end
   end
 
-  return Sweeps(
-    nsweeps;
-    maxdim=get(kwargs, :maxdim, typemax(Int)),
-    mindim=get(kwargs, :mindim, 1),
-    cutoff=get(kwargs, :cutoff, 1E-8),
-    noise=get(kwargs, :noise, 0.0),
-  )
+  return nsweeps
 end
 
-function tdvp(solver, PH, t::Number, psi0::MPS, sweeps::Sweeps=Sweeps(); kwargs...)
+function _extend_sweeps_param(param, nsweeps)
+  if param isa Number
+    eparam = fill(param, nsweeps)
+  else
+    length(param) == nsweeps && return param
+    eparam = Vector(undef, nsweeps)
+    eparam[1:length(param)] = param
+    eparam[(length(param) + 1):end] .= param[end]
+  end
+  return eparam
+end
+
+function process_sweeps(; kwargs...)
+  nsweeps = get(kwargs, :nsweeps, 1)
+  maxdim = get(kwargs, :maxdim, fill(typemax(Int), nsweeps))
+  mindim = get(kwargs, :mindim, fill(1, nsweeps))
+  cutoff = get(kwargs, :cutoff, fill(1E-16, nsweeps))
+  noise = get(kwargs, :noise, fill(0.0, nsweeps))
+
+  maxdim = _extend_sweeps_param(maxdim, nsweeps)
+  mindim = _extend_sweeps_param(mindim, nsweeps)
+  cutoff = _extend_sweeps_param(cutoff, nsweeps)
+  noise = _extend_sweeps_param(noise, nsweeps)
+
+  return (; maxdim, mindim, cutoff, noise)
+end
+
+function tdvp(solver, PH, t::Number, psi0::MPS; kwargs...)
   reverse_step = true
-  isempty(sweeps) && (sweeps = _tdvp_compute_sweeps(t; kwargs...))
+
+  nsweeps = _tdvp_compute_nsweeps(t; kwargs...)
+  maxdim, mindim, cutoff, noise = process_sweeps(; nsweeps, kwargs...)
+
   time_step::Number = get(kwargs, :time_step, t)
 
   checkdone = get(kwargs, :checkdone, nothing)
@@ -239,9 +263,8 @@ function tdvp(solver, PH, t::Number, psi0::MPS, sweeps::Sweeps=Sweeps(); kwargs.
 
   psi = copy(psi0)
 
-  for sw in 1:nsweep(sweeps)
-    if !isnothing(write_when_maxdim_exceeds) &&
-      maxdim(sweeps, sw) > write_when_maxdim_exceeds
+  for sw in 1:nsweeps
+    if !isnothing(write_when_maxdim_exceeds) && maxdim[sw] > write_when_maxdim_exceeds
       if outputlevel >= 2
         println(
           "write_when_maxdim_exceeds = $write_when_maxdim_exceeds and maxdim(sweeps, sw) = $(maxdim(sweeps, sw)), writing environment tensors to disk",
@@ -252,7 +275,17 @@ function tdvp(solver, PH, t::Number, psi0::MPS, sweeps::Sweeps=Sweeps(); kwargs.
 
     sw_time = @elapsed begin
       psi, PH, info = tdvp_iteration(
-        solver, PH, time_step, psi; sweep=sw, reverse_step, kwargs...
+        solver,
+        PH,
+        time_step,
+        psi;
+        kwargs...,
+        reverse_step,
+        sweep=sw,
+        maxdim=maxdim[sw],
+        mindim=mindim[sw],
+        cutoff=cutoff[sw],
+        noise=noise[sw],
       )
     end
 
@@ -278,26 +311,25 @@ function tdvp(solver, PH, t::Number, psi0::MPS, sweeps::Sweeps=Sweeps(); kwargs.
   return psi
 end
 
-function tdvp(H, t::Number, psi0::MPS, sweeps::Sweeps=Sweeps(); kwargs...)
+function tdvp(H, t::Number, psi0::MPS; kwargs...)
   return tdvp(tdvp_solver(; kwargs...), H, t, psi0, sweeps; kwargs...)
 end
 
-function dmrg(H, psi0::MPS, sweeps::Sweeps=Sweeps(); kwargs...)
+function dmrg(H, psi0::MPS; kwargs...)
   t = Inf # DMRG is TDVP with an infinite timestep and no reverse step
-  isempty(sweeps) && (sweeps = _tdvp_compute_sweeps(t; kwargs...))
   reverse_step = false
-  psi = tdvp(eigsolve_solver(; kwargs...), H, t, psi0, sweeps; reverse_step, kwargs...)
+  psi = tdvp(eigsolve_solver(; kwargs...), H, t, psi0; reverse_step, kwargs...)
   return psi
 end
 
-function dmrg(H::MPO, psi0::MPS, sweeps::Sweeps=Sweeps(); kwargs...)
+function dmrg(H::MPO, psi0::MPS; kwargs...)
   check_hascommoninds(siteinds, H, psi0)
   check_hascommoninds(siteinds, H, psi0')
   # Permute the indices to have a better memory layout
   # and minimize permutations
   H = ITensors.permute(H, (linkind, siteinds, linkind))
   PH = ProjMPO(H)
-  return dmrg(PH, psi0, sweeps; kwargs...)
+  return dmrg(PH, psi0; kwargs...)
 end
 
 """
@@ -319,9 +351,7 @@ each step of the algorithm when optimizing the MPS.
 Returns:
 * `psi::MPS` - time-evolved MPS
 """
-function tdvp(
-  solver, Hs::Vector{MPO}, t::Number, psi0::MPS, sweeps::Sweeps=Sweeps(); kwargs...
-)
+function tdvp(solver, Hs::Vector{MPO}, t::Number, psi0::MPS; kwargs...)
   for H in Hs
     check_hascommoninds(siteinds, H, psi0)
     check_hascommoninds(siteinds, H, psi0')
@@ -331,13 +361,13 @@ function tdvp(
   return tdvp(solver, PHs, t, psi0, sweeps; kwargs...)
 end
 
-function tdvp(H::Vector{MPO}, t::Number, psi0::MPS, sweeps::Sweeps=Sweeps(); kwargs...)
+function tdvp(H::Vector{MPO}, t::Number, psi0::MPS; kwargs...)
   return tdvp(tdvp_solver(; kwargs...), H, t, psi0, sweeps; kwargs...)
 end
 
 """
     tdvp(H::MPO,psi0::MPS,t::Number; kwargs...)
-    tdvp(H::MPO,psi0::MPS,t::Number,sweeps::Sweeps; kwargs...)
+    tdvp(H::MPO,psi0::MPS,t::Number; kwargs...)
 
 Use the time dependent variational principle (TDVP) algorithm
 to compute `exp(t*H)*psi0` using an efficient algorithm based
@@ -352,16 +382,42 @@ Optional keyword arguments:
 * `observer` - object implementing the [Observer](@ref observer) interface which can perform measurements and stop early
 * `write_when_maxdim_exceeds::Int` - when the allowed maxdim exceeds this value, begin saving tensors to disk to free memory in large calculations
 """
-function tdvp(solver, H::MPO, t::Number, psi0::MPS, sweeps::Sweeps=Sweeps(); kwargs...)
+function tdvp(solver, H::MPO, t::Number, psi0::MPS; kwargs...)
   check_hascommoninds(siteinds, H, psi0)
   check_hascommoninds(siteinds, H, psi0')
   # Permute the indices to have a better memory layout
   # and minimize permutations
   H = ITensors.permute(H, (linkind, siteinds, linkind))
   PH = ProjMPO(H)
-  return tdvp(solver, PH, t, psi0, sweeps; kwargs...)
+  return tdvp(solver, PH, t, psi0; kwargs...)
 end
 
-function tdvp(H::MPO, t::Number, psi0::MPS, sweeps::Sweeps=Sweeps(); kwargs...)
-  return tdvp(tdvp_solver(; kwargs...), H, t, psi0, sweeps; kwargs...)
+function tdvp(H::MPO, t::Number, psi0::MPS; kwargs...)
+  return tdvp(tdvp_solver(; kwargs...), H, t, psi0; kwargs...)
+end
+
+#
+# Support for passing Sweeps objects to tdvp and dmrg
+#
+
+function process_sweeps(s::Sweeps)
+  return (;
+    nsweeps=s.nsweep, maxdim=s.maxdim, mindim=s.mindim, cutoff=s.cutoff, noise=s.noise
+  )
+end
+
+function tdvp(X, t::Number, psi0::MPS, sweeps::Sweeps; kwargs...)
+  return tdvp(X, t, psi0; process_sweeps(sweeps)..., kwargs...)
+end
+
+function tdvp(X1, X2, t::Number, psi0::MPS, sweeps::Sweeps; kwargs...)
+  return tdvp(X1, X2, t, psi0; process_sweeps(sweeps)..., kwargs...)
+end
+
+function dmrg(X, psi0::MPS, sweeps::Sweeps; kwargs...)
+  return dmrg(X, psi0; process_sweeps(sweeps)..., kwargs...)
+end
+
+function dmrg(X1, X2, psi0::MPS, sweeps::Sweeps; kwargs...)
+  return dmrg(X1, X2, psi0; process_sweeps(sweeps)..., kwargs...)
 end

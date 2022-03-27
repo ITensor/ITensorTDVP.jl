@@ -31,7 +31,7 @@ using Observers
   #@test abs(inner(ψ0,ψ1)) < 0.9
 
   # Average energy should be conserved:
-  @test real(inner(ψ1, H, ψ1)) ≈ inner(ψ0, H, ψ0)
+  @test real(inner(ψ1, H, ψ1)) ≈ inner(ψ0', H, ψ0)
 
   # Time evolve backwards:
   ψ2 = tdvp(H, +0.1im, ψ1; cutoff)
@@ -75,7 +75,7 @@ end
   #@test abs(inner(ψ0,ψ1)) < 0.9
 
   # Average energy should be conserved:
-  @test real(inner(ψ1, H, ψ1)) ≈ inner(ψ0, H, ψ0)
+  @test real(inner(ψ1', H, ψ1)) ≈ inner(ψ0', H, ψ0)
 
   # Time evolve backwards:
   ψ2 = tdvp(H, +0.1im, ψ1; cutoff)
@@ -187,7 +187,7 @@ end
     normalize!(psi)
 
     Sz1[step] = expect(psi, "Sz"; sites=c)
-    En1[step] = real(inner(psi, H, psi))
+    En1[step] = real(inner(psi', H, psi))
   end
 
   #
@@ -200,7 +200,7 @@ end
   function ITensors.measure!(obs::TDVPObserver; sweep, bond, half_sweep, psi, kwargs...)
     if bond == 1 && half_sweep == 2
       Sz2[sweep] = expect(psi, "Sz"; sites=c)
-      En2[sweep] = real(inner(psi, H, psi))
+      En2[sweep] = real(inner(psi', H, psi))
       #@printf("sweep %d Sz=%.12f energy=%.12f\n",sweep,Sz2[sweep],En2[sweep])
     end
   end
@@ -251,11 +251,11 @@ end
   for (step, t) in enumerate(trange)
     nsite = (step <= 10 ? 2 : 1)
     psi = tdvp(H, -tau, psi; cutoff, nsite, normalize=true)
-    #@printf("%.3f energy = %.12f\n", step * tau, inner(psi, H, psi))
+    #@printf("%.3f energy = %.12f\n", step * tau, inner(psi', H, psi))
   end
   #@show maxlinkdim(psi)
 
-  @test inner(psi, H, psi) < -4.25
+  @test inner(psi', H, psi) < -4.25
 end
 
 @testset "DMRG" begin
@@ -275,15 +275,16 @@ end
 
   psi = randomMPS(s; linkdims=2)
 
-  Nsteps = 10
+  nsweeps = 10
   nsite = 2
+  maxdim = [10, 20, 40, 100]
   psi = ITensorTDVP.dmrg(
-    H, psi; nsweeps=Nsteps, cutoff, nsite, solver_krylovdim=3, solver_maxiter=1
+    H, psi; nsweeps, maxdim, cutoff, nsite, solver_krylovdim=3, solver_maxiter=1
   )
 
-  e2, psi2 = dmrg(H, psi; nsweeps=Nsteps, maxdim=100, cutoff, normalize=true, outputlevel=0)
+  e2, psi2 = dmrg(H, psi; nsweeps, maxdim, cutoff, normalize=true, outputlevel=0)
 
-  @test inner(psi, H, psi) ≈ inner(psi2, H, psi2)
+  @test inner(psi', H, psi) ≈ inner(psi2', H, psi2)
 end
 
 @testset "Observers" begin
@@ -315,7 +316,7 @@ end
   function ITensors.measure!(obs::TDVPObserver; sweep, bond, half_sweep, psi, kwargs...)
     if bond == 1 && half_sweep == 2
       Sz1[sweep] = expect(psi, "Sz"; sites=c)
-      En1[sweep] = real(inner(psi, H, psi))
+      En1[sweep] = real(inner(psi', H, psi))
       #@printf("sweep %d Sz=%.12f energy=%.12f\n",sweep,Sz2[sweep],En2[sweep])
     end
   end
@@ -344,7 +345,7 @@ end
 
   function measure_en(; psi, bond, half_sweep)
     if bond == 1 && half_sweep == 2
-      return real(inner(psi, H, psi))
+      return real(inner(psi', H, psi))
     end
     return nothing
   end
