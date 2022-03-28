@@ -31,7 +31,7 @@ using Observers
   #@test abs(inner(ψ0,ψ1)) < 0.9
 
   # Average energy should be conserved:
-  @test real(inner(ψ1, H, ψ1)) ≈ inner(ψ0', H, ψ0)
+  @test real(inner(ψ1', H, ψ1)) ≈ inner(ψ0', H, ψ0)
 
   # Time evolve backwards:
   ψ2 = tdvp(H, +0.1im, ψ1; cutoff)
@@ -315,7 +315,7 @@ end
   En1 = zeros(Nsteps)
   function ITensors.measure!(obs::TDVPObserver; sweep, bond, half_sweep, psi, kwargs...)
     if bond == 1 && half_sweep == 2
-      Sz1[sweep] = expect(psi, "Sz"; sites=c)
+      Sz1[sweep] = first(expect(psi, "Sz"; site_range=c:c))
       En1[sweep] = real(inner(psi', H, psi))
       #@printf("sweep %d Sz=%.12f energy=%.12f\n",sweep,Sz2[sweep],En2[sweep])
     end
