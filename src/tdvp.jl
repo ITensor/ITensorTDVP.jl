@@ -40,7 +40,7 @@ function tdvp(solver, PH, psi0::MPS, t::Number, sweeps; kwargs...)::MPS
   for sw in 1:nsweep(sweeps)
     orthogonalize!(psi, 1)
     if nsite==1
-      subspace_expansion_sweep!(psi,PH;maxdim, cutoff, atol=1E-10, kwargs...)
+      @time subspace_expansion_sweep!(psi,PH;maxdim, cutoff, atol=atol, kwargs...)
     end
     sw_time = @elapsed begin
       maxtruncerr = 0.0
@@ -114,6 +114,11 @@ function tdvp(solver, PH, psi0::MPS, t::Number, sweeps; kwargs...)::MPS
             uinds = uniqueinds(phi1, psi[b + Δ])
             U, S, V = svd(phi1, uinds)
             psi[b] = U
+            if ha==1
+              ITensors.setleftlim!(psi,b)
+            elseif ha==2
+              ITensors.setrightlim!(psi,b)
+            end
             phi0 = S * V
           end
 
@@ -128,6 +133,11 @@ function tdvp(solver, PH, psi0::MPS, t::Number, sweeps; kwargs...)::MPS
             psi[b1] = phi0
           elseif nsite == 1
             psi[b + Δ] = phi0 * psi[b + Δ]
+            if ha==1
+              ITensors.setrightlim!(psi,b + Δ + 1)
+            elseif ha==2
+              ITensors.setleftlim!(psi,b + Δ - 1)
+            end
           end
           PH.nsite = nsite
         end
