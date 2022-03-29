@@ -315,7 +315,7 @@ end
   En1 = zeros(Nsteps)
   function ITensors.measure!(obs::TDVPObserver; sweep, bond, half_sweep, psi, kwargs...)
     if bond == 1 && half_sweep == 2
-      Sz1[sweep] = first(expect(psi, "Sz"; site_range=c:c))
+      Sz1[sweep] = expect(psi, "Sz"; sites=c)
       En1[sweep] = real(inner(psi', H, psi))
       #@printf("sweep %d Sz=%.12f energy=%.12f\n",sweep,Sz2[sweep],En2[sweep])
     end
@@ -357,8 +357,8 @@ end
 
   # Using filter here just due to the current
   # behavior of Observers that nothing gets appended:
-  Sz2 = filter(!isnothing, results(obs)["Sz"])
-  En2 = filter(!isnothing, results(obs)["En"])
+  Sz2 = results(obs)["Sz"]
+  En2 = results(obs)["En"]
 
   #display(En1)
   #display(En2)
