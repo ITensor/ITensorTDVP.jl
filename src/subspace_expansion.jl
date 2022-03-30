@@ -3,6 +3,7 @@ function replaceind_indval(IV::Tuple, iĩ::Pair)
   return ntuple(n -> first(IV[n]) == i ? ĩ => last(IV[n]) : IV[n], length(IV))
 end
 
+
 # atol controls the tolerance cutoff for determining which eigenvectors are in the null
 # space of the isometric MPS tensors. Setting to 1e-2 since we only want to keep
 # the eigenvectors corresponding to eigenvalues of approximately 1.
@@ -158,33 +159,28 @@ function _subspace_expand_core_krylov(centerwf::Vector{ITensor}, env,NL,NR;maxdi
   outinds=uniqueinds(NL,NL)
   ininds=uniqueinds(NR,NR)
   B2=ITensorNetworkMap([NR,R,L,NL],ininds,outinds)
-  B2dag=adjoint(B2)
-  trial=randomITensor(uniqueinds(NL,L))   #columnspace of B2, i.e. NL
-  trial=noprime(B2(noprime(B2dag(trial))))
+  B2dag=adjoint(B2) 
+  trial=randomITensor(eltype(L),uniqueinds(NL,L))
+  trialadj=randomITensor(eltype(R),uniqueinds(NR,R))   #columnspace of B2, i.e. NL
+  #trial=noprime(B2(noprime(B2dag(trial))))
+  #vals, lvecs, rvecs, info = svdsolve(trial, maxdim) do (x, flag)
+  #  if flag
+  #      y = B2dag * copy(x)# y = compute action of adjoint map on x
+  #  else
+  #      y = B2 * copy(x)# y = compute action of linear map on x
+  #  end
+  #  return y
+  #end
+  vals, lvecs, rvecs, info=svdsolve((x -> noprime(B2*x),y -> noprime(B2dag*y)),trial,maxdim)    ###seems to work
 
-
-  vals, lvecs, rvecs, info=svdsolve((x -> noprime(B2(x)),y -> noprime(B2dag(y))),trial,maxdim)
   #TO DO construct U,S,V objects, using only the vals > cutoff, and at most maxdim
+  #
   @show vals
-  @show lvecs
-  @show rvecs
-
-end
-
-function _subspace_expand_core(ϕ::ITensor, env,NL,NR;maxdim, cutoff, kwargs...)
-  ϕH = noprime(env(ϕ))   #add noprime?
-  ϕH = NL * ϕH * NR
-  if norm(ϕH) == 0.0
-    return false,false,false,false
-  end
-  U,S,V=svd(ϕH,commoninds(ϕH,NL);maxdim=maxdim, cutoff=cutoff, kwargs...)
-
-  @assert dim(commonind(U,S))<=maxdim
-
-  
-  NL *= dag(U)
-  NR *= dag(V)
-  return NL,S,NR,true
+  @show uniqueinds(NL,L)
+  @show uniqueinds(NR,R)
+  @show inds(lvecs[1])
+  @show inds(rvecs[1])
+  println("success!!")
 end
 
 function subspace_expansion!(ψ::MPS,PH,lims::Tuple{Int,Int},b::Tuple{Int,Int};bondtensor=nothing,maxdim, cutoff, atol=1e-2, kwargs...)
