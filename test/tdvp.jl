@@ -310,12 +310,7 @@ end
   ψ = MPS(s, initstate)
 
   dmrg_x_kwargs = (
-    nsweeps=20,
-    reverse_step=false,
-    normalize=true,
-    maxdim=20,
-    cutoff=1e-10,
-    outputlevel=0,
+    nsweeps=20, reverse_step=false, normalize=true, maxdim=20, cutoff=1e-10, outputlevel=0
   )
 
   ϕ = dmrg_x(ProjMPO(H), ψ; dmrg_x_kwargs...)
