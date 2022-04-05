@@ -240,35 +240,50 @@ function tdvp(solver, Hs::Vector{MPO}, psi0::MPS, t::Number, sweeps::Sweeps; kwa
 end
 
 function tdvp(PH, psi0::MPS, t::Number; reverse_step=true, kwargs...)
-  solver_kwargs = (;
-    ishermitian=get(kwargs, :ishermitian, true),
-    tol=get(kwargs, :exponentiate_tol, 1e-12),
-    krylovdim=get(kwargs, :exponentiate_krylovdim, 30),
-    maxiter=get(kwargs, :exponentiate_maxiter, 100),
-    verbosity=get(kwargs, :exponentiate_verbosity, 0),
-  )
   function solver(PH, t, psi0)
-    psi, info = exponentiate(PH, t, psi0; solver_kwargs...)
+    tdvp_solver_kwargs = (;
+      ishermitian=get(kwargs, :ishermitian, true),
+      tol=get(kwargs, :exponentiate_tol, 1e-12),
+      krylovdim=get(kwargs, :exponentiate_krylovdim, 30),
+      maxiter=get(kwargs, :exponentiate_maxiter, 100),
+      verbosity=get(kwargs, :exponentiate_verbosity, 0),
+    )
+    psi, info = exponentiate(PH, t, psi0; tdvp_solver_kwargs...)
     return psi, info
   end
   return tdvp(solver, PH, psi0, t; reverse_step, kwargs...)
 end
 
 function dmrg(PH, psi0::MPS; reverse_step=false, kwargs...)
-  t = Inf # DMRG is TDVP with an infinite timestep and no reverse step
-  howmany = 1
-  which = get(kwargs, :eigsolve_which_eigenvalue, :SR)
-  solver_kwargs = (;
-    ishermitian=get(kwargs, :ishermitian, true),
-    tol=get(kwargs, :eigsolve_tol, 1e-14),
-    krylovdim=get(kwargs, :eigsolve_krylovdim, 3),
-    maxiter=get(kwargs, :eigsolve_maxiter, 1),
-    verbosity=get(kwargs, :eigsolve_verbosity, 0),
-  )
-  function solver(PH, t, psi0)
-    vals, vecs, info = eigsolve(PH, psi0, howmany, which; solver_kwargs...)
+  function dmrg_solver(PH, t, psi0)
+    which = get(kwargs, :eigsolve_which_eigenvalue, :SR)
+    dmrg_solver_kwargs = (;
+      ishermitian=get(kwargs, :ishermitian, true),
+      tol=get(kwargs, :eigsolve_tol, 1e-14),
+      krylovdim=get(kwargs, :eigsolve_krylovdim, 3),
+      maxiter=get(kwargs, :eigsolve_maxiter, 1),
+      verbosity=get(kwargs, :eigsolve_verbosity, 0),
+    )
+    howmany = 1
+    vals, vecs, info = eigsolve(PH, psi0, howmany, which; dmrg_solver_kwargs...)
     psi = vecs[1]
     return psi, info
   end
-  return tdvp(solver, PH, psi0, t; reverse_step, kwargs...)
+
+  t = Inf # DMRG is TDVP with an infinite timestep and no reverse step
+  return tdvp(dmrg_solver, PH, psi0, t; reverse_step, kwargs...)
+end
+
+function dmrg_x_solver(PH, t, psi0)
+  H = contract(PH, ITensor(1.0))
+  D, U = eigen(H; ishermitian=true)
+  u = uniqueind(U, H)
+  max_overlap, max_ind = findmax(abs, array(psi0 * U))
+  U_max = U * dag(onehot(u => max_ind))
+  return U_max, nothing
+end
+
+function dmrg_x(PH, psi0::MPS; reverse_step=false, kwargs...)
+  t = NaN
+  return tdvp(dmrg_x_solver, PH, psi0, t; reverse_step, kwargs...)
 end

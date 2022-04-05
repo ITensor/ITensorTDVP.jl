@@ -29,7 +29,7 @@ using Printf
   #@test abs(inner(ψ0,ψ1)) < 0.9
 
   # Average energy should be conserved:
-  @test real(inner(ψ1, H, ψ1)) ≈ inner(ψ0, H, ψ0)
+  @test real(inner(ψ1', H, ψ1)) ≈ inner(ψ0', H, ψ0)
 
   # Time evolve backwards:
   ψ2 = tdvp(H, ψ1, +0.1im; cutoff)
@@ -71,7 +71,7 @@ end
   #@test abs(inner(ψ0,ψ1)) < 0.9
 
   # Average energy should be conserved:
-  @test real(inner(ψ1, H, ψ1)) ≈ inner(ψ0, H, ψ0)
+  @test real(inner(ψ1', H, ψ1)) ≈ inner(ψ0', H, ψ0)
 
   # Time evolve backwards:
   ψ2 = tdvp(H, ψ1, +0.1im; cutoff)
@@ -148,8 +148,8 @@ end
       )
     end
 
-    push!(Sz_tdvp, real(expect(psi, "Sz"; site_range=c:c)))
-    push!(Sz_exact, real(scalar(dag(prime(psix, s[c])) * Szc * psix)))
+    append!(Sz_tdvp, real(expect(psi, "Sz"; sites=c:c)))
+    append!(Sz_exact, real(scalar(dag(prime(psix, s[c])) * Szc * psix)))
     #F = abs(scalar(dag(psix)*prod(psi)))
     #@printf("%s=%.10f  exact=%.10f  F=%.10f\n",method,Sz_tdvp[end],Sz_exact[end],F)
   end
@@ -206,10 +206,10 @@ end
     nsite = (step <= 3 ? 2 : 1)
     phi = tdvp(H, phi, -tau * im; cutoff, nsite, normalize=true, exponentiate_krylovdim=15)
 
-    Sz1[step] = expect(psi, "Sz"; site_range=c:c)
-    Sz2[step] = expect(phi, "Sz"; site_range=c:c)
-    En1[step] = real(inner(psi, H, psi))
-    En2[step] = real(inner(phi, H, phi))
+    Sz1[step] = expect(psi, "Sz"; sites=c:c)[1]
+    Sz2[step] = expect(phi, "Sz"; sites=c:c)[1]
+    En1[step] = real(inner(psi', H, psi))
+    En2[step] = real(inner(phi', H, phi))
   end
 
   #display(En1)
@@ -244,11 +244,11 @@ end
   for step in 1:Nsteps
     nsite = (step <= 10 ? 2 : 1)
     psi = tdvp(H, psi, -tau; cutoff, nsite, normalize=true, exponentiate_krylovdim=15)
-    @printf("%.3f energy = %.12f\n", step * tau, inner(psi, H, psi))
+    @printf("%.3f energy = %.12f\n", step * tau, inner(psi', H, psi))
   end
   #@show maxlinkdim(psi)
 
-  @test inner(psi, H, psi) < -4.25
+  @test inner(psi', H, psi) < -4.25
 end
 
 @testset "DMRG" begin
@@ -276,7 +276,53 @@ end
 
   e2, psi2 = dmrg(H, psi; nsweeps=Nsteps, maxdim=100, cutoff, normalize=true)
 
-  @test inner(psi, H, psi) ≈ inner(psi2, H, psi2)
+  @test inner(psi', H, psi) ≈ inner(psi2', H, psi2)
+end
+
+@testset "DMRG-X" begin
+  function heisenberg(n; h=zeros(n))
+    os = OpSum()
+    for j in 1:(n - 1)
+      os += 0.5, "S+", j, "S-", j + 1
+      os += 0.5, "S-", j, "S+", j + 1
+      os += "Sz", j, "Sz", j + 1
+    end
+    for j in 1:n
+      if h[j] ≠ 0
+        os -= h[j], "Sz", j
+      end
+    end
+    return os
+  end
+
+  n = 10
+  s = siteinds("S=1/2", n)
+
+  using Random
+  Random.seed!(12)
+
+  W = 12
+  # Random fields h ∈ [-W, W]
+  h = W * (2 * rand(n) .- 1)
+  H = MPO(heisenberg(n; h), s)
+
+  initstate = rand(["↑", "↓"], n)
+  ψ = MPS(s, initstate)
+
+  dmrg_x_kwargs = (
+    nsweeps=20,
+    reverse_step=false,
+    normalize=true,
+    maxdim=20,
+    cutoff=1e-10,
+    outputlevel=0,
+  )
+
+  ϕ = dmrg_x(ProjMPO(H), ψ; dmrg_x_kwargs...)
+
+  @test inner(ψ', H, ψ) / inner(ψ, ψ) ≈ inner(ϕ', H, ϕ) / inner(ϕ, ϕ) rtol=1e-2
+  @test inner(H, ψ, H, ψ) ≉ inner(ψ', H, ψ) ^ 2 atol=1e-1
+  @test inner(H, ϕ, H, ϕ) ≈ inner(ϕ', H, ϕ) ^ 2 atol=1e-7
 end
 
 nothing

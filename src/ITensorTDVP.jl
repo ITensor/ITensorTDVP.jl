@@ -8,6 +8,6 @@ using ITensors: AbstractMPS, @debug_check, @timeit_debug, check_hascommoninds, o
 
 include("tdvp.jl")
 
-export tdvp
+export tdvp, dmrg_x
 
 end
