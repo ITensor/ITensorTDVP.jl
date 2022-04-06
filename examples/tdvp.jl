@@ -21,12 +21,13 @@ H = MPO(heisenberg(n), s)
 
 ϕ = tdvp(
   H,
-  ψ,
-  -1;
-  nsweeps=10,
+  -1.0,
+  ψ
+  ;
+  nsweeps=20,
   reverse_step=false,
   normalize=true,
-  maxdim=20,
+  maxdim=30,
   cutoff=1e-10,
   outputlevel=1,
 )

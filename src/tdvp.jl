@@ -3,8 +3,47 @@ struct TDVPInfo
   maxtruncerr::Float64
 end
 
-function tdvp_iteration(solver, PH, time_step::Number, psi0::MPS; kwargs...)
-  if length(psi0) == 1
+struct TDVPOrder
+  order::Int
+  direction::Base.Ordering #Forward, Reverse
+end
+
+function tdvp(solver,PH,time_step::Number,order::TDVPOrder,psi0::MPS;kwargs...)
+  psi=copy(psi0)
+  return tdvp!(solver,PH,time_step,order,psi;kwargs...)
+end
+
+function tdvp!(solver,PH,time_step::Number,tdvp_order::TDVPOrder,psi::MPS;kwargs...)
+  order=tdvp_order.order
+  direction=tdvp_order.direction
+  
+  if order==1
+    sub_time_steps=[1.0,0.0]
+    orderings=[direction, Base.ReverseOrdering(direction)]
+  elseif order==2
+    sub_time_steps=[1.0/2.0,1.0/2.0]
+    orderings=[direction, Base.ReverseOrdering(direction)]
+  elseif order==4
+    s=1.0/(2.0-2.0^(1.0/3.0))
+    sub_time_steps=[s/2.0,s/2.0,(1.0-2.0*s)/2.,(1.0-2.0*s)/2.0,s/2.0,s/2.0]
+    orderings=repeat([direction, Base.ReverseOrdering(direction)],3)
+  end
+  
+  sub_time_steps*=time_step
+  global info
+  for substep in 1:length(sub_time_steps)
+    psi, PH, info=tdvp!(solver, PH, sub_time_steps[substep], orderings[substep], psi; kwargs...)
+  end
+  return psi, PH, info
+  end
+
+function tdvp(solver, PH, time_step::Number, direction::Base.Ordering, psi0::MPS; kwargs...)
+  psi=copy(psi0)
+  return tdvp!(solver, PH, time_step, direction, psi; kwargs...)
+end
+
+function tdvp!(solver, PH, time_step::Number, direction::Base.Ordering, psi::MPS; kwargs...)
+  if length(psi) == 1
     error(
       "`tdvp` currently does not support system sizes of 1. You can diagonalize the MPO tensor directly with tools like `LinearAlgebra.eigen`, `KrylovKit.exponentiate`, etc.",
     )
@@ -24,19 +63,31 @@ function tdvp_iteration(solver, PH, time_step::Number, psi0::MPS; kwargs...)
   cutoff::Real = get(kwargs, :cutoff, 1E-16)
   noise::Real = get(kwargs, :noise, 0.0)
 
-  psi = copy(psi0)
   N = length(psi)
-
-  if !isortho(psi) || orthocenter(psi) != 1
-    orthogonalize!(psi, 1)
+  if typeof(order)==Base.Forward
+    ha=1
+    if !isortho(psi) || orthocenter(psi) != 1
+      orthogonalize!(psi, 1)
+    end
+    @assert isortho(psi) && orthocenter(psi) == 1
+    position!(PH, psi, 1)
+  else
+    ha=2
+    if !isortho(psi) || orthocenter(psi) != N
+      orthogonalize!(psi, N)
+    end
+    @assert isortho(psi) && orthocenter(psi) == N
+    position!(PH, psi, N)
   end
-  @assert isortho(psi) && orthocenter(psi) == 1
-
-  position!(PH, psi, 1)
 
   maxtruncerr = 0.0
-
   for (b, ha) in sweepnext(N; ncenter=nsite)
+    if order==Base.Forward && ha==2
+      continue
+    elseif order==Base.Reverse && ha==1
+      continue
+    end
+  #for b in sort!(Vector(1:N-nsite),order=direction)
     PH.nsite = nsite
     position!(PH, psi, b)
 
@@ -120,14 +171,14 @@ function tdvp_iteration(solver, PH, time_step::Number, psi0::MPS; kwargs...)
       flush(stdout)
     end
 
-    sweep_is_done = (b == 1 && ha == 2)
+    half_sweep_is_done = ((b == 1 && ha == 2) || (b == N && ha == 1) )
     if observer isa Observers.Observer
       update!(
-        observer; psi, bond=b, sweep=sw, half_sweep=ha, spec, outputlevel, sweep_is_done
+        observer; psi, bond=b, sweep=sw, half_sweep=ha, spec, outputlevel, half_sweep_is_done
       )
     elseif observer isa ITensors.AbstractObserver
       measure!(
-        observer; psi, bond=b, sweep=sw, half_sweep=ha, spec, outputlevel, sweep_is_done
+        observer; psi, bond=b, sweep=sw, half_sweep=ha, spec, outputlevel, half_sweep_is_done
       )
     else
       error("observer has unrecognized type ($(typeof(observer)))")
@@ -253,6 +304,8 @@ function tdvp(solver, PH, t::Number, psi0::MPS; kwargs...)
   maxdim, mindim, cutoff, noise = process_sweeps(; nsweeps, kwargs...)
 
   time_step::Number = get(kwargs, :time_step, t)
+  order = get(kwargs, :order, 2)
+  tdvp_order = TDVPOrder(order,Base.Forward)
 
   checkdone = get(kwargs, :checkdone, nothing)
   write_when_maxdim_exceeds::Union{Int,Nothing} = get(
@@ -274,10 +327,11 @@ function tdvp(solver, PH, t::Number, psi0::MPS; kwargs...)
     end
 
     sw_time = @elapsed begin
-      psi, PH, info = tdvp_iteration(
+      psi, PH, info = tdvp!(
         solver,
         PH,
         time_step,
+        tdvp_order,
         psi;
         kwargs...,
         reverse_step,
