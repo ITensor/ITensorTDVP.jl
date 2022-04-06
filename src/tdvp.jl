@@ -224,7 +224,7 @@ function applyexp_solver(; kwargs...)
 end
 
 function tdvp_solver(; kwargs...)
-  solver_backend = get(kwargs, :solver_backend, "applyexp")
+  solver_backend = get(kwargs, :solver_backend, "exponentiate")
   if solver_backend == "applyexp"
     return applyexp_solver(; kwargs...)
   elseif solver_backend == "exponentiate"
