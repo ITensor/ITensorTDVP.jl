@@ -1,9 +1,10 @@
-using Test
 using ITensors
 using ITensorTDVP
 using KrylovKit
 using Printf
 using Observers
+using Random
+using Test
 
 @testset "Basic TDVP" begin
   N = 10
@@ -35,6 +36,47 @@ using Observers
 
   # Time evolve backwards:
   ψ2 = tdvp(H, +0.1im, ψ1; cutoff)
+
+  @test norm(ψ2) ≈ 1.0
+
+  # Should rotate back to original state:
+  @test abs(inner(ψ0, ψ2)) > 0.99
+end
+
+@testset "TDVP: Sum of Hamiltonians" begin
+  N = 10
+  cutoff = 1e-10
+
+  s = siteinds("S=1/2", N)
+
+  os1 = OpSum()
+  for j in 1:(N - 1)
+    os1 += 0.5, "S+", j, "S-", j + 1
+    os1 += 0.5, "S-", j, "S+", j + 1
+  end
+  os2 = OpSum()
+  for j in 1:(N - 1)
+    os2 += "Sz", j, "Sz", j + 1
+  end
+
+  H1 = MPO(os1, s)
+  H2 = MPO(os2, s)
+  Hs = [H1, H2]
+
+  ψ0 = randomMPS(s; linkdims=10)
+
+  ψ1 = tdvp(Hs, ψ0, -0.1im; cutoff, nsite=1)
+
+  @test norm(ψ1) ≈ 1.0
+
+  ## Should lose fidelity:
+  #@test abs(inner(ψ0,ψ1)) < 0.9
+
+  # Average energy should be conserved:
+  @test real(sum(H -> inner(ψ1', H, ψ1), Hs)) ≈ sum(H -> inner(ψ0', H, ψ0), Hs)
+
+  # Time evolve backwards:
+  ψ2 = tdvp(Hs, ψ1, +0.1im; cutoff)
 
   @test norm(ψ2) ≈ 1.0
 
@@ -186,8 +228,13 @@ end
     psi = apply(gates, psi; cutoff)
     #normalize!(psi)
 
-    Sz1[step] = expect(psi, "Sz"; sites=c)
+    nsite = (step <= 3 ? 2 : 1)
+    phi = tdvp(H, phi, -tau * im; cutoff, nsite, normalize=true, exponentiate_krylovdim=15)
+
+    Sz1[step] = expect(psi, "Sz"; sites=c:c)[1]
+    Sz2[step] = expect(phi, "Sz"; sites=c:c)[1]
     En1[step] = real(inner(psi', H, psi))
+    En2[step] = real(inner(phi', H, phi))
   end
 
   #
@@ -250,9 +297,9 @@ end
   trange = 0.0:tau:ttotal
   for (step, t) in enumerate(trange)
     nsite = (step <= 10 ? 2 : 1)
-    psi = tdvp(H, -tau, psi; cutoff, nsite, normalize=false)
-    #@printf("%.3f energy = %.12f\n", step * tau, inner(psi', H, psi))
-  end
+    psi = tdvp(H, psi, -tau; cutoff, nsite, normalize=true, exponentiate_krylovdim=15)
+    @printf("%.3f energy = %.12f\n", step * tau, inner(psi', H, psi))
+end
   #@show maxlinkdim(psi)
 
   @test inner(psi', H, psi) < -4.25
@@ -372,6 +419,44 @@ end
 
   @test Sz1 ≈ Sz2
   @test En1 ≈ En2
+@testset "DMRG-X" begin
+  function heisenberg(n; h=zeros(n))
+    os = OpSum()
+    for j in 1:(n - 1)
+      os += 0.5, "S+", j, "S-", j + 1
+      os += 0.5, "S-", j, "S+", j + 1
+      os += "Sz", j, "Sz", j + 1
+    end
+    for j in 1:n
+      if h[j] ≠ 0
+        os -= h[j], "Sz", j
+      end
+    end
+    return os
+  end
+
+  n = 10
+  s = siteinds("S=1/2", n)
+
+  Random.seed!(12)
+
+  W = 12
+  # Random fields h ∈ [-W, W]
+  h = W * (2 * rand(n) .- 1)
+  H = MPO(heisenberg(n; h), s)
+
+  initstate = rand(["↑", "↓"], n)
+  ψ = MPS(s, initstate)
+
+  dmrg_x_kwargs = (
+    nsweeps=20, reverse_step=false, normalize=true, maxdim=20, cutoff=1e-10, outputlevel=0
+  )
+
+  ϕ = dmrg_x(ProjMPO(H), ψ; dmrg_x_kwargs...)
+
+  @test inner(ψ', H, ψ) / inner(ψ, ψ) ≈ inner(ϕ', H, ϕ) / inner(ϕ, ϕ) rtol = 1e-1
+  @test inner(H, ψ, H, ψ) ≉ inner(ψ', H, ψ)^2 atol = 1e-1
+  @test inner(H, ϕ, H, ϕ) ≈ inner(ϕ', H, ϕ)^2 atol = 1e-7
 end
 
 nothing
