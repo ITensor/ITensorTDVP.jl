@@ -53,8 +53,6 @@ end
   end
   os2 = OpSum()
   for j in 1:(N - 1)
-    os2 += 0.5, "S+", j, "S-", j + 1
-    os2 += 0.5, "S-", j, "S+", j + 1
     os2 += "Sz", j, "Sz", j + 1
   end
 
