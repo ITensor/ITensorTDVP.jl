@@ -7,7 +7,7 @@ using Observers
 
 @testset "Basic TDVP" begin
   N = 10
-  cutoff = 1e-10
+  cutoff = 1e-12
 
   s = siteinds("S=1/2", N)
 
@@ -44,7 +44,7 @@ end
 
 @testset "Custom solver in TDVP" begin
   N = 10
-  cutoff = 1e-10
+  cutoff = 1e-12
 
   s = siteinds("S=1/2", N)
 
@@ -128,15 +128,17 @@ end
       normalize=false,
       solver_tol=1e-12,
       solver_maxiter=500,
-      solver_krylovdim=100,
+      solver_krylovdim=25,
     )
     
-    push!(Sz_tdvp, real(expect(psi, "Sz"; sites=c)[c]))
+    push!(Sz_tdvp, real(expect(psi, "Sz"; sites=c)))
     push!(Sz_exact, real(scalar(dag(prime(psix, s[c])) * Szc * psix)))
     F = abs(scalar(dag(psix) * prod(psi)))
     #@printf("%s=%.10f  exact=%.10f  F=%.10f\n",method,Sz_tdvp[end],Sz_exact[end],F)
   end
   #@show norm(Sz_tdvp-Sz_exact)
+  @show Sz_tdvp
+  @show Sz_exact
   @test norm(Sz_tdvp - Sz_exact) < 1e-5
 end
 
@@ -186,7 +188,7 @@ end
     psi = apply(gates, psi; cutoff)
     #normalize!(psi)
 
-    Sz1[step] = expect(psi, "Sz"; sites=c)[c]
+    Sz1[step] = expect(psi, "Sz"; sites=c)
     En1[step] = real(inner(psi', H, psi))
   end
 
@@ -199,7 +201,7 @@ end
   En2 = zeros(Nsteps)
   function ITensors.measure!(obs::TDVPObserver; sweep, bond, half_sweep, psi, kwargs...)
     if bond == 1 && half_sweep == 2
-      Sz2[sweep] = expect(psi, "Sz"; sites=c)[c]
+      Sz2[sweep] = expect(psi, "Sz"; sites=c)
       En2[sweep] = real(inner(psi', H, psi))
       #@printf("sweep %d Sz=%.12f energy=%.12f\n",sweep,Sz2[sweep],En2[sweep])
     end
@@ -318,7 +320,7 @@ end
   En1 = zeros(Nsteps)
   function ITensors.measure!(obs::TDVPObserver; sweep, bond, half_sweep, psi, kwargs...)
     if bond == 1 && half_sweep == 2
-      Sz1[sweep] = expect(psi, "Sz"; sites=c)[c]
+      Sz1[sweep] = expect(psi, "Sz"; sites=c)
       En1[sweep] = real(inner(psi', H, psi))
       #@printf("sweep %d Sz=%.12f energy=%.12f\n",sweep,Sz2[sweep],En2[sweep])
     end
@@ -341,7 +343,7 @@ end
 
   function measure_sz(; psi, bond, half_sweep)
     if bond == 1 && half_sweep == 2
-      return expect(psi, "Sz"; sites=c)[c]
+      return expect(psi, "Sz"; sites=c)
     end
     return nothing
   end

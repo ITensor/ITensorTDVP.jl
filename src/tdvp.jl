@@ -64,40 +64,45 @@ function tdvp!(solver, PH, time_step::Number, direction::Base.Ordering, psi::MPS
   noise::Real = get(kwargs, :noise, 0.0)
 
   N = length(psi)
-  if typeof(order)==Base.Forward
-    ha=1
+  PH.nsite = nsite
+  if direction==Base.Forward
+    #println("doing forward step")
     if !isortho(psi) || orthocenter(psi) != 1
       orthogonalize!(psi, 1)
     end
     @assert isortho(psi) && orthocenter(psi) == 1
     position!(PH, psi, 1)
-  else
-    ha=2
-    if !isortho(psi) || orthocenter(psi) != N
-      orthogonalize!(psi, N)
+  elseif direction==Base.Reverse
+   # println("doing backward step")
+    if !isortho(psi) || orthocenter(psi) != N-nsite+1
+    #  println("orthogonalizing before backward step")
+      orthogonalize!(psi, N-nsite+1)
+    else
+    #   println("not orthogonalizing before backward step")
     end
-    @assert isortho(psi) && orthocenter(psi) == N
-    position!(PH, psi, N)
+    @assert(isortho(psi) && (orthocenter(psi) == N-nsite+1))
+    position!(PH, psi, N-nsite+1)
   end
 
   maxtruncerr = 0.0
   for (b, ha) in sweepnext(N; ncenter=nsite)
-    if order==Base.Forward && ha==2
+    if direction==Base.Forward && ha==2
+      #println("not doing step for ", b," ", ha)
       continue
-    elseif order==Base.Reverse && ha==1
+    elseif direction==Base.Reverse && ha==1
+      #println("not doing step for ", b," ", ha)
       continue
+    #else
+    #  #println("doing step for ", b," ", ha)
     end
-  #for b in sort!(Vector(1:N-nsite),order=direction)
     PH.nsite = nsite
     position!(PH, psi, b)
-
     if nsite == 1
       phi1 = psi[b]
     elseif nsite == 2
       phi1 = psi[b] * psi[b + 1]
     end
-
-    phi1, info = solver(PH, time_step / 2, phi1)
+    phi1, info = solver(PH, time_step, phi1)
 
     normalize && (phi1 /= norm(phi1))
 
@@ -141,12 +146,17 @@ function tdvp!(solver, PH, time_step::Number, direction::Base.Ordering, psi::MPS
         U, S, V = svd(phi1, uinds)
         psi[b] = U
         phi0 = S * V
+        if ha==1
+          ITensors.setleftlim!(psi,b)
+        elseif ha==2
+          ITensors.setrightlim!(psi,b)
+        end
       end
 
       PH.nsite = nsite - 1
       position!(PH, psi, b1)
 
-      phi0, info = solver(PH, -time_step / 2, phi0)
+      phi0, info = solver(PH, -time_step, phi0)
 
       normalize && (phi0 ./= norm(phi0))
 
@@ -154,6 +164,11 @@ function tdvp!(solver, PH, time_step::Number, direction::Base.Ordering, psi::MPS
         psi[b1] = phi0
       elseif nsite == 1
         psi[b + Δ] = phi0 * psi[b + Δ]
+        if ha==1
+           ITensors.setrightlim!(psi,b + Δ + 1)
+        elseif ha==2
+           ITensors.setleftlim!(psi,b + Δ - 1)
+        end
       end
       PH.nsite = nsite
     end
