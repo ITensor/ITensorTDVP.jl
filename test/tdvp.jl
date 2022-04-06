@@ -88,7 +88,7 @@ end
 
 @testset "Accuracy Test" begin
   N = 4
-  tau = 0.02
+  tau = 0.1
   ttotal = 1.0
   cutoff = 1e-12
 
@@ -124,18 +124,18 @@ end
       -im * tau,
       psi;
       cutoff,
-      normalize=true,
+      nsteps=20,
+      normalize=false,
       solver_tol=1e-12,
       solver_maxiter=500,
       solver_krylovdim=100,
     )
-
-    push!(Sz_tdvp, real(expect(psi, "Sz"; sites=c)))
+    
+    push!(Sz_tdvp, real(expect(psi, "Sz"; sites=c)[c]))
     push!(Sz_exact, real(scalar(dag(prime(psix, s[c])) * Szc * psix)))
     F = abs(scalar(dag(psix) * prod(psi)))
     #@printf("%s=%.10f  exact=%.10f  F=%.10f\n",method,Sz_tdvp[end],Sz_exact[end],F)
   end
-
   #@show norm(Sz_tdvp-Sz_exact)
   @test norm(Sz_tdvp - Sz_exact) < 1e-5
 end
@@ -184,9 +184,9 @@ end
 
   for step in 1:Nsteps
     psi = apply(gates, psi; cutoff)
-    normalize!(psi)
+    #normalize!(psi)
 
-    Sz1[step] = expect(psi, "Sz"; sites=c)
+    Sz1[step] = expect(psi, "Sz"; sites=c)[c]
     En1[step] = real(inner(psi', H, psi))
   end
 
@@ -199,7 +199,7 @@ end
   En2 = zeros(Nsteps)
   function ITensors.measure!(obs::TDVPObserver; sweep, bond, half_sweep, psi, kwargs...)
     if bond == 1 && half_sweep == 2
-      Sz2[sweep] = expect(psi, "Sz"; sites=c)
+      Sz2[sweep] = expect(psi, "Sz"; sites=c)[c]
       En2[sweep] = real(inner(psi', H, psi))
       #@printf("sweep %d Sz=%.12f energy=%.12f\n",sweep,Sz2[sweep],En2[sweep])
     end
@@ -213,7 +213,7 @@ end
     phi;
     time_step=-im * tau,
     cutoff,
-    normalize=true,
+    normalize=false,
     observer=TDVPObserver(),
   )
 
@@ -250,7 +250,7 @@ end
   trange = 0.0:tau:ttotal
   for (step, t) in enumerate(trange)
     nsite = (step <= 10 ? 2 : 1)
-    psi = tdvp(H, -tau, psi; cutoff, nsite, normalize=true)
+    psi = tdvp(H, -tau, psi; cutoff, nsite, normalize=false)
     #@printf("%.3f energy = %.12f\n", step * tau, inner(psi', H, psi))
   end
   #@show maxlinkdim(psi)
@@ -278,11 +278,14 @@ end
   nsweeps = 10
   nsite = 2
   maxdim = [10, 20, 40, 100]
+  sweeps = Sweeps(nsweeps) # number of sweeps is 5
+  maxdim!(sweeps,10,20,40,100) # gradually increase states kept
+  cutoff!(sweeps,cutoff)
   psi = ITensorTDVP.dmrg(
     H, psi; nsweeps, maxdim, cutoff, nsite, solver_krylovdim=3, solver_maxiter=1
   )
 
-  e2, psi2 = dmrg(H, psi; nsweeps, maxdim, cutoff, normalize=true, outputlevel=0)
+  e2, psi2 = dmrg(H, psi, sweeps; normalize=false, outputlevel=0)
 
   @test inner(psi', H, psi) ≈ inner(psi2', H, psi2)
 end
@@ -315,7 +318,7 @@ end
   En1 = zeros(Nsteps)
   function ITensors.measure!(obs::TDVPObserver; sweep, bond, half_sweep, psi, kwargs...)
     if bond == 1 && half_sweep == 2
-      Sz1[sweep] = expect(psi, "Sz"; sites=c)
+      Sz1[sweep] = expect(psi, "Sz"; sites=c)[c]
       En1[sweep] = real(inner(psi', H, psi))
       #@printf("sweep %d Sz=%.12f energy=%.12f\n",sweep,Sz2[sweep],En2[sweep])
     end
@@ -328,7 +331,7 @@ end
     psi1;
     time_step=-im * tau,
     cutoff,
-    normalize=true,
+    normalize=false,
     observer=TDVPObserver(),
   )
 
@@ -338,7 +341,7 @@ end
 
   function measure_sz(; psi, bond, half_sweep)
     if bond == 1 && half_sweep == 2
-      return expect(psi, "Sz"; sites=c)
+      return expect(psi, "Sz"; sites=c)[c]
     end
     return nothing
   end
@@ -353,7 +356,7 @@ end
   obs = Observer("Sz" => measure_sz, "En" => measure_en)
 
   psi2 = productMPS(s, n -> isodd(n) ? "Up" : "Dn")
-  tdvp(H, -im * ttotal, psi2; time_step=-im * tau, cutoff, normalize=true, observer=obs)
+  tdvp(H, -im * ttotal, psi2; time_step=-im * tau, cutoff, normalize=false, observer=obs)
 
   # Using filter here just due to the current
   # behavior of Observers that nothing gets appended:
