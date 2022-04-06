@@ -65,20 +65,16 @@ function tdvp!(solver, PH, time_step::Number, direction::Base.Ordering, psi::MPS
 
   N = length(psi)
   PH.nsite = nsite
+  
   if direction==Base.Forward
-    #println("doing forward step")
     if !isortho(psi) || orthocenter(psi) != 1
       orthogonalize!(psi, 1)
     end
     @assert isortho(psi) && orthocenter(psi) == 1
     position!(PH, psi, 1)
   elseif direction==Base.Reverse
-   # println("doing backward step")
     if !isortho(psi) || orthocenter(psi) != N-nsite+1
-    #  println("orthogonalizing before backward step")
       orthogonalize!(psi, N-nsite+1)
-    else
-    #   println("not orthogonalizing before backward step")
     end
     @assert(isortho(psi) && (orthocenter(psi) == N-nsite+1))
     position!(PH, psi, N-nsite+1)
@@ -86,15 +82,14 @@ function tdvp!(solver, PH, time_step::Number, direction::Base.Ordering, psi::MPS
 
   maxtruncerr = 0.0
   for (b, ha) in sweepnext(N; ncenter=nsite)
+    # unidirectional (half-)sweeps only, skip over the other direction
     if direction==Base.Forward && ha==2
-      #println("not doing step for ", b," ", ha)
       continue
     elseif direction==Base.Reverse && ha==1
-      #println("not doing step for ", b," ", ha)
       continue
-    #else
-    #  #println("doing step for ", b," ", ha)
     end
+    
+    # Do 'forwards' evolution step
     PH.nsite = nsite
     position!(PH, psi, b)
     if nsite == 1

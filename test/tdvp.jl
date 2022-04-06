@@ -136,9 +136,7 @@ end
     F = abs(scalar(dag(psix) * prod(psi)))
     #@printf("%s=%.10f  exact=%.10f  F=%.10f\n",method,Sz_tdvp[end],Sz_exact[end],F)
   end
-  #@show norm(Sz_tdvp-Sz_exact)
-  @show Sz_tdvp
-  @show Sz_exact
+  
   @test norm(Sz_tdvp - Sz_exact) < 1e-5
 end
 
