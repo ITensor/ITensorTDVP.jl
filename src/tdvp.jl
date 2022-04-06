@@ -49,7 +49,7 @@ function tdvp(solver, PH, psi0::MPS, t::Number, sweeps; kwargs...)::MPS
       end
 
       for (b, ha) in sweepnext(N; ncenter=nsite)
-        PH.nsite = nsite
+        set_nsite!(PH, nsite)
         position!(PH, psi, b)
 
         if nsite == 1
@@ -109,7 +109,7 @@ function tdvp(solver, PH, psi0::MPS, t::Number, sweeps; kwargs...)::MPS
             phi0 = S * V
           end
 
-          PH.nsite = nsite - 1
+          set_nsite!(PH, nsite - 1)
           position!(PH, psi, b1)
 
           phi0, info = solver(PH, -t / 2, phi0)
@@ -121,7 +121,7 @@ function tdvp(solver, PH, psi0::MPS, t::Number, sweeps; kwargs...)::MPS
           elseif nsite == 1
             psi[b + Δ] = phi0 * psi[b + Δ]
           end
-          PH.nsite = nsite
+          set_nsite!(PH, nsite)
         end
 
         if outputlevel >= 2
