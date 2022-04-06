@@ -33,12 +33,7 @@ initstate = rand(["↑", "↓"], n)
 ψ = MPS(s, initstate)
 
 dmrg_x_kwargs = (
-  nsweeps=10,
-  reverse_step=false,
-  normalize=true,
-  maxdim=20,
-  cutoff=1e-10,
-  outputlevel=1,
+  nsweeps=10, reverse_step=false, normalize=true, maxdim=20, cutoff=1e-10, outputlevel=1
 )
 
 ϕ = dmrg_x(ProjMPO(H), ψ; dmrg_x_kwargs...)

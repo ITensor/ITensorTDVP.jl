@@ -310,19 +310,14 @@ end
   ψ = MPS(s, initstate)
 
   dmrg_x_kwargs = (
-    nsweeps=20,
-    reverse_step=false,
-    normalize=true,
-    maxdim=20,
-    cutoff=1e-10,
-    outputlevel=0,
+    nsweeps=20, reverse_step=false, normalize=true, maxdim=20, cutoff=1e-10, outputlevel=0
   )
 
   ϕ = dmrg_x(ProjMPO(H), ψ; dmrg_x_kwargs...)
 
-  @test inner(ψ', H, ψ) / inner(ψ, ψ) ≈ inner(ϕ', H, ϕ) / inner(ϕ, ϕ) rtol=1e-2
-  @test inner(H, ψ, H, ψ) ≉ inner(ψ', H, ψ) ^ 2 atol=1e-1
-  @test inner(H, ϕ, H, ϕ) ≈ inner(ϕ', H, ϕ) ^ 2 atol=1e-7
+  @test inner(ψ', H, ψ) / inner(ψ, ψ) ≈ inner(ϕ', H, ϕ) / inner(ϕ, ϕ) rtol = 1e-2
+  @test inner(H, ψ, H, ψ) ≉ inner(ψ', H, ψ)^2 atol = 1e-1
+  @test inner(H, ϕ, H, ϕ) ≈ inner(ϕ', H, ϕ)^2 atol = 1e-7
 end
 
 nothing
