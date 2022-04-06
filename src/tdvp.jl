@@ -64,8 +64,7 @@ function tdvp!(solver, PH, time_step::Number, direction::Base.Ordering, psi::MPS
   noise::Real = get(kwargs, :noise, 0.0)
 
   N = length(psi)
-  PH.nsite = nsite
-  
+  set_nsite!(PH, nsite)
   if direction==Base.Forward
     if !isortho(psi) || orthocenter(psi) != 1
       orthogonalize!(psi, 1)
@@ -90,7 +89,7 @@ function tdvp!(solver, PH, time_step::Number, direction::Base.Ordering, psi::MPS
     end
     
     # Do 'forwards' evolution step
-    PH.nsite = nsite
+    set_nsite!(PH, nsite)
     position!(PH, psi, b)
     if nsite == 1
       phi1 = psi[b]
@@ -147,8 +146,8 @@ function tdvp!(solver, PH, time_step::Number, direction::Base.Ordering, psi::MPS
           ITensors.setrightlim!(psi,b)
         end
       end
-
-      PH.nsite = nsite - 1
+      
+      set_nsite!(PH, nsite-1)
       position!(PH, psi, b1)
 
       phi0, info = solver(PH, -time_step, phi0)
@@ -165,7 +164,7 @@ function tdvp!(solver, PH, time_step::Number, direction::Base.Ordering, psi::MPS
            ITensors.setleftlim!(psi,b + Δ - 1)
         end
       end
-      PH.nsite = nsite
+      set_nsite!(PH, nsite)
     end
 
     if outputlevel >= 2
