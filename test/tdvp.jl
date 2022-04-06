@@ -40,6 +40,47 @@ using Printf
   @test abs(inner(ψ0, ψ2)) > 0.99
 end
 
+@testset "TDVP: Sum of Hamiltonians" begin
+  N = 10
+  cutoff = 1e-10
+
+  s = siteinds("S=1/2", N)
+
+  os1 = OpSum()
+  for j in 1:(N - 1)
+    os1 += 0.5, "S+", j, "S-", j + 1
+    os1 += 0.5, "S-", j, "S+", j + 1
+  end
+  os2 = OpSum()
+  for j in 1:(N - 1)
+    os2 += "Sz", j, "Sz", j + 1
+  end
+
+  H1 = MPO(os1, s)
+  H2 = MPO(os2, s)
+  Hs = [H1, H2]
+
+  ψ0 = randomMPS(s; linkdims=10)
+
+  ψ1 = tdvp(Hs, ψ0, -0.1im; cutoff, nsite=1)
+
+  @test norm(ψ1) ≈ 1.0
+
+  ## Should lose fidelity:
+  #@test abs(inner(ψ0,ψ1)) < 0.9
+
+  # Average energy should be conserved:
+  @test real(sum(H -> inner(ψ1, H, ψ1), Hs)) ≈ sum(H -> inner(ψ0, H, ψ0), Hs)
+
+  # Time evolve backwards:
+  ψ2 = tdvp(Hs, ψ1, +0.1im; cutoff)
+
+  @test norm(ψ2) ≈ 1.0
+
+  # Should rotate back to original state:
+  @test abs(inner(ψ0, ψ2)) > 0.99
+end
+
 @testset "Custom solver in TDVP" begin
   N = 10
   cutoff = 1e-10

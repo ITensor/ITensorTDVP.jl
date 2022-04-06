@@ -6,6 +6,10 @@ using Printf
 
 using ITensors: AbstractMPS, @debug_check, @timeit_debug, check_hascommoninds, orthocenter
 
+# Overloads needed for ITensors.jl
+# To port to ITensors.jl
+include(joinpath("ITensors", "abstractprojmpo.jl"))
+
 include("tdvp.jl")
 include("dmrg_x.jl")
 
