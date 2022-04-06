@@ -1,8 +1,9 @@
-using Test
 using ITensors
 using ITensorTDVP
 using KrylovKit
 using Printf
+using Random
+using Test
 
 @testset "Basic TDVP" begin
   N = 10
@@ -70,7 +71,7 @@ end
   #@test abs(inner(ψ0,ψ1)) < 0.9
 
   # Average energy should be conserved:
-  @test real(sum(H -> inner(ψ1, H, ψ1), Hs)) ≈ sum(H -> inner(ψ0, H, ψ0), Hs)
+  @test real(sum(H -> inner(ψ1', H, ψ1), Hs)) ≈ sum(H -> inner(ψ0', H, ψ0), Hs)
 
   # Time evolve backwards:
   ψ2 = tdvp(Hs, ψ1, +0.1im; cutoff)
@@ -339,7 +340,6 @@ end
   n = 10
   s = siteinds("S=1/2", n)
 
-  using Random
   Random.seed!(12)
 
   W = 12
