@@ -26,7 +26,7 @@ function tdvp(direction::Base.Ordering, solver, PH, time_step::Number, psi::MPS;
   normalize::Bool = get(kwargs, :normalize, false)
   which_decomp::Union{String,Nothing} = get(kwargs, :which_decomp, nothing)
   svd_alg::String = get(kwargs, :svd_alg, "divide_and_conquer")
-  observer = get(kwargs, :observer, NoObserver())
+  observer = get(kwargs, :observer!, NoObserver())
   outputlevel = get(kwargs, :outputlevel, 0)
   sw = get(kwargs, :sweep, 1)
 
@@ -153,31 +153,9 @@ function tdvp(direction::Base.Ordering, solver, PH, time_step::Number, psi::MPS;
     end
 
     half_sweep_is_done = ((b == 1 && ha == 2) || (b == N && ha == 1))
-    if observer isa Observers.Observer
-      update!(
-        observer;
-        psi,
-        bond=b,
-        sweep=sw,
-        half_sweep=ha,
-        spec,
-        outputlevel,
-        half_sweep_is_done,
-      )
-    elseif observer isa ITensors.AbstractObserver
-      measure!(
-        observer;
-        psi,
-        bond=b,
-        sweep=sw,
-        half_sweep=ha,
-        spec,
-        outputlevel,
-        half_sweep_is_done,
-      )
-    else
-      error("observer has unrecognized type ($(typeof(observer)))")
-    end
+    update!(
+      observer; psi, bond=b, sweep=sw, half_sweep=ha, spec, outputlevel, half_sweep_is_done
+    )
   end
 
   # Just to be sure:

@@ -22,9 +22,9 @@ function applyexp_solver(; kwargs...)
       maxiter=get(kwargs, :solver_krylovdim, 30),
       outputlevel=get(kwargs, :solver_outputlevel, 0),
     )
-    #apply_exp tol is absolute, compute from tol_per_unit_time:
+    #applyexp tol is absolute, compute from tol_per_unit_time:
     tol = abs(t) * tol_per_unit_time
-    psi, info = apply_exp(H, t, psi0; tol, solver_kwargs..., kws...)
+    psi, info = applyexp(H, t, psi0; tol, solver_kwargs..., kws...)
     return psi, info
   end
   return solver

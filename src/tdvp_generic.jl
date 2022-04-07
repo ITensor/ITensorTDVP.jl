@@ -1,9 +1,9 @@
 function _tdvp_compute_nsweeps(t; kwargs...)
   time_step::Number = get(kwargs, :time_step, t)
-  nsweeps::Integer = get(kwargs, :nsweeps, 0)
-  if nsweeps > 0 && time_step != t
+  nsweeps::Union{Int,Nothing} = get(kwargs, :nsweeps, nothing)
+  if !isnothing(nsweeps) && time_step != t
     error("Cannot specify both time_step and nsweeps in tdvp")
-  elseif isfinite(time_step) && abs(time_step) > 0.0 && nsweeps == 0
+  elseif isfinite(time_step) && abs(time_step) > 0.0 && isnothing(nsweeps)
     nsweeps = convert(Int, ceil(abs(t / time_step)))
     if !(nsweeps * time_step ≈ t)
       error("Time step $time_step not commensurate with total time t=$t")
@@ -98,7 +98,7 @@ function tdvp(solver, PH, t::Number, psi0::MPS; kwargs...)
     end
 
     isdone = false
-    if checkdone != nothing
+    if !isnothing(checkdone)
       isdone = checkdone(; psi, sweep=sw, outputlevel, kwargs...)
     elseif observer isa ITensors.AbstractObserver
       isdone = checkdone!(observer; psi, sweep=sw, outputlevel)

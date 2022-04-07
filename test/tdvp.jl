@@ -263,7 +263,7 @@ end
     time_step=-im * tau,
     cutoff,
     normalize=false,
-    observer=TDVPObserver(),
+    (observer!)=TDVPObserver(),
   )
 
   #display(En1)
@@ -381,7 +381,7 @@ end
     time_step=-im * tau,
     cutoff,
     normalize=false,
-    observer=TDVPObserver(),
+    (observer!)=TDVPObserver(),
   )
 
   #
@@ -405,7 +405,7 @@ end
   obs = Observer("Sz" => measure_sz, "En" => measure_en)
 
   psi2 = productMPS(s, n -> isodd(n) ? "Up" : "Dn")
-  tdvp(H, -im * ttotal, psi2; time_step=-im * tau, cutoff, normalize=false, observer=obs)
+  tdvp(H, -im * ttotal, psi2; time_step=-im * tau, cutoff, normalize=false, (observer!)=obs)
 
   # Using filter here just due to the current
   # behavior of Observers that nothing gets appended:

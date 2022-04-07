@@ -4,7 +4,7 @@
 # - check slice ranges - change end value by 1?
 #
 
-function assemble_Lanczos_vecs(lanczos_vectors, linear_comb, norm)
+function assemble_lanczos_vecs(lanczos_vectors, linear_comb, norm)
   #if length(lanczos_vectors) != length(linear_comb)
   #  @show length(lanczos_vectors)
   #  @show length(linear_comb)
@@ -20,7 +20,7 @@ struct ApplyExpInfo
   numops::Int
 end
 
-function apply_exp(H, tau::Number, x0; kwargs...)
+function applyexp(H, tau::Number, x0; kwargs...)
   maxiter = get(kwargs, :maxiter, 30)
   tol = get(kwargs, :tol, 1E-12)
   outputlevel = get(kwargs, :outputlevel, 0)
@@ -66,7 +66,7 @@ function apply_exp(H, tau::Number, x0; kwargs...)
       tmat = bigTmat[1:tmat_size, 1:tmat_size]
       tmat_exp = exp(tau * tmat)
       linear_comb = tmat_exp[:, 1]
-      xt = assemble_Lanczos_vecs(lanczos_vectors, linear_comb, nrm)
+      xt = assemble_lanczos_vecs(lanczos_vectors, linear_comb, nrm)
       return xt, ApplyExpInfo(nmatvec)
     end
 
@@ -106,12 +106,12 @@ function apply_exp(H, tau::Number, x0; kwargs...)
 
       if ((error < tol) || (iter == maxiter))
         if (iter == maxiter)
-          println("warning: apply_exp not converged in $maxiter steps")
+          println("warning: applyexp not converged in $maxiter steps")
         end
 
         # Assemble the time evolved state
         linear_comb = tmat_ext_exp[:, 1]
-        xt = assemble_Lanczos_vecs(lanczos_vectors, linear_comb, nrm)
+        xt = assemble_lanczos_vecs(lanczos_vectors, linear_comb, nrm)
 
         if outputlevel >= 1
           println("  Number of iterations: $iter")
@@ -123,7 +123,7 @@ function apply_exp(H, tau::Number, x0; kwargs...)
   end # iter
 
   if outputlevel >= 0
-    println("In apply_exp, number of matrix-vector multiplies: ", nmatvec)
+    println("In applyexp, number of matrix-vector multiplies: ", nmatvec)
   end
 
   return x0
