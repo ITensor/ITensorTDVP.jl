@@ -41,7 +41,7 @@ function process_sweeps(; kwargs...)
 end
 
 function tdvp(solver, PH, t::Number, psi0::MPS; kwargs...)
-  reverse_step = get(kwargs, :checkdone, true)
+  reverse_step = get(kwargs, :reverse_step, true)
 
   nsweeps = _tdvp_compute_nsweeps(t; kwargs...)
   maxdim, mindim, cutoff, noise = process_sweeps(; nsweeps, kwargs...)
@@ -71,10 +71,10 @@ function tdvp(solver, PH, t::Number, psi0::MPS; kwargs...)
 
     sw_time = @elapsed begin
       psi, PH, info = tdvp!(
+        tdvp_order,
         solver,
         PH,
         time_step,
-        tdvp_order,
         psi;
         kwargs...,
         reverse_step,

@@ -2,50 +2,57 @@ struct TDVPInfo
   maxtruncerr::Float64
 end
 
-struct TDVPOrder
-  order::Int
-  direction::Base.Ordering #Forward, Reverse
+struct TDVPOrder{order,direction} end
+
+TDVPOrder(order::Int, direction::Base.Ordering) = TDVPOrder{order,direction}()
+
+orderings(::TDVPOrder) = error("Not implemented")
+sub_time_steps(::TDVPOrder) = error("Not implemented")
+
+function orderings(::TDVPOrder{1,direction}) where {direction}
+  return [direction, Base.ReverseOrdering(direction)]
+end
+sub_time_steps(::TDVPOrder{1}) = [1.0, 0.0]
+
+function orderings(::TDVPOrder{2,direction}) where {direction}
+  return [direction, Base.ReverseOrdering(direction)]
+end
+sub_time_steps(::TDVPOrder{2}) = [1.0 / 2.0, 1.0 / 2.0]
+
+function orderings(::TDVPOrder{4,direction}) where {direction}
+  return [direction, Base.ReverseOrdering(direction)]
+end
+function sub_time_steps(::TDVPOrder{4})
+  s = 1.0 / (2.0 - 2.0^(1.0 / 3.0))
+  return [
+    s / 2.0, s / 2.0, (1.0 - 2.0 * s) / 2.0, (1.0 - 2.0 * s) / 2.0, s / 2.0, s / 2.0
+  ]
 end
 
-function tdvp(solver, PH, time_step::Number, order::TDVPOrder, psi0::MPS; kwargs...)
+function tdvp(order::TDVPOrder, solver, PH, time_step::Number, psi0::MPS; kwargs...)
   psi = copy(psi0)
-  return tdvp!(solver, PH, time_step, order, psi; kwargs...)
+  return tdvp!(order, solver, PH, time_step, psi; kwargs...)
 end
 
-function tdvp!(solver, PH, time_step::Number, tdvp_order::TDVPOrder, psi::MPS; kwargs...)
-  order = tdvp_order.order
-  direction = tdvp_order.direction
-
-  if order == 1
-    sub_time_steps = [1.0, 0.0]
-    orderings = [direction, Base.ReverseOrdering(direction)]
-  elseif order == 2
-    sub_time_steps = [1.0 / 2.0, 1.0 / 2.0]
-    orderings = [direction, Base.ReverseOrdering(direction)]
-  elseif order == 4
-    s = 1.0 / (2.0 - 2.0^(1.0 / 3.0))
-    sub_time_steps = [
-      s / 2.0, s / 2.0, (1.0 - 2.0 * s) / 2.0, (1.0 - 2.0 * s) / 2.0, s / 2.0, s / 2.0
-    ]
-    orderings = repeat([direction, Base.ReverseOrdering(direction)], 3)
-  end
-
+function tdvp!(order, solver, PH, time_step::Number, psi::MPS; kwargs...)
+  orderings = ITensorTDVP.orderings(order)
+  sub_time_steps = ITensorTDVP.sub_time_steps(order)
   sub_time_steps *= time_step
   global info
   for substep in 1:length(sub_time_steps)
     psi, PH, info = tdvp!(
-      solver, PH, sub_time_steps[substep], orderings[substep], psi; kwargs...
+      orderings[substep], solver, PH, sub_time_steps[substep], psi; kwargs...
     )
   end
   return psi, PH, info
 end
 
-function tdvp(solver, PH, time_step::Number, direction::Base.Ordering, psi0::MPS; kwargs...)
+function tdvp(direction::Base.Ordering, solver, PH, time_step::Number, psi0::MPS; kwargs...)
   psi = copy(psi0)
-  return tdvp!(solver, PH, time_step, direction, psi; kwargs...)
+  return tdvp!(direction, solver, PH, time_step, psi; kwargs...)
 end
 
-function tdvp!(solver, PH, time_step::Number, direction::Base.Ordering, psi::MPS; kwargs...)
+function tdvp!(direction::Base.Ordering, solver, PH, time_step::Number, psi::MPS; kwargs...)
   if length(psi) == 1
     error(
       "`tdvp` currently does not support system sizes of 1. You can diagonalize the MPO tensor directly with tools like `LinearAlgebra.eigen`, `KrylovKit.exponentiate`, etc.",
