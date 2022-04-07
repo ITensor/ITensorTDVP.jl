@@ -76,7 +76,7 @@ end
   @test real(sum(H -> inner(ψ1', H, ψ1), Hs)) ≈ sum(H -> inner(ψ0', H, ψ0), Hs)
 
   # Time evolve backwards:
-  ψ2 = tdvp(Hs,+0.1im, ψ1;nsweeps=1, cutoff)
+  ψ2 = tdvp(Hs, +0.1im, ψ1; nsweeps=1, cutoff)
 
   @test norm(ψ2) ≈ 1.0
 
@@ -166,7 +166,6 @@ end
       -im * tau,
       psi;
       cutoff,
-      
       normalize=false,
       solver_tol=1e-12,
       solver_maxiter=500,
@@ -177,7 +176,7 @@ end
     F = abs(scalar(dag(psix) * prod(psi)))
     #@printf("%s=%.10f  exact=%.10f  F=%.10f\n",method,Sz_tdvp[end],Sz_exact[end],F)
   end
-  
+
   @test norm(Sz_tdvp - Sz_exact) < 1e-5
 end
 
@@ -224,14 +223,15 @@ end
   En1 = zeros(Nsteps)
   Sz2 = zeros(Nsteps)
   En2 = zeros(Nsteps)
-  
 
   for step in 1:Nsteps
     psi = apply(gates, psi; cutoff)
     #normalize!(psi)
 
     nsite = (step <= 3 ? 2 : 1)
-    phi = tdvp(H,  -tau * im, phi; nsweeps=1, cutoff, nsite, normalize=true, exponentiate_krylovdim=15)
+    phi = tdvp(
+      H, -tau * im, phi; nsweeps=1, cutoff, nsite, normalize=true, exponentiate_krylovdim=15
+    )
 
     Sz1[step] = expect(psi, "Sz"; sites=c:c)[1]
     Sz2[step] = expect(phi, "Sz"; sites=c:c)[1]

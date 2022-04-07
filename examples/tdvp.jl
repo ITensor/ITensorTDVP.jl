@@ -22,8 +22,7 @@ H = MPO(heisenberg(n), s)
 ϕ = tdvp(
   H,
   -1.0,
-  ψ
-  ;
+  ψ;
   nsweeps=20,
   reverse_step=false,
   normalize=true,

@@ -8,37 +8,41 @@ struct TDVPOrder
   direction::Base.Ordering #Forward, Reverse
 end
 
-function tdvp(solver,PH,time_step::Number,order::TDVPOrder,psi0::MPS;kwargs...)
-  psi=copy(psi0)
-  return tdvp!(solver,PH,time_step,order,psi;kwargs...)
+function tdvp(solver, PH, time_step::Number, order::TDVPOrder, psi0::MPS; kwargs...)
+  psi = copy(psi0)
+  return tdvp!(solver, PH, time_step, order, psi; kwargs...)
 end
 
-function tdvp!(solver,PH,time_step::Number,tdvp_order::TDVPOrder,psi::MPS;kwargs...)
-  order=tdvp_order.order
-  direction=tdvp_order.direction
-  
-  if order==1
-    sub_time_steps=[1.0,0.0]
-    orderings=[direction, Base.ReverseOrdering(direction)]
-  elseif order==2
-    sub_time_steps=[1.0/2.0,1.0/2.0]
-    orderings=[direction, Base.ReverseOrdering(direction)]
-  elseif order==4
-    s=1.0/(2.0-2.0^(1.0/3.0))
-    sub_time_steps=[s/2.0,s/2.0,(1.0-2.0*s)/2.,(1.0-2.0*s)/2.0,s/2.0,s/2.0]
-    orderings=repeat([direction, Base.ReverseOrdering(direction)],3)
-  end
-  
-  sub_time_steps*=time_step
-  global info
-  for substep in 1:length(sub_time_steps)
-    psi, PH, info=tdvp!(solver, PH, sub_time_steps[substep], orderings[substep], psi; kwargs...)
-  end
-  return psi, PH, info
+function tdvp!(solver, PH, time_step::Number, tdvp_order::TDVPOrder, psi::MPS; kwargs...)
+  order = tdvp_order.order
+  direction = tdvp_order.direction
+
+  if order == 1
+    sub_time_steps = [1.0, 0.0]
+    orderings = [direction, Base.ReverseOrdering(direction)]
+  elseif order == 2
+    sub_time_steps = [1.0 / 2.0, 1.0 / 2.0]
+    orderings = [direction, Base.ReverseOrdering(direction)]
+  elseif order == 4
+    s = 1.0 / (2.0 - 2.0^(1.0 / 3.0))
+    sub_time_steps = [
+      s / 2.0, s / 2.0, (1.0 - 2.0 * s) / 2.0, (1.0 - 2.0 * s) / 2.0, s / 2.0, s / 2.0
+    ]
+    orderings = repeat([direction, Base.ReverseOrdering(direction)], 3)
   end
 
+  sub_time_steps *= time_step
+  global info
+  for substep in 1:length(sub_time_steps)
+    psi, PH, info = tdvp!(
+      solver, PH, sub_time_steps[substep], orderings[substep], psi; kwargs...
+    )
+  end
+  return psi, PH, info
+end
+
 function tdvp(solver, PH, time_step::Number, direction::Base.Ordering, psi0::MPS; kwargs...)
-  psi=copy(psi0)
+  psi = copy(psi0)
   return tdvp!(solver, PH, time_step, direction, psi; kwargs...)
 end
 
@@ -65,29 +69,29 @@ function tdvp!(solver, PH, time_step::Number, direction::Base.Ordering, psi::MPS
 
   N = length(psi)
   set_nsite!(PH, nsite)
-  if direction==Base.Forward
+  if direction == Base.Forward
     if !isortho(psi) || orthocenter(psi) != 1
       orthogonalize!(psi, 1)
     end
     @assert isortho(psi) && orthocenter(psi) == 1
     position!(PH, psi, 1)
-  elseif direction==Base.Reverse
-    if !isortho(psi) || orthocenter(psi) != N-nsite+1
-      orthogonalize!(psi, N-nsite+1)
+  elseif direction == Base.Reverse
+    if !isortho(psi) || orthocenter(psi) != N - nsite + 1
+      orthogonalize!(psi, N - nsite + 1)
     end
-    @assert(isortho(psi) && (orthocenter(psi) == N-nsite+1))
-    position!(PH, psi, N-nsite+1)
+    @assert(isortho(psi) && (orthocenter(psi) == N - nsite + 1))
+    position!(PH, psi, N - nsite + 1)
   end
 
   maxtruncerr = 0.0
   for (b, ha) in sweepnext(N; ncenter=nsite)
     # unidirectional (half-)sweeps only, skip over the other direction
-    if direction==Base.Forward && ha==2
+    if direction == Base.Forward && ha == 2
       continue
-    elseif direction==Base.Reverse && ha==1
+    elseif direction == Base.Reverse && ha == 1
       continue
     end
-    
+
     # Do 'forwards' evolution step
     set_nsite!(PH, nsite)
     position!(PH, psi, b)
@@ -140,14 +144,14 @@ function tdvp!(solver, PH, time_step::Number, direction::Base.Ordering, psi::MPS
         U, S, V = svd(phi1, uinds)
         psi[b] = U
         phi0 = S * V
-        if ha==1
-          ITensors.setleftlim!(psi,b)
-        elseif ha==2
-          ITensors.setrightlim!(psi,b)
+        if ha == 1
+          ITensors.setleftlim!(psi, b)
+        elseif ha == 2
+          ITensors.setrightlim!(psi, b)
         end
       end
-      
-      set_nsite!(PH, nsite-1)
+
+      set_nsite!(PH, nsite - 1)
       position!(PH, psi, b1)
 
       phi0, info = solver(PH, -time_step, phi0)
@@ -158,10 +162,10 @@ function tdvp!(solver, PH, time_step::Number, direction::Base.Ordering, psi::MPS
         psi[b1] = phi0
       elseif nsite == 1
         psi[b + Δ] = phi0 * psi[b + Δ]
-        if ha==1
-           ITensors.setrightlim!(psi,b + Δ + 1)
-        elseif ha==2
-           ITensors.setleftlim!(psi,b + Δ - 1)
+        if ha == 1
+          ITensors.setrightlim!(psi, b + Δ + 1)
+        elseif ha == 2
+          ITensors.setleftlim!(psi, b + Δ - 1)
         end
       end
       set_nsite!(PH, nsite)
@@ -180,14 +184,28 @@ function tdvp!(solver, PH, time_step::Number, direction::Base.Ordering, psi::MPS
       flush(stdout)
     end
 
-    half_sweep_is_done = ((b == 1 && ha == 2) || (b == N && ha == 1) )
+    half_sweep_is_done = ((b == 1 && ha == 2) || (b == N && ha == 1))
     if observer isa Observers.Observer
       update!(
-        observer; psi, bond=b, sweep=sw, half_sweep=ha, spec, outputlevel, half_sweep_is_done
+        observer;
+        psi,
+        bond=b,
+        sweep=sw,
+        half_sweep=ha,
+        spec,
+        outputlevel,
+        half_sweep_is_done,
       )
     elseif observer isa ITensors.AbstractObserver
       measure!(
-        observer; psi, bond=b, sweep=sw, half_sweep=ha, spec, outputlevel, half_sweep_is_done
+        observer;
+        psi,
+        bond=b,
+        sweep=sw,
+        half_sweep=ha,
+        spec,
+        outputlevel,
+        half_sweep_is_done,
       )
     else
       error("observer has unrecognized type ($(typeof(observer)))")
@@ -313,7 +331,7 @@ function tdvp(solver, PH, t::Number, psi0::MPS; kwargs...)
 
   time_step::Number = get(kwargs, :time_step, t)
   order = get(kwargs, :order, 2)
-  tdvp_order = TDVPOrder(order,Base.Forward)
+  tdvp_order = TDVPOrder(order, Base.Forward)
 
   checkdone = get(kwargs, :checkdone, nothing)
   write_when_maxdim_exceeds::Union{Int,Nothing} = get(
