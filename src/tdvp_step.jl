@@ -1,4 +1,4 @@
-function tdvp(order, solver, PH, time_step::Number, psi::MPS; kwargs...)
+function tdvp(order::TDVPOrder, solver, PH, time_step::Number, psi::MPS; kwargs...)
   orderings = ITensorTDVP.orderings(order)
   sub_time_steps = ITensorTDVP.sub_time_steps(order)
   sub_time_steps *= time_step
