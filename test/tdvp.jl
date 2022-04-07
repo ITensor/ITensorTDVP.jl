@@ -328,8 +328,8 @@ end
   nsite = 2
   maxdim = [10, 20, 40, 100]
   sweeps = Sweeps(nsweeps) # number of sweeps is 5
-  maxdim!(sweeps,10,20,40,100) # gradually increase states kept
-  cutoff!(sweeps,cutoff)
+  maxdim!(sweeps, 10, 20, 40, 100) # gradually increase states kept
+  cutoff!(sweeps, cutoff)
   psi = ITensorTDVP.dmrg(
     H, psi; nsweeps, maxdim, cutoff, nsite, solver_krylovdim=3, solver_maxiter=1
   )
