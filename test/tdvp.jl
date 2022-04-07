@@ -24,7 +24,7 @@ using Test
   ψ0 = randomMPS(s; linkdims=10)
 
   # Time evolve forward:
-  ψ1 = tdvp(H, -0.1im, ψ0; cutoff, nsite=1)
+  ψ1 = tdvp(H, -0.1im, ψ0; nsweeps=1, cutoff, nsite=1)
 
   @test norm(ψ1) ≈ 1.0
 
@@ -35,7 +35,7 @@ using Test
   @test real(inner(ψ1', H, ψ1)) ≈ inner(ψ0', H, ψ0)
 
   # Time evolve backwards:
-  ψ2 = tdvp(H, +0.1im, ψ1; cutoff)
+  ψ2 = tdvp(H, +0.1im, ψ1; nsweeps=1, cutoff)
 
   @test norm(ψ2) ≈ 1.0
 
@@ -65,7 +65,7 @@ end
 
   ψ0 = randomMPS(s; linkdims=10)
 
-  ψ1 = tdvp(Hs, ψ0, -0.1im; cutoff, nsite=1)
+  ψ1 = tdvp(Hs, -0.1im, ψ0; nsweeps=1, cutoff, nsite=1)
 
   @test norm(ψ1) ≈ 1.0
 
@@ -76,7 +76,7 @@ end
   @test real(sum(H -> inner(ψ1', H, ψ1), Hs)) ≈ sum(H -> inner(ψ0', H, ψ0), Hs)
 
   # Time evolve backwards:
-  ψ2 = tdvp(Hs, ψ1, +0.1im; cutoff)
+  ψ2 = tdvp(Hs,+0.1im, ψ1;nsweeps=1, cutoff)
 
   @test norm(ψ2) ≈ 1.0
 
@@ -166,14 +166,13 @@ end
       -im * tau,
       psi;
       cutoff,
-      nsteps=20,
+      
       normalize=false,
       solver_tol=1e-12,
       solver_maxiter=500,
       solver_krylovdim=25,
     )
-    
-    push!(Sz_tdvp, real(expect(psi, "Sz"; sites=c)))
+    push!(Sz_tdvp, real(expect(psi, "Sz"; sites=c:c)[1]))
     push!(Sz_exact, real(scalar(dag(prime(psix, s[c])) * Szc * psix)))
     F = abs(scalar(dag(psix) * prod(psi)))
     #@printf("%s=%.10f  exact=%.10f  F=%.10f\n",method,Sz_tdvp[end],Sz_exact[end],F)
@@ -213,7 +212,7 @@ end
   append!(gates, reverse(gates))
 
   psi = productMPS(s, n -> isodd(n) ? "Up" : "Dn")
-
+  phi = copy(psi)
   c = div(N, 2)
 
   #
@@ -223,13 +222,16 @@ end
   Nsteps = convert(Int, ceil(abs(ttotal / tau)))
   Sz1 = zeros(Nsteps)
   En1 = zeros(Nsteps)
+  Sz2 = zeros(Nsteps)
+  En2 = zeros(Nsteps)
+  
 
   for step in 1:Nsteps
     psi = apply(gates, psi; cutoff)
     #normalize!(psi)
 
     nsite = (step <= 3 ? 2 : 1)
-    phi = tdvp(H, phi, -tau * im; cutoff, nsite, normalize=true, exponentiate_krylovdim=15)
+    phi = tdvp(H,  -tau * im, phi; nsweeps=1, cutoff, nsite, normalize=true, exponentiate_krylovdim=15)
 
     Sz1[step] = expect(psi, "Sz"; sites=c:c)[1]
     Sz2[step] = expect(phi, "Sz"; sites=c:c)[1]
@@ -297,9 +299,9 @@ end
   trange = 0.0:tau:ttotal
   for (step, t) in enumerate(trange)
     nsite = (step <= 10 ? 2 : 1)
-    psi = tdvp(H, psi, -tau; cutoff, nsite, normalize=true, exponentiate_krylovdim=15)
+    psi = tdvp(H, -tau,psi; cutoff, nsite, normalize=true, exponentiate_krylovdim=15)
     @printf("%.3f energy = %.12f\n", step * tau, inner(psi', H, psi))
-end
+  end
   #@show maxlinkdim(psi)
 
   @test inner(psi', H, psi) < -4.25
@@ -419,6 +421,8 @@ end
 
   @test Sz1 ≈ Sz2
   @test En1 ≈ En2
+end
+
 @testset "DMRG-X" begin
   function heisenberg(n; h=zeros(n))
     os = OpSum()

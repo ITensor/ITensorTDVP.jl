@@ -266,7 +266,6 @@ end
 function _tdvp_compute_nsweeps(t; kwargs...)
   time_step::Number = get(kwargs, :time_step, t)
   nsweeps::Integer = get(kwargs, :nsweeps, 0)
-
   if nsweeps > 0 && time_step != t
     error("Cannot specify both time_step and nsweeps in tdvp")
   elseif isfinite(time_step) && abs(time_step) > 0.0 && nsweeps == 0
@@ -421,11 +420,11 @@ function tdvp(solver, Hs::Vector{MPO}, t::Number, psi0::MPS; kwargs...)
   end
   Hs .= ITensors.permute.(Hs, Ref((linkind, siteinds, linkind)))
   PHs = ProjMPOSum(Hs)
-  return tdvp(solver, PHs, t, psi0, sweeps; kwargs...)
+  return tdvp(solver, PHs, t, psi0; kwargs...)
 end
 
 function tdvp(H::Vector{MPO}, t::Number, psi0::MPS; kwargs...)
-  return tdvp(tdvp_solver(; kwargs...), H, t, psi0, sweeps; kwargs...)
+  return tdvp(tdvp_solver(; kwargs...), H, t, psi0; kwargs...)
 end
 
 """
