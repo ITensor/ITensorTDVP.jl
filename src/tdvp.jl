@@ -306,7 +306,7 @@ function process_sweeps(; kwargs...)
 end
 
 function tdvp(solver, PH, t::Number, psi0::MPS; kwargs...)
-  reverse_step = true
+  reverse_step = get(kwargs, :checkdone, true)
 
   nsweeps = _tdvp_compute_nsweeps(t; kwargs...)
   maxdim, mindim, cutoff, noise = process_sweeps(; nsweeps, kwargs...)
