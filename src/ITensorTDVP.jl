@@ -10,6 +10,7 @@ using ITensors:
   AbstractMPS, @debug_check, @timeit_debug, check_hascommoninds, orthocenter, set_nsite!
 
 include("apply_exp.jl")
+include("tdvporder.jl")
 include("tdvp_step.jl")
 include("tdvp_generic.jl")
 include("tdvp.jl")

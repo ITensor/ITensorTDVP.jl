@@ -4,18 +4,14 @@ function process_sweeps(s::Sweeps)
   )
 end
 
-function tdvp(X, t::Number, psi0::MPS, sweeps::Sweeps; kwargs...)
-  return tdvp(X, t, psi0; process_sweeps(sweeps)..., kwargs...)
+function tdvp(H, t::Number, psi0::MPS, sweeps::Sweeps; kwargs...)
+  return tdvp(H, t, psi0; process_sweeps(sweeps)..., kwargs...)
 end
 
-function tdvp(X1, X2, t::Number, psi0::MPS, sweeps::Sweeps; kwargs...)
-  return tdvp(X1, X2, t, psi0; process_sweeps(sweeps)..., kwargs...)
+function tdvp(solver, H, t::Number, psi0::MPS, sweeps::Sweeps; kwargs...)
+  return tdvp(solver, H, t, psi0; process_sweeps(sweeps)..., kwargs...)
 end
 
-function dmrg(X, psi0::MPS, sweeps::Sweeps; kwargs...)
-  return dmrg(X, psi0; process_sweeps(sweeps)..., kwargs...)
-end
-
-function dmrg(X1, X2, psi0::MPS, sweeps::Sweeps; kwargs...)
-  return dmrg(X1, X2, psi0; process_sweeps(sweeps)..., kwargs...)
+function dmrg(H, psi0::MPS, sweeps::Sweeps; kwargs...)
+  return dmrg(H, psi0; process_sweeps(sweeps)..., kwargs...)
 end

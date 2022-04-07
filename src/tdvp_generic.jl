@@ -70,7 +70,7 @@ function tdvp(solver, PH, t::Number, psi0::MPS; kwargs...)
     end
 
     sw_time = @elapsed begin
-      psi, PH, info = tdvp!(
+      psi, PH, info = tdvp(
         tdvp_order,
         solver,
         PH,
