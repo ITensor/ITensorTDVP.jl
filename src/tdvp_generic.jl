@@ -135,6 +135,14 @@ function tdvp(solver, H::MPO, t::Number, psi0::MPS; kwargs...)
   return tdvp(solver, PH, t, psi0; kwargs...)
 end
 
+function tdvp(solver, t::Number, H, psi0::MPS; kwargs...)
+  return tdvp(solver, H, t, psi0; kwargs...)
+end
+
+function tdvp(solver, H, psi0::MPS, t::Number; kwargs...)
+  return tdvp(solver, H, t, psi0; kwargs...)
+end
+
 """
     tdvp(Hs::Vector{MPO},psi0::MPS,t::Number; kwargs...)
     tdvp(Hs::Vector{MPO},psi0::MPS,t::Number, sweeps::Sweeps; kwargs...)

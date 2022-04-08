@@ -26,6 +26,9 @@ using Test
   # Time evolve forward:
   ψ1 = tdvp(H, -0.1im, ψ0; nsweeps=1, cutoff, nsite=1)
 
+  @test ψ1 ≈ tdvp(-0.1im, H, ψ0; nsweeps=1, cutoff, nsite=1)
+  @test ψ1 ≈ tdvp(H, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1)
+
   @test norm(ψ1) ≈ 1.0
 
   ## Should lose fidelity:
@@ -66,6 +69,9 @@ end
   ψ0 = randomMPS(s; linkdims=10)
 
   ψ1 = tdvp(Hs, -0.1im, ψ0; nsweeps=1, cutoff, nsite=1)
+
+  @test ψ1 ≈ tdvp(-0.1im, Hs, ψ0; nsweeps=1, cutoff, nsite=1)
+  @test ψ1 ≈ tdvp(Hs, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1)
 
   @test norm(ψ1) ≈ 1.0
 
@@ -110,6 +116,9 @@ end
   end
 
   ψ1 = tdvp(solver, H, -0.1im, ψ0; cutoff, nsite=1)
+
+  @test ψ1 ≈ tdvp(solver, -0.1im, H, ψ0; cutoff, nsite=1)
+  @test ψ1 ≈ tdvp(solver, H, ψ0, -0.1im; cutoff, nsite=1)
 
   @test norm(ψ1) ≈ 1.0
 
