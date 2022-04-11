@@ -98,8 +98,8 @@ function heisenberg(n; J=1.0, J2=0.0)
   end
   if !iszero(J2)
     for j in 1:(n - 2)
-      ℋ += J2/2, "S+", j, "S-", j + 2
-      ℋ += J2/2, "S-", j, "S+", j + 2
+      ℋ += J2 / 2, "S+", j, "S-", j + 2
+      ℋ += J2 / 2, "S-", j, "S+", j + 2
       ℋ += J2, "Sz", j, "Sz", j + 2
     end
   end
