@@ -45,17 +45,22 @@ H⃗₀ = [MPO(ℋ₀, s) for ℋ₀ in ℋ⃗₀]
 @show norm(ψ₀)
 
 cutoff = 1e-8
+# nsite-update TDVP
 nsite = 2
 
-solver_alg = Tsit5()
-solver_kwargs = (reltol=1e-8, abstol=1e-8)
+#
+# Use an ODE solver
+#
+
+ode_alg = Tsit5()
+ode_kwargs = (; reltol=1e-8, abstol=1e-8)
 function ode_solver(H⃗₀, time_step, ψ₀; kwargs...)
   return ode_solver(
     -im * TimeDependentOperator(f⃗, H⃗₀),
     time_step,
     ψ₀;
-    solver_alg=solver_alg,
-    solver_kwargs...,
+    solver_alg=ode_alg,
+    ode_kwargs...,
     kwargs...,
   )
 end
@@ -64,8 +69,13 @@ end
 
 @show norm(ψₜ_ode)
 
+#
+# Use a Krylov exponentiation solver
+#
+
+krylov_kwargs = (; tol=1e-8, eager=true)
 function krylov_solver(H⃗₀, time_step, ψ₀; kwargs...)
-  return krylov_solver(-im * TimeDependentOperator(f⃗, H⃗₀), time_step, ψ₀; kwargs...)
+  return krylov_solver(-im * TimeDependentOperator(f⃗, H⃗₀), time_step, ψ₀; krylov_kwargs..., kwargs...)
 end
 
 ψₜ_krylov = tdvp(krylov_solver, H⃗₀, time_stop, ψ₀; time_step, cutoff, nsite)

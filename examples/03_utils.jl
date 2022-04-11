@@ -84,7 +84,7 @@ end
 function krylov_solver(
   H::TimeDependentOperator, time_step, ψ₀; time_step_start=0.0, kwargs...
 )
-  ψₜ, info = exponentiate(H(time_step_start), time_step, ψ₀; tol=1e-8)
+  ψₜ, info = exponentiate(H(time_step_start), time_step, ψ₀; kwargs...)
   return ψₜ, info
 end
 
