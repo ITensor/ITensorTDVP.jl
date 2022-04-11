@@ -107,7 +107,7 @@ end
 
   ψ0 = randomMPS(s; linkdims=10)
 
-  function solver(PH, t, psi0)
+  function solver(PH, t, psi0; kwargs...)
     solver_kwargs = (;
       ishermitian=true, tol=1e-12, krylovdim=30, maxiter=100, verbosity=0, eager=true
     )

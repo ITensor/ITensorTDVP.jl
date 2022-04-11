@@ -29,6 +29,7 @@ function tdvp(direction::Base.Ordering, solver, PH, time_step::Number, psi::MPS;
   observer = get(kwargs, :observer!, NoObserver())
   outputlevel = get(kwargs, :outputlevel, 0)
   sw = get(kwargs, :sweep, 1)
+  time_step_start = get(kwargs, :time_step_start, 0.0)
 
   maxdim::Integer = get(kwargs, :maxdim, typemax(Int))
   mindim::Integer = get(kwargs, :mindim, 1)
@@ -68,7 +69,7 @@ function tdvp(direction::Base.Ordering, solver, PH, time_step::Number, psi::MPS;
     elseif nsite == 2
       phi1 = psi[b] * psi[b + 1]
     end
-    phi1, info = solver(PH, time_step, phi1)
+    phi1, info = solver(PH, time_step, phi1; time_step_start)
 
     normalize && (phi1 /= norm(phi1))
 
@@ -122,7 +123,7 @@ function tdvp(direction::Base.Ordering, solver, PH, time_step::Number, psi::MPS;
       set_nsite!(PH, nsite - 1)
       position!(PH, psi, b1)
 
-      phi0, info = solver(PH, -time_step, phi0)
+      phi0, info = solver(PH, -time_step, phi0; time_step_start)
 
       normalize && (phi0 ./= norm(phi0))
 

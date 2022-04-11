@@ -46,6 +46,7 @@ function tdvp(solver, PH, t::Number, psi0::MPS; kwargs...)
   nsweeps = _tdvp_compute_nsweeps(t; kwargs...)
   maxdim, mindim, cutoff, noise = process_sweeps(; nsweeps, kwargs...)
 
+  time_start::Number = get(kwargs, :time_start, 0.0)
   time_step::Number = get(kwargs, :time_step, t)
   order = get(kwargs, :order, 2)
   tdvp_order = TDVPOrder(order, Base.Forward)
@@ -58,6 +59,13 @@ function tdvp(solver, PH, t::Number, psi0::MPS; kwargs...)
   outputlevel::Int = get(kwargs, :outputlevel, 0)
 
   psi = copy(psi0)
+
+  # Keep track of the start of the current time step.
+  # Helpful for tracking the total time, for example
+  # when using time-dependent solvers.
+  # This will be passed as a keyword argument to the
+  # `solver`.
+  time_step_start = time_start
 
   for sw in 1:nsweeps
     if !isnothing(write_when_maxdim_exceeds) && maxdim[sw] > write_when_maxdim_exceeds
@@ -77,6 +85,7 @@ function tdvp(solver, PH, t::Number, psi0::MPS; kwargs...)
         time_step,
         psi;
         kwargs...,
+        time_step_start,
         reverse_step,
         sweep=sw,
         maxdim=maxdim[sw],
@@ -85,6 +94,8 @@ function tdvp(solver, PH, t::Number, psi0::MPS; kwargs...)
         noise=noise[sw],
       )
     end
+
+    time_step_start += time_step
 
     if outputlevel >= 1
       @printf(
