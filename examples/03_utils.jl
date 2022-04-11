@@ -80,7 +80,9 @@ function ode_solver(H::TimeDependentOperator, time_step, ψ₀; time_step_start=
   return itensor(Ψₜ, inds_ψ), nothing
 end
 
-function krylov_solver(H::TimeDependentOperator, time_step, ψ₀; time_step_start=0.0, kwargs...)
+function krylov_solver(
+  H::TimeDependentOperator, time_step, ψ₀; time_step_start=0.0, kwargs...
+)
   ψₜ, info = exponentiate(H(time_step_start), -im * time_step, ψ₀; tol=1e-8)
   return ψₜ, info
 end
