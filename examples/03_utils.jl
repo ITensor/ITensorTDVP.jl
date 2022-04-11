@@ -25,6 +25,11 @@ end
 TimeDependentOperator(f::Vector, H0::ProjMPOSum) = TimeDependentOperator(f, H0.pm)
 Base.length(H::TimeDependentOperator) = length(H.f)
 
+function Base.:*(c::Number, H::TimeDependentOperator)
+  return TimeDependentOperator([t -> c * fₙ(t) for fₙ in H.f], H.H0)
+end
+Base.:*(H::TimeDependentOperator, c::Number) = c * H
+
 # Calling a `TimeDependentOperator` at a certain time like:
 #
 # H(t)
@@ -58,30 +63,28 @@ function (H::ScaledOperatorSum)(ψ₀)
   return permute(ψ, inds(ψ₀))
 end
 
-function ode_solver(H::TimeDependentOperator, time_step, ψ₀; time_step_start=0.0, kwargs...)
+function ode_solver(
+  H::TimeDependentOperator,
+  time_step,
+  ψ₀;
+  time_step_start=0.0,
+  solver_alg=Tsit5(),
+  kwargs...,
+)
   time_step_stop = time_step_start + time_step
   time_span = (time_step_start, time_step_stop)
-
-  inds_ψ = inds(ψ₀)
-
-  # Apply `iH(t)` on `ψ`, while also converting
-  # back and forth from `Vector` to `ITensor`.
-  # H(t) = f⃗[1](t) * H⃗₀[1] + f⃗[2](t) * H⃗₀[2] + …
-  function apply_iH(Ψ, p, t)
-    return apply_to_itensor(Ψ, inds_ψ) do ψ
-      -im * H(t)(ψ)
-    end
-  end
-
-  Ψ₀ = vec(array(ψ₀))
-  prob = ODEProblem(apply_iH, Ψ₀, time_span)
-  sol = solve(prob, Tsit5(); reltol=1e-8, abstol=1e-8)
-  Ψₜ = sol.u[end]
-  return itensor(Ψₜ, inds_ψ), nothing
+  f(u, p, t) = apply_to_itensor(H(t), u, inds(ψ₀))
+  u₀ = vec(array(ψ₀))
+  prob = ODEProblem(f, u₀, time_span)
+  sol = solve(prob, solver_alg; kwargs...)
+  uₜ = sol.u[end]
+  return itensor(uₜ, inds(ψ₀)), nothing
 end
 
-function krylov_solver(H::TimeDependentOperator, time_step, ψ₀; time_step_start=0.0, kwargs...)
-  ψₜ, info = exponentiate(H(time_step_start), -im * time_step, ψ₀; tol=1e-8)
+function krylov_solver(
+  H::TimeDependentOperator, time_step, ψ₀; time_step_start=0.0, kwargs...
+)
+  ψₜ, info = exponentiate(H(time_step_start), time_step, ψ₀; tol=1e-8)
   return ψₜ, info
 end
 
@@ -89,15 +92,15 @@ function heisenberg(n; J=1.0, J2=0.0)
   ℋ = OpSum()
   if !iszero(J)
     for j in 1:(n - 1)
-      ℋ += J/2, "S+", j, "S-", j + 1
-      ℋ += J/2, "S-", j, "S+", j + 1
+      ℋ += J / 2, "S+", j, "S-", j + 1
+      ℋ += J / 2, "S-", j, "S+", j + 1
       ℋ += J, "Sz", j, "Sz", j + 1
     end
   end
   if !iszero(J2)
     for j in 1:(n - 2)
-      ℋ += J2/2, "S+", j, "S-", j + 2
-      ℋ += J2/2, "S-", j, "S+", j + 2
+      ℋ += J2 / 2, "S+", j, "S-", j + 2
+      ℋ += J2 / 2, "S-", j, "S+", j + 2
       ℋ += J2, "Sz", j, "Sz", j + 2
     end
   end

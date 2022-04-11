@@ -20,14 +20,6 @@ f⃗ = [t -> cos(ω * t) for ω in ω⃗]
 time_stop = 1.0
 time_step = 0.2
 
-function ode_solver(H⃗₀, time_step, ψ₀; kwargs...)
-  return ode_solver(TimeDependentOperator(f⃗, H⃗₀), time_step, ψ₀; kwargs...)
-end
-
-function krylov_solver(H⃗₀, time_step, ψ₀; kwargs...)
-  return krylov_solver(TimeDependentOperator(f⃗, H⃗₀), time_step, ψ₀; kwargs...)
-end
-
 # Number of sites
 n = 4
 
@@ -55,9 +47,26 @@ H⃗₀ = [MPO(ℋ₀, s) for ℋ₀ in ℋ⃗₀]
 cutoff = 1e-8
 nsite = 2
 
+solver_alg = Tsit5()
+solver_kwargs = (reltol=1e-8, abstol=1e-8)
+function ode_solver(H⃗₀, time_step, ψ₀; kwargs...)
+  return ode_solver(
+    -im * TimeDependentOperator(f⃗, H⃗₀),
+    time_step,
+    ψ₀;
+    solver_alg=solver_alg,
+    solver_kwargs...,
+    kwargs...,
+  )
+end
+
 ψₜ_ode = tdvp(ode_solver, H⃗₀, time_stop, ψ₀; time_step, cutoff, nsite)
 
 @show norm(ψₜ_ode)
+
+function krylov_solver(H⃗₀, time_step, ψ₀; kwargs...)
+  return krylov_solver(-im * TimeDependentOperator(f⃗, H⃗₀), time_step, ψ₀; kwargs...)
+end
 
 ψₜ_krylov = tdvp(krylov_solver, H⃗₀, time_stop, ψ₀; time_step, cutoff, nsite)
 
