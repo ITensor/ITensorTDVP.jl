@@ -75,7 +75,9 @@ end
 
 krylov_kwargs = (; tol=1e-8, eager=true)
 function krylov_solver(H⃗₀, time_step, ψ₀; kwargs...)
-  return krylov_solver(-im * TimeDependentOperator(f⃗, H⃗₀), time_step, ψ₀; krylov_kwargs..., kwargs...)
+  return krylov_solver(
+    -im * TimeDependentOperator(f⃗, H⃗₀), time_step, ψ₀; krylov_kwargs..., kwargs...
+  )
 end
 
 ψₜ_krylov = tdvp(krylov_solver, H⃗₀, time_stop, ψ₀; time_step, cutoff, nsite)
