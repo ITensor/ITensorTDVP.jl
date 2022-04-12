@@ -1,7 +1,8 @@
 using ITensors
 using ITensorTDVP
-n = 25
-s = siteinds("S=1/2", n,conserve_qns=true)
+
+n = 10
+s = siteinds("S=1/2", n)
 
 function heisenberg(n)
   os = OpSum()
@@ -14,26 +15,28 @@ function heisenberg(n)
 end
 
 H = MPO(heisenberg(n), s)
-ψ = randomMPS(s,i -> isodd(i) ? "Up" : "Dn"; linkdims=10)
+ψ = randomMPS(s, "↑"; linkdims=10)
 
-E0= inner(ψ', H, ψ) / inner(ψ, ψ)
-
+@show inner(ψ', H, ψ) / inner(ψ, ψ)
 
 ϕ = tdvp(
   H,
-  ψ,
-  -0.1im;
+  -1.0,
+  ψ;
   nsweeps=20,
-  nsite=1,
-  reverse_step=true,
-  normalize=false,
-  maxdim=50,
-  cutoff=5e-2,
-  atol=1e-11,
+  reverse_step=false,
+  normalize=true,
+  maxdim=30,
+  cutoff=1e-10,
   outputlevel=1,
 )
-@show inner(ϕ', H, ϕ) / inner(ϕ, ϕ) , E0
 
-ϕ3 = ITensors.dmrg(H, ψ; nsweeps=10, maxdim=50, cutoff=1e-10)
+@show inner(ϕ', H, ϕ) / inner(ϕ, ϕ)
+
+e2, ϕ2 = dmrg(H, ψ; nsweeps=10, maxdim=20, cutoff=1e-10)
+
+@show inner(ϕ2', H, ϕ2) / inner(ϕ2, ϕ2)
+
+ϕ3 = ITensorTDVP.dmrg(H, ψ; nsweeps=10, maxdim=20, cutoff=1e-10, outputlevel=1)
 
 @show inner(ϕ3', H, ϕ3) / inner(ϕ3, ϕ3)
