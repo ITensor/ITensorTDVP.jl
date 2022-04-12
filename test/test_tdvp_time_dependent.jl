@@ -5,7 +5,8 @@ using KrylovKit
 using LinearAlgebra
 using Test
 
-include(joinpath(pkgdir(ITensorTDVP), "examples", "03_utils.jl"))
+include(joinpath(pkgdir(ITensorTDVP), "examples", "03_models.jl"))
+include(joinpath(pkgdir(ITensorTDVP), "examples", "03_solvers.jl"))
 
 # Functions need to be defined in global scope (outside
 # of the @testset macro)
@@ -21,7 +22,7 @@ f⃗ = [t -> cos(ω * t) for ω in ω⃗]
 
 function ode_solver(H⃗₀, time_step, ψ₀; kwargs...)
   return ode_solver(
-    -im * TimeDependentOperator(f⃗, H⃗₀),
+    -im * TimeDependentSum(f⃗, H⃗₀),
     time_step,
     ψ₀;
     solver_alg=ode_alg,
@@ -34,7 +35,7 @@ krylov_kwargs = (; tol=1e-8, eager=true)
 
 function krylov_solver(H⃗₀, time_step, ψ₀; kwargs...)
   return krylov_solver(
-    -im * TimeDependentOperator(f⃗, H⃗₀), time_step, ψ₀; krylov_kwargs..., kwargs...
+    -im * TimeDependentSum(f⃗, H⃗₀), time_step, ψ₀; krylov_kwargs..., kwargs...
   )
 end
 

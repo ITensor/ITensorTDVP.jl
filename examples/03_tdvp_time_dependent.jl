@@ -4,7 +4,11 @@ using ITensorTDVP
 using KrylovKit
 using LinearAlgebra
 
-include("03_utils.jl")
+# Define the time-independent model
+include("03_models.jl")
+
+# Define the solvers needed for TDVP
+include("03_solvers.jl")
 
 # Time dependent Hamiltonian is:
 # H(t) = H₁(t) + H₂(t) + …
@@ -79,7 +83,7 @@ println()
 
 function ode_solver(H⃗₀, time_step, ψ₀; kwargs...)
   return ode_solver(
-    -im * TimeDependentOperator(f⃗, H⃗₀),
+    -im * TimeDependentSum(f⃗, H⃗₀),
     time_step,
     ψ₀;
     solver_alg=ode_alg,
@@ -102,7 +106,7 @@ println()
 
 function krylov_solver(H⃗₀, time_step, ψ₀; kwargs...)
   return krylov_solver(
-    -im * TimeDependentOperator(f⃗, H⃗₀), time_step, ψ₀; krylov_kwargs..., kwargs...
+    -im * TimeDependentSum(f⃗, H⃗₀), time_step, ψ₀; krylov_kwargs..., kwargs...
   )
 end
 
