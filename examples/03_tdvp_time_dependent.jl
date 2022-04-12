@@ -14,6 +14,12 @@ include("03_utils.jl")
 # Number of sites
 n = 4
 
+# How much information to output from TDVP
+# Set to 2 to get information about each bond/site
+# evolution, and 3 to get information about the
+# solver.
+outputlevel = 1
+
 # Frequency of time dependent terms
 ω₁ = 0.1
 ω₂ = 0.2
@@ -83,7 +89,7 @@ function ode_solver(H⃗₀, time_step, ψ₀; kwargs...)
 end
 
 ψₜ_ode = tdvp(
-  ode_solver, H⃗₀, time_stop, ψ₀; time_step, maxdim, cutoff, nsite, outputlevel=3
+  ode_solver, H⃗₀, time_stop, ψ₀; time_step, maxdim, cutoff, nsite, outputlevel
 )
 
 println()
@@ -102,7 +108,7 @@ function krylov_solver(H⃗₀, time_step, ψ₀; kwargs...)
   )
 end
 
-ψₜ_krylov = tdvp(krylov_solver, H⃗₀, time_stop, ψ₀; time_step, cutoff, nsite, outputlevel=3)
+ψₜ_krylov = tdvp(krylov_solver, H⃗₀, time_stop, ψ₀; time_step, cutoff, nsite, outputlevel)
 
 println()
 println("Finished running TDVP with Krylov solver")
@@ -114,7 +120,7 @@ println("Running full state evolution with ODE solver")
 println("#"^100)
 println()
 
-ψₜ_full, _ = ode_solver(prod.(H⃗₀), time_stop, prod(ψ₀); outputlevel=3)
+ψₜ_full, _ = ode_solver(prod.(H⃗₀), time_stop, prod(ψ₀); outputlevel)
 
 println()
 println("Finished full state evolution with ODE solver")
