@@ -1,4 +1,4 @@
-using OrdinaryDiffEq
+using DifferentialEquations
 using ITensors
 using ITensorTDVP
 using KrylovKit
