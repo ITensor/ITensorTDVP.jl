@@ -12,6 +12,11 @@ using ITensors:
 # Compatibility of ITensor observer and Observers
 include("update_observer.jl")
 
+# Utilities for making it easier
+# to define solvers (like ODE solvers)
+# for TDVP
+include("solver_utils.jl")
+
 include("applyexp.jl")
 include("tdvporder.jl")
 include("tdvpinfo.jl")
@@ -21,6 +26,6 @@ include("tdvp.jl")
 include("dmrg.jl")
 include("dmrg_x.jl")
 
-export tdvp, dmrg_x
+export tdvp, dmrg_x, to_vec, TimeDependentSum
 
 end
