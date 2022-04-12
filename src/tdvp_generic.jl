@@ -65,7 +65,7 @@ function tdvp(solver, PH, t::Number, psi0::MPS; kwargs...)
   # when using time-dependent solvers.
   # This will be passed as a keyword argument to the
   # `solver`.
-  time_step_start = time_start
+  current_time = time_start
 
   for sw in 1:nsweeps
     if !isnothing(write_when_maxdim_exceeds) && maxdim[sw] > write_when_maxdim_exceeds
@@ -85,7 +85,7 @@ function tdvp(solver, PH, t::Number, psi0::MPS; kwargs...)
         time_step,
         psi;
         kwargs...,
-        time_step_start,
+        current_time,
         reverse_step,
         sweep=sw,
         maxdim=maxdim[sw],
@@ -95,14 +95,15 @@ function tdvp(solver, PH, t::Number, psi0::MPS; kwargs...)
       )
     end
 
-    time_step_start += time_step
+    current_time += time_step
 
     if outputlevel >= 1
       @printf(
-        "After sweep %d maxlinkdim=%d maxerr=%.2E time=%.3f\n",
+        "After sweep %d maxlinkdim=%d maxerr=%.2E current_time=%.3f time=%.3f\n",
         sw,
         maxlinkdim(psi),
         info.maxtruncerr,
+        current_time,
         sw_time
       )
       flush(stdout)

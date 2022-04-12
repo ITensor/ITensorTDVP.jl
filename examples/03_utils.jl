@@ -2,9 +2,9 @@ using DifferentialEquations
 using ITensors
 
 # TODO: Define in ITensors.jl
-Base.complex(ψ::ITensors.AbstractMPS) = complex.(ψ)
-ITensors.contract(ψ::ITensors.AbstractMPS) = prod(ψ)
-(A::ITensor)(x) = apply(A, x)
+## Base.complex(ψ::ITensors.AbstractMPS) = complex.(ψ)
+## ITensors.contract(ψ::ITensors.AbstractMPS) = prod(ψ)
+## (A::ITensor)(x) = apply(A, x)
 
 # Helper function to apply the function `f` to the
 # ITensor formed by converting the input Vector `v`
@@ -58,7 +58,7 @@ Base.length(H::ScaledOperatorSum) = length(H.coefficients)
 function (H::ScaledOperatorSum)(ψ₀)
   ψ = ITensor(inds(ψ₀))
   for n in 1:length(H)
-    ψ += H.coefficients[n] * H.H[n](ψ₀)
+    ψ += H.coefficients[n] * apply(H.H[n], ψ₀)
   end
   return permute(ψ, inds(ψ₀))
 end
@@ -67,12 +67,17 @@ function ode_solver(
   H::TimeDependentOperator,
   time_step,
   ψ₀;
-  time_step_start=0.0,
+  current_time=0.0,
+  outputlevel=0,
   solver_alg=Tsit5(),
   kwargs...,
 )
-  time_step_stop = time_step_start + time_step
-  time_span = (time_step_start, time_step_stop)
+  time_span = (current_time, current_time + time_step)
+
+  if outputlevel ≥ 3
+    println("    In ODE solver, current_time = $current_time, time_step = $time_step")
+  end
+
   f(u, p, t) = apply_to_itensor(H(t), u, inds(ψ₀))
   u₀ = vec(array(ψ₀))
   prob = ODEProblem(f, u₀, time_span)
@@ -82,9 +87,12 @@ function ode_solver(
 end
 
 function krylov_solver(
-  H::TimeDependentOperator, time_step, ψ₀; time_step_start=0.0, kwargs...
+  H::TimeDependentOperator, time_step, ψ₀; current_time=0.0, outputlevel=0, kwargs...
 )
-  ψₜ, info = exponentiate(H(time_step_start), time_step, ψ₀; kwargs...)
+  if outputlevel ≥ 3
+    println("    In Krylov solver, current_time = $current_time, time_step = $time_step")
+  end
+  ψₜ, info = exponentiate(H(current_time), time_step, ψ₀; kwargs...)
   return ψₜ, info
 end
 

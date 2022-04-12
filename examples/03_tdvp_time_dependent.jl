@@ -11,22 +11,43 @@ include("03_utils.jl")
 #      = f₁(t) H₁(0) + f₂(t) H₂(0) + …
 #      = cos(ω₁t) H₁(0) + cos(ω₂t) H₂(0) + …
 
-ω₁ = 0.2
-ω₂ = 0.4
-
-ω⃗ = [ω₁, ω₂]
-f⃗ = [t -> cos(ω * t) for ω in ω⃗]
-
-time_stop = 1.0
-time_step = 0.2
-
 # Number of sites
 n = 4
+
+# Frequency of time dependent terms
+ω₁ = 0.1
+ω₂ = 0.2
 
 # Nearest and next-nearest neighbor
 # Heisenberg couplings.
 J₁ = 1.0
 J₂ = 0.1
+
+time_step = 0.1
+time_stop = 1.0
+
+# nsite-update TDVP
+nsite = 2
+
+# TDVP truncation parameters
+maxdim = 100
+cutoff = 1e-8
+
+# ODE solver parameters
+ode_alg = Tsit5()
+ode_kwargs = (; reltol=1e-8, abstol=1e-8)
+
+# Krylov solver parameters
+krylov_kwargs = (; tol=1e-8, eager=true)
+
+@show n
+@show ω₁, ω₂
+@show J₁, J₂
+@show maxdim, cutoff, nsite
+@show time_step, time_stop
+
+ω⃗ = [ω₁, ω₂]
+f⃗ = [t -> cos(ω * t) for ω in ω⃗]
 
 # H₀ = H(0) = H₁(0) + H₂(0) + …
 ℋ₁₀ = heisenberg(n; J=J₁, J2=0.0)
@@ -40,20 +61,16 @@ H⃗₀ = [MPO(ℋ₀, s) for ℋ₀ in ℋ⃗₀]
 # Initial state, ψ₀ = ψ(0)
 # Initialize as complex since that is what DifferentialEquations.jl
 # expects.
-ψ₀ = complex(MPS(s, j -> isodd(j) ? "↑" : "↓"))
+ψ₀ = complex.(MPS(s, j -> isodd(j) ? "↑" : "↓"))
 
 @show norm(ψ₀)
 
-cutoff = 1e-8
-# nsite-update TDVP
-nsite = 2
+println()
+println("#"^100)
+println("Running TDVP with ODE solver")
+println("#"^100)
+println()
 
-#
-# Use an ODE solver
-#
-
-ode_alg = Tsit5()
-ode_kwargs = (; reltol=1e-8, abstol=1e-8)
 function ode_solver(H⃗₀, time_step, ψ₀; kwargs...)
   return ode_solver(
     -im * TimeDependentOperator(f⃗, H⃗₀),
@@ -65,29 +82,47 @@ function ode_solver(H⃗₀, time_step, ψ₀; kwargs...)
   )
 end
 
-ψₜ_ode = tdvp(ode_solver, H⃗₀, time_stop, ψ₀; time_step, cutoff, nsite)
+ψₜ_ode = tdvp(
+  ode_solver, H⃗₀, time_stop, ψ₀; time_step, maxdim, cutoff, nsite, outputlevel=3
+)
 
-@show norm(ψₜ_ode)
+println()
+println("Finished running TDVP with ODE solver")
+println()
 
-#
-# Use a Krylov exponentiation solver
-#
+println()
+println("#"^100)
+println("Running TDVP with Krylov solver")
+println("#"^100)
+println()
 
-krylov_kwargs = (; tol=1e-8, eager=true)
 function krylov_solver(H⃗₀, time_step, ψ₀; kwargs...)
   return krylov_solver(
     -im * TimeDependentOperator(f⃗, H⃗₀), time_step, ψ₀; krylov_kwargs..., kwargs...
   )
 end
 
-ψₜ_krylov = tdvp(krylov_solver, H⃗₀, time_stop, ψ₀; time_step, cutoff, nsite)
+ψₜ_krylov = tdvp(krylov_solver, H⃗₀, time_stop, ψ₀; time_step, cutoff, nsite, outputlevel=3)
 
+println()
+println("Finished running TDVP with Krylov solver")
+println()
+
+println()
+println("#"^100)
+println("Running full state evolution with ODE solver")
+println("#"^100)
+println()
+
+ψₜ_full, _ = ode_solver(prod.(H⃗₀), time_stop, prod(ψ₀); outputlevel=3)
+
+println()
+println("Finished full state evolution with ODE solver")
+println()
+
+@show norm(ψₜ_ode)
 @show norm(ψₜ_krylov)
-@show norm(ψₜ_ode - ψₜ_krylov)
-
-# Solve full problem with ODE solver
-ψₜ_full, _ = ode_solver(contract.(H⃗₀), time_stop, contract(ψ₀))
-
 @show norm(ψₜ_full)
-@show norm(contract(ψₜ_ode) - ψₜ_full)
-@show norm(contract(ψₜ_krylov) - ψₜ_full)
+
+@show norm(prod(ψₜ_ode) - ψₜ_full)
+@show norm(prod(ψₜ_krylov) - ψₜ_full)
