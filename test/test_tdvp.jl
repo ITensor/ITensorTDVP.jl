@@ -1,14 +1,9 @@
-using DifferentialEquations
 using ITensors
 using ITensorTDVP
 using KrylovKit
-using LinearAlgebra
-using Printf
 using Observers
 using Random
 using Test
-
-include(joinpath(pkgdir(ITensorTDVP), "examples", "03_utils.jl"))
 
 @testset "Basic TDVP" begin
   N = 10
@@ -187,7 +182,6 @@ end
     push!(Sz_tdvp, real(expect(psi, "Sz"; sites=c:c)[1]))
     push!(Sz_exact, real(scalar(dag(prime(psix, s[c])) * Szc * psix)))
     F = abs(scalar(dag(psix) * prod(psi)))
-    #@printf("%s=%.10f  exact=%.10f  F=%.10f\n",method,Sz_tdvp[end],Sz_exact[end],F)
   end
 
   @test norm(Sz_tdvp - Sz_exact) < 1e-5
@@ -263,7 +257,6 @@ end
     if bond == 1 && half_sweep == 2
       Sz2[sweep] = expect(psi, "Sz"; sites=c)
       En2[sweep] = real(inner(psi', H, psi))
-      #@printf("sweep %d Sz=%.12f energy=%.12f\n",sweep,Sz2[sweep],En2[sweep])
     end
   end
 
@@ -313,43 +306,10 @@ end
   for (step, t) in enumerate(trange)
     nsite = (step <= 10 ? 2 : 1)
     psi = tdvp(H, -tau, psi; cutoff, nsite, normalize=true, exponentiate_krylovdim=15)
-    #@printf("%.3f energy = %.12f\n", step * tau, inner(psi', H, psi))
   end
   #@show maxlinkdim(psi)
 
   @test inner(psi', H, psi) < -4.25
-end
-
-@testset "DMRG" begin
-  N = 10
-  cutoff = 1e-12
-
-  s = siteinds("S=1/2", N)
-
-  os = OpSum()
-  for j in 1:(N - 1)
-    os += 0.5, "S+", j, "S-", j + 1
-    os += 0.5, "S-", j, "S+", j + 1
-    os += "Sz", j, "Sz", j + 1
-  end
-
-  H = MPO(os, s)
-
-  psi = randomMPS(s; linkdims=2)
-
-  nsweeps = 10
-  nsite = 2
-  maxdim = [10, 20, 40, 100]
-  sweeps = Sweeps(nsweeps) # number of sweeps is 5
-  maxdim!(sweeps, 10, 20, 40, 100) # gradually increase states kept
-  cutoff!(sweeps, cutoff)
-  psi = ITensorTDVP.dmrg(
-    H, psi; nsweeps, maxdim, cutoff, nsite, solver_krylovdim=3, solver_maxiter=1
-  )
-
-  e2, psi2 = dmrg(H, psi, sweeps; normalize=false, outputlevel=0)
-
-  @test inner(psi', H, psi) ≈ inner(psi2', H, psi2)
 end
 
 @testset "Observers" begin
@@ -382,7 +342,6 @@ end
     if bond == 1 && half_sweep == 2
       Sz1[sweep] = expect(psi, "Sz"; sites=c)
       En1[sweep] = real(inner(psi', H, psi))
-      #@printf("sweep %d Sz=%.12f energy=%.12f\n",sweep,Sz2[sweep],En2[sweep])
     end
   end
 
@@ -434,110 +393,6 @@ end
 
   @test Sz1 ≈ Sz2
   @test En1 ≈ En2
-end
-
-@testset "DMRG-X" begin
-  function heisenberg(n; h=zeros(n))
-    os = OpSum()
-    for j in 1:(n - 1)
-      os += 0.5, "S+", j, "S-", j + 1
-      os += 0.5, "S-", j, "S+", j + 1
-      os += "Sz", j, "Sz", j + 1
-    end
-    for j in 1:n
-      if h[j] ≠ 0
-        os -= h[j], "Sz", j
-      end
-    end
-    return os
-  end
-
-  n = 10
-  s = siteinds("S=1/2", n)
-
-  Random.seed!(12)
-
-  W = 12
-  # Random fields h ∈ [-W, W]
-  h = W * (2 * rand(n) .- 1)
-  H = MPO(heisenberg(n; h), s)
-
-  initstate = rand(["↑", "↓"], n)
-  ψ = MPS(s, initstate)
-
-  dmrg_x_kwargs = (
-    nsweeps=20, reverse_step=false, normalize=true, maxdim=20, cutoff=1e-10, outputlevel=0
-  )
-
-  ϕ = dmrg_x(ProjMPO(H), ψ; dmrg_x_kwargs...)
-
-  @test inner(ψ', H, ψ) / inner(ψ, ψ) ≈ inner(ϕ', H, ϕ) / inner(ϕ, ϕ) rtol = 1e-1
-  @test inner(H, ψ, H, ψ) ≉ inner(ψ', H, ψ)^2 atol = 1e-1
-  @test inner(H, ϕ, H, ϕ) ≈ inner(ϕ', H, ϕ)^2 atol = 1e-7
-end
-
-@testset "Time dependent Hamiltonian" begin
-  n = 4
-  ω₁ = 0.1
-  ω₂ = 0.2
-  J₁ = 1.0
-  J₂ = 0.1
-
-  time_step = 0.1
-  time_stop = 1.0
-
-  nsite = 2
-  maxdim = 100
-  cutoff = 1e-8
-
-  ode_alg = Tsit5()
-  ode_kwargs = (; reltol=1e-8, abstol=1e-8)
-
-  krylov_kwargs = (; tol=1e-8, eager=true)
-
-  ω⃗ = [ω₁, ω₂]
-  f⃗ = [t -> cos(ω * t) for ω in ω⃗]
-
-  s = siteinds("S=1/2", n)
-  ℋ₁₀ = heisenberg(n; J=J₁, J2=0.0)
-  ℋ₂₀ = heisenberg(n; J=0.0, J2=J₂)
-  ℋ⃗₀ = [ℋ₁₀, ℋ₂₀]
-  H⃗₀ = [MPO(ℋ₀, s) for ℋ₀ in ℋ⃗₀]
-
-  ψ₀ = complex.(MPS(s, j -> isodd(j) ? "↑" : "↓"))
-
-  function ode_solver(H⃗₀, time_step, ψ₀; kwargs...)
-    return ode_solver(
-      -im * TimeDependentOperator(f⃗, H⃗₀),
-      time_step,
-      ψ₀;
-      solver_alg=ode_alg,
-      ode_kwargs...,
-      kwargs...,
-    )
-  end
-  ψₜ_ode = tdvp(ode_solver, H⃗₀, time_stop, ψ₀; time_step, maxdim, cutoff, nsite)
-
-  function krylov_solver(H⃗₀, time_step, ψ₀; kwargs...)
-    return krylov_solver(
-      -im * TimeDependentOperator(f⃗, H⃗₀), time_step, ψ₀; krylov_kwargs..., kwargs...
-    )
-  end
-  ψₜ_krylov = tdvp(krylov_solver, H⃗₀, time_stop, ψ₀; time_step, cutoff, nsite)
-
-  ψₜ_full, _ = ode_solver(prod.(H⃗₀), time_stop, prod(ψ₀))
-
-  @test norm(ψ₀) ≈ 1
-  @test norm(ψₜ_ode) ≈ 1
-  @test norm(ψₜ_krylov) ≈ 1
-  @test norm(ψₜ_full) ≈ 1
-
-  ode_err = norm(prod(ψₜ_ode) - ψₜ_full)
-  krylov_err = norm(prod(ψₜ_krylov) - ψₜ_full)
-
-  @test krylov_err > ode_err
-  @test ode_err < 1e-3
-  @test krylov_err < 1e-3
 end
 
 nothing
