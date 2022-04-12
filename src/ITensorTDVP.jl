@@ -14,6 +14,7 @@ include("update_observer.jl")
 
 include("applyexp.jl")
 include("tdvporder.jl")
+include("tdvpinfo.jl")
 include("tdvp_step.jl")
 include("tdvp_generic.jl")
 include("tdvp.jl")
