@@ -88,9 +88,7 @@ function ode_solver(H⃗₀, time_step, ψ₀; kwargs...)
   )
 end
 
-ψₜ_ode = tdvp(
-  ode_solver, H⃗₀, time_stop, ψ₀; time_step, maxdim, cutoff, nsite, outputlevel
-)
+ψₜ_ode = tdvp(ode_solver, H⃗₀, time_stop, ψ₀; time_step, maxdim, cutoff, nsite, outputlevel)
 
 println()
 println("Finished running TDVP with ODE solver")
