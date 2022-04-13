@@ -3,6 +3,9 @@ using ITensors
 using ITensorTDVP
 using KrylovKit
 using LinearAlgebra
+using Random
+
+Random.seed!(1234)
 
 # Define the time-independent model
 include("03_models.jl")
@@ -16,7 +19,7 @@ include("03_solvers.jl")
 #      = cos(ω₁t) H₁(0) + cos(ω₂t) H₂(0) + …
 
 # Number of sites
-n = 4
+n = 6
 
 # How much information to output from TDVP
 # Set to 2 to get information about each bond/site
@@ -31,7 +34,7 @@ outputlevel = 1
 # Nearest and next-nearest neighbor
 # Heisenberg couplings.
 J₁ = 1.0
-J₂ = 0.1
+J₂ = 1.0
 
 time_step = 0.1
 time_stop = 1.0
@@ -39,21 +42,30 @@ time_stop = 1.0
 # nsite-update TDVP
 nsite = 2
 
+# Starting state bond/link dimension.
+# A product state starting state can
+# cause issues for TDVP without
+# subspace expansion.
+start_linkdim = 4
+
 # TDVP truncation parameters
 maxdim = 100
 cutoff = 1e-8
 
+tol = 1e-15
+
 # ODE solver parameters
 ode_alg = Tsit5()
-ode_kwargs = (; reltol=1e-8, abstol=1e-8)
+ode_kwargs = (; reltol=tol, abstol=tol)
 
 # Krylov solver parameters
-krylov_kwargs = (; tol=1e-8, eager=true)
+krylov_kwargs = (; tol=tol, eager=true)
 
 @show n
 @show ω₁, ω₂
 @show J₁, J₂
 @show maxdim, cutoff, nsite
+@show start_linkdim
 @show time_step, time_stop
 @show ode_alg
 @show ode_kwargs
@@ -74,7 +86,7 @@ H⃗₀ = [MPO(ℋ₀, s) for ℋ₀ in ℋ⃗₀]
 # Initial state, ψ₀ = ψ(0)
 # Initialize as complex since that is what DifferentialEquations.jl
 # expects.
-ψ₀ = complex.(MPS(s, j -> isodd(j) ? "↑" : "↓"))
+ψ₀ = complex.(randomMPS(s, j -> isodd(j) ? "↑" : "↓"; linkdims=start_linkdim))
 
 @show norm(ψ₀)
 
@@ -125,7 +137,9 @@ println("Running full state evolution with ODE solver")
 println("#"^100)
 println()
 
-ψₜ_full, _ = ode_solver(prod.(H⃗₀), time_stop, prod(ψ₀); outputlevel)
+@disable_warn_order begin
+  ψₜ_full, _ = ode_solver(prod.(H⃗₀), time_stop, prod(ψ₀); outputlevel)
+end
 
 println()
 println("Finished full state evolution with ODE solver")
@@ -135,5 +149,5 @@ println()
 @show norm(ψₜ_krylov)
 @show norm(ψₜ_full)
 
-@show norm(prod(ψₜ_ode) - ψₜ_full)
-@show norm(prod(ψₜ_krylov) - ψₜ_full)
+@show 1 - abs(inner(prod(ψₜ_ode), ψₜ_full))
+@show 1 - abs(inner(prod(ψₜ_krylov), ψₜ_full))
