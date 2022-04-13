@@ -55,6 +55,9 @@ krylov_kwargs = (; tol=1e-8, eager=true)
 @show J₁, J₂
 @show maxdim, cutoff, nsite
 @show time_step, time_stop
+@show ode_alg
+@show ode_kwargs
+@show krylov_kwargs
 
 ω⃗ = [ω₁, ω₂]
 f⃗ = [t -> cos(ω * t) for ω in ω⃗]
