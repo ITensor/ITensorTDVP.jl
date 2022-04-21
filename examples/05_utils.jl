@@ -1,11 +1,20 @@
 using ITensors
 using ITensorTDVP
+using Observers
 using Printf
 
 using ITensorTDVP: tdvp_solver, process_sweeps, TDVPOrder
 
 function tdvp_nonuniform_timesteps(
-  solver, PH, psi::MPS; time_steps, reverse_step=true, time_start=0.0, order=2, kwargs...
+  solver,
+  PH,
+  psi::MPS;
+  time_steps,
+  reverse_step=true,
+  time_start=0.0,
+  order=2,
+  (step_observer!)=Observer(),
+  kwargs...,
 )
   nsweeps = length(time_steps)
   maxdim, mindim, cutoff, noise = process_sweeps(; nsweeps, kwargs...)
@@ -30,6 +39,8 @@ function tdvp_nonuniform_timesteps(
       )
     end
     current_time += time_steps[sw]
+
+    update!(step_observer!; psi, sweep=sw, outputlevel, current_time)
 
     if outputlevel ≥ 1
       print("After sweep ", sw, ":")

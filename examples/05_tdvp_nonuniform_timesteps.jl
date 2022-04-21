@@ -19,28 +19,14 @@ outputlevel = 1
 nsteps = 10
 time_steps = [n ≤ 2 ? -0.2im : -0.1im for n in 1:nsteps]
 
-function current_time(; current_time, bond, half_sweep)
-  if bond == 1 && half_sweep == 2
-    return current_time
-  end
-  return nothing
-end
-
-function return_state(; psi, bond, half_sweep)
-  if bond == 1 && half_sweep == 2
-    return psi
-  end
-  return nothing
-end
-
-obs = Observer("times" => current_time, "psis" => return_state)
+obs = Observer("times" => (; current_time) -> current_time, "psis" => (; psi) -> psi)
 
 s = siteinds("S=1/2", N; conserve_qns=true)
 H = MPO(heisenberg(N), s)
 
 psi0 = MPS(s, n -> isodd(n) ? "Up" : "Dn")
 psi = tdvp_nonuniform_timesteps(
-  ProjMPO(H), psi0; time_steps, cutoff, outputlevel, (observer!)=obs
+  ProjMPO(H), psi0; time_steps, cutoff, outputlevel, (step_observer!)=obs
 )
 
 res = results(obs)
