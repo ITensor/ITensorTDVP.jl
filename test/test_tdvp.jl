@@ -380,7 +380,7 @@ end
 
   step_measure_en(; psi) = real(inner(psi', H, psi))
 
-  step_obs = Observer("Sz" => step_measure_Sz, "En" => step_measure_en)
+  step_obs = Observer("Sz" => step_measure_sz, "En" => step_measure_en)
 
   psi2 = MPS(s, n -> isodd(n) ? "Up" : "Dn")
   tdvp(
@@ -394,20 +394,11 @@ end
     (step_observer!)=step_obs,
   )
 
-  # Using filter here just due to the current
-  # behavior of Observers that nothing gets appended:
   Sz2 = results(obs)["Sz"]
   En2 = results(obs)["En"]
 
   Sz2_step = results(step_obs)["Sz"]
   En2_step = results(step_obs)["En"]
-
-  #display(En1)
-  #display(En2)
-  #display(Sz1)
-  #display(Sz2)
-  #@show norm(Sz1 - Sz2)
-  #@show norm(En1 - En2)
 
   @test Sz1 ≈ Sz2
   @test En1 ≈ En2
