@@ -55,7 +55,8 @@ function tdvp(solver, PH, t::Number, psi0::MPS; kwargs...)
   write_when_maxdim_exceeds::Union{Int,Nothing} = get(
     kwargs, :write_when_maxdim_exceeds, nothing
   )
-  observer = get(kwargs, :observer, NoObserver())
+  observer = get(kwargs, :observer!, NoObserver())
+  step_observer = get(kwargs, :step_observer!, NoObserver())
   outputlevel::Int = get(kwargs, :outputlevel, 0)
 
   psi = copy(psi0)
@@ -96,6 +97,8 @@ function tdvp(solver, PH, t::Number, psi0::MPS; kwargs...)
     end
 
     current_time += time_step
+
+    update!(step_observer; psi, sweep=sw, outputlevel, current_time)
 
     if outputlevel >= 1
       print("After sweep ", sw, ":")

@@ -20,7 +20,7 @@ ttotal = 1.0
 s = siteinds("S=1/2", N; conserve_qns=true)
 H = MPO(heisenberg(N), s)
 
-function sweep(; sweep, bond, half_sweep)
+function step(; sweep, bond, half_sweep)
   if bond == 1 && half_sweep == 2
     return sweep
   end
@@ -49,10 +49,10 @@ function return_state(; psi, bond, half_sweep)
 end
 
 obs = Observer(
-  "sweeps" => sweep, "times" => current_time, "psis" => return_state, "Sz" => measure_sz
+  "steps" => step, "times" => current_time, "psis" => return_state, "Sz" => measure_sz
 )
 
-psi = productMPS(s, n -> isodd(n) ? "Up" : "Dn")
+psi = MPS(s, n -> isodd(n) ? "Up" : "Dn")
 psi_f = tdvp(
   H,
   -im * ttotal,
@@ -65,14 +65,15 @@ psi_f = tdvp(
 )
 
 res = results(obs)
-
-sweeps = res["sweeps"]
+steps = res["steps"]
 times = res["times"]
 psis = res["psis"]
 Sz = res["Sz"]
 
-for n in 1:length(sweeps)
-  print("sweep = ", sweeps[n])
+println("\nResults")
+println("=======")
+for n in 1:length(steps)
+  print("step = ", steps[n])
   print(", time = ", round(times[n]; digits=3))
   print(", |⟨ψⁿ|ψⁱ⟩| = ", round(abs(inner(psis[n], psi)); digits=3))
   print(", |⟨ψⁿ|ψᶠ⟩| = ", round(abs(inner(psis[n], psi_f)); digits=3))

@@ -376,23 +376,34 @@ end
 
   obs = Observer("Sz" => measure_sz, "En" => measure_en)
 
-  psi2 = productMPS(s, n -> isodd(n) ? "Up" : "Dn")
-  tdvp(H, -im * ttotal, psi2; time_step=-im * tau, cutoff, normalize=false, (observer!)=obs)
+  step_measure_sz(; psi) = expect(psi, "Sz"; sites=c)
 
-  # Using filter here just due to the current
-  # behavior of Observers that nothing gets appended:
+  step_measure_en(; psi) = real(inner(psi', H, psi))
+
+  step_obs = Observer("Sz" => step_measure_sz, "En" => step_measure_en)
+
+  psi2 = MPS(s, n -> isodd(n) ? "Up" : "Dn")
+  tdvp(
+    H,
+    -im * ttotal,
+    psi2;
+    time_step=-im * tau,
+    cutoff,
+    normalize=false,
+    (observer!)=obs,
+    (step_observer!)=step_obs,
+  )
+
   Sz2 = results(obs)["Sz"]
   En2 = results(obs)["En"]
 
-  #display(En1)
-  #display(En2)
-  #display(Sz1)
-  #display(Sz2)
-  #@show norm(Sz1 - Sz2)
-  #@show norm(En1 - En2)
+  Sz2_step = results(step_obs)["Sz"]
+  En2_step = results(step_obs)["En"]
 
   @test Sz1 ≈ Sz2
   @test En1 ≈ En2
+  @test Sz1 ≈ Sz2_step
+  @test En1 ≈ En2_step
 end
 
 nothing

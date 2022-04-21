@@ -153,7 +153,7 @@ function tdvp(direction::Base.Ordering, solver, PH, time_step::Number, psi::MPS;
       @printf(" cutoff=%.1E", cutoff)
       @printf(" maxdim=%.1E", maxdim)
       print(" mindim=", mindim)
-      print(" current_time=", current_time)
+      print(" current_time=", round(current_time; digits=3))
       println()
       if spec != nothing
         @printf(
