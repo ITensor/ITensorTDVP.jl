@@ -165,7 +165,15 @@ function tdvp(direction::Base.Ordering, solver, PH, time_step::Number, psi::MPS;
 
     half_sweep_is_done = ((b == 1 && ha == 2) || (b == N && ha == 1))
     update!(
-      observer; psi, bond=b, sweep=sw, half_sweep=ha, spec, outputlevel, half_sweep_is_done, current_time
+      observer;
+      psi,
+      bond=b,
+      sweep=sw,
+      half_sweep=ha,
+      spec,
+      outputlevel,
+      half_sweep_is_done,
+      current_time,
     )
   end
 
