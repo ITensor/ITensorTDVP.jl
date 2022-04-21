@@ -2,11 +2,6 @@
 # to define solvers (like ODE solvers)
 # for TDVP
 
-# TODO: Define in ITensors.jl
-## Base.complex(ψ::ITensors.AbstractMPS) = complex.(ψ)
-## ITensors.contract(ψ::ITensors.AbstractMPS) = prod(ψ)
-## (A::ITensor)(x) = apply(A, x)
-
 """
     to_vec(x)
 Transform `x` into a `Vector`, and return the vector, and a closure which inverts the

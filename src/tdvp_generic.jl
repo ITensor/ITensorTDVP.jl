@@ -98,14 +98,12 @@ function tdvp(solver, PH, t::Number, psi0::MPS; kwargs...)
     current_time += time_step
 
     if outputlevel >= 1
-      @printf(
-        "After sweep %d maxlinkdim=%d maxerr=%.2E current_time=%.3f time=%.3f\n",
-        sw,
-        maxlinkdim(psi),
-        info.maxtruncerr,
-        current_time,
-        sw_time
-      )
+      print("After sweep ", sw, ":")
+      print(" maxlinkdim=", maxlinkdim(psi))
+      @printf(" maxerr=%.2E", info.maxtruncerr)
+      print(" current_time=", round(current_time; digits=3))
+      print(" time=", round(sw_time; digits=3))
+      println()
       flush(stdout)
     end
 
