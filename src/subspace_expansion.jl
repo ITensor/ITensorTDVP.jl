@@ -32,7 +32,7 @@ function subspace_expansion_sweep!(ψ::MPS,PH::Union{ProjMPO,ProjMPOSum};maxdim,
       b1 = (ha == 1 ? b + 1 : b)
       Δ = (ha == 1 ? +1 : -1)
       inds = (ha == 1 ? (b,b+Δ) : (b+Δ,b))
-      subspace_expansion_krylov!(ψ,PH,(ψ.llim,ψ.rlim),inds;maxdim, cutoff, atol=atol, kwargs...
+      subspace_expansion!(ψ,PH,(ψ.llim,ψ.rlim),inds;maxdim, cutoff, atol=atol, kwargs...
       )
     end
   end
