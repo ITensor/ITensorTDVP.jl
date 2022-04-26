@@ -46,6 +46,7 @@ function tdvp(solver, PH, t::Number, psi0::MPS; kwargs...)
   nsweeps = _tdvp_compute_nsweeps(t; kwargs...)
   maxdim, mindim, cutoff, noise = process_sweeps(; nsweeps, kwargs...)
 
+  time_start::Number = get(kwargs, :time_start, 0.0)
   time_step::Number = get(kwargs, :time_step, t)
   order = get(kwargs, :order, 2)
   tdvp_order = TDVPOrder(order, Base.Forward)
@@ -54,10 +55,18 @@ function tdvp(solver, PH, t::Number, psi0::MPS; kwargs...)
   write_when_maxdim_exceeds::Union{Int,Nothing} = get(
     kwargs, :write_when_maxdim_exceeds, nothing
   )
-  observer = get(kwargs, :observer, NoObserver())
+  observer = get(kwargs, :observer!, NoObserver())
+  step_observer = get(kwargs, :step_observer!, NoObserver())
   outputlevel::Int = get(kwargs, :outputlevel, 0)
 
   psi = copy(psi0)
+
+  # Keep track of the start of the current time step.
+  # Helpful for tracking the total time, for example
+  # when using time-dependent solvers.
+  # This will be passed as a keyword argument to the
+  # `solver`.
+  current_time = time_start
 
   for sw in 1:nsweeps
     if !isnothing(write_when_maxdim_exceeds) && maxdim[sw] > write_when_maxdim_exceeds
@@ -77,6 +86,7 @@ function tdvp(solver, PH, t::Number, psi0::MPS; kwargs...)
         time_step,
         psi;
         kwargs...,
+        current_time,
         reverse_step,
         sweep=sw,
         maxdim=maxdim[sw],
@@ -86,14 +96,17 @@ function tdvp(solver, PH, t::Number, psi0::MPS; kwargs...)
       )
     end
 
+    current_time += time_step
+
+    update!(step_observer; psi, sweep=sw, outputlevel, current_time)
+
     if outputlevel >= 1
-      @printf(
-        "After sweep %d maxlinkdim=%d maxerr=%.2E time=%.3f\n",
-        sw,
-        maxlinkdim(psi),
-        info.maxtruncerr,
-        sw_time
-      )
+      print("After sweep ", sw, ":")
+      print(" maxlinkdim=", maxlinkdim(psi))
+      @printf(" maxerr=%.2E", info.maxtruncerr)
+      print(" current_time=", round(current_time; digits=3))
+      print(" time=", round(sw_time; digits=3))
+      println()
       flush(stdout)
     end
 

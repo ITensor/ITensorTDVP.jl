@@ -9,7 +9,7 @@ function eigsolve_solver(; kwargs...)
       maxiter=get(kwargs, :solver_maxiter, 1),
       verbosity=get(kwargs, :solver_verbosity, 0),
     )
-    vals, vecs, info = eigsolve(H, psi0, howmany, which; solver_kwargs..., kws...)
+    vals, vecs, info = eigsolve(H, psi0, howmany, which; solver_kwargs...)
     psi = vecs[1]
     return psi, info
   end

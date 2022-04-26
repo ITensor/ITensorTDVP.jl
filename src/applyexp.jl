@@ -100,7 +100,7 @@ function applyexp(H, tau::Number, x0; kwargs...)
         error = ϕ1
       end
 
-      if outputlevel >= 2
+      if outputlevel >= 3
         @printf("  Iteration: %d, Error: %.2E\n", iter, error)
       end
 
@@ -113,7 +113,7 @@ function applyexp(H, tau::Number, x0; kwargs...)
         linear_comb = tmat_ext_exp[:, 1]
         xt = assemble_lanczos_vecs(lanczos_vectors, linear_comb, nrm)
 
-        if outputlevel >= 1
+        if outputlevel >= 3
           println("  Number of iterations: $iter")
         end
 

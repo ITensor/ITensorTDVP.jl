@@ -1,7 +1,3 @@
-struct TDVPInfo
-  maxtruncerr::Float64
-end
-
 struct TDVPOrder{order,direction} end
 
 TDVPOrder(order::Int, direction::Base.Ordering) = TDVPOrder{order,direction}()

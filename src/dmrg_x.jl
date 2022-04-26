@@ -1,4 +1,4 @@
-function dmrg_x_solver(PH, t, psi0)
+function dmrg_x_solver(PH, t, psi0; kwargs...)
   H = contract(PH, ITensor(1.0))
   D, U = eigen(H; ishermitian=true)
   u = uniqueind(U, H)
