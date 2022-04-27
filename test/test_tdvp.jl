@@ -301,12 +301,10 @@ end
 
   H = MPO(os, s)
 
-  
   psi = productMPS(s, n -> isodd(n) ? "Up" : "Dn")
   phi = copy(psi)
   c = div(N, 2)
 
-  
   #
   # Evolve using TDVP
   # 
@@ -315,7 +313,7 @@ end
   Nsteps = convert(Int, ceil(abs(ttotal / tau)))
   maxdims1 = zeros(Nsteps)
   maxdims2 = zeros(Nsteps)
-  
+
   Sz1 = zeros(Nsteps)
   En1 = zeros(Nsteps)
   Sz2 = zeros(Nsteps)
@@ -331,25 +329,17 @@ end
 
   phi = productMPS(s, n -> isodd(n) ? "Up" : "Dn")
 
-  phi = tdvp(
-    H,
-    -im * tau,
-    phi;
-    nsite=2,
-    time_step=-im * tau,
-    cutoff,
-    normalize=false,
-  )
-  
-  psi=deepcopy(phi)
-  
+  phi = tdvp(H, -im * tau, phi; nsite=2, time_step=-im * tau, cutoff, normalize=false)
+
+  psi = deepcopy(phi)
+
   phi = tdvp(
     H,
     -im * ttotal,
     phi;
     nsite=2,
     time_step=-im * tau,
-    cutoff = cutoff,
+    cutoff=cutoff,
     normalize=false,
     (observer!)=TDVPObserver(),
   )
@@ -366,7 +356,7 @@ end
     -im * ttotal,
     psi;
     time_step=-im * tau,
-    cutoff=cutoff*1e8,      ##not clear why this is so much larger than the 2-site TDVP cutoff for comparable bond dimensions?
+    cutoff=cutoff * 1e8,      ##not clear why this is so much larger than the 2-site TDVP cutoff for comparable bond dimensions?
     cutoff_compress=cutoff,
     normalize=false,
     nsite=1,
@@ -385,7 +375,7 @@ end
   #@show norm(En1 - En2)
   #@show(Sz1)
   #@show(Sz2)
-  
+
   @test norm(Sz1 - Sz2) < 1e-3
   @test norm(En1 - En2) < 1e-3
 end

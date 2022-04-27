@@ -7,19 +7,19 @@ function tdvp(
   global info
 
   #psi_evolved = copy(psi)  #copy required, otherwise this tdvp function mutates psi in the loop (and subspace expansion if performed)
-  
+
   nsite::Int = get(kwargs, :nsite, 2)
-  expand::Bool = get(kwargs, :expand, nsite == 2 ? false : (hasqns(psi) ? true : false )) 
-  
+  expand::Bool = get(kwargs, :expand, nsite == 2 ? false : (hasqns(psi) ? true : false))
+
   if expand
     ###TODO: check that shallow copy leaves psi invariant in the following 'in-place' subspace expansion
     maxdim = get(kwargs, :maxdim, 100)
     cutoff = get(kwargs, :cutoff, 1e-11)
     atol = get(kwargs, :atol, 1e-12)
     cutoff_trunc = 0.5 * abs(time_step)^2 * cutoff ### cutoff_trunc is min. acceleration of population gain of expansion vectors, thus rescaling with timestep
-    ITensorTDVP.subspace_expansion_sweep!(psi, PH;maxdim, cutoff=cutoff_trunc, atol=atol)
-    end
-  
+    ITensorTDVP.subspace_expansion_sweep!(psi, PH; maxdim, cutoff=cutoff_trunc, atol=atol)
+  end
+
   for substep in 1:length(sub_time_steps)
     psi, PH, info = tdvp(
       orderings[substep], solver, PH, sub_time_steps[substep], psi; current_time, kwargs...

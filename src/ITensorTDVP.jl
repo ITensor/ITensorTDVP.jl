@@ -1,19 +1,15 @@
 module ITensorTDVP
 
 using ITensors
-using KrylovKit: exponentiate, eigsolve,svdsolve
+using KrylovKit: exponentiate, eigsolve, svdsolve
 using Printf
 using LinearAlgebra
-
-
-
 
 using TimerOutputs
 using Observers
 
 using ITensors:
   AbstractMPS, @debug_check, @timeit_debug, check_hascommoninds, orthocenter, set_nsite!
-using ITensors: AbstractMPS, @debug_check, @timeit_debug, check_hascommoninds, orthocenter
 using ITensors.NDTensors
 using ITensors.NDTensors: eachdiagblock, blockview
 using ITensors.ITensorNetworkMaps
