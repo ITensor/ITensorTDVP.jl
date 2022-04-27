@@ -10,23 +10,15 @@ function tdvp(
   
   nsite::Int = get(kwargs, :nsite, 2)
   expand::Bool = get(kwargs, :expand, nsite == 2 ? false : (hasqns(psi) ? true : false )) 
-  ###TODO: Pass accuracy and other control parameters for subspace expansion instead of hardcoding
+  
   if expand
     ###TODO: check that shallow copy leaves psi invariant in the following 'in-place' subspace expansion
     maxdim = get(kwargs, :maxdim, 100)
-    @show kwargs
-    @show expand
-    @show nsite
-    @show maxdim
-    cutoff = get(kwargs, :cutoff, 1e-12)
-    atol = get(kwargs, :cutoff, 1e-12)
-    println("running subspace expansion sweep")
-    println("maxlinkdim before")
-    @show maxlinkdim(psi)
-    ITensorTDVP.subspace_expansion_sweep!(psi, PH;maxdim, cutoff, atol=atol)
-    println("maxlinkdim after")
-    @show maxlinkdim(psi)
-  end
+    cutoff = get(kwargs, :cutoff, 1e-11)
+    atol = get(kwargs, :atol, 1e-12)
+    cutoff_trunc = 0.5 * abs(time_step)^2 * cutoff ### cutoff_trunc is min. acceleration of population gain of expansion vectors, thus rescaling with timestep
+    ITensorTDVP.subspace_expansion_sweep!(psi, PH;maxdim, cutoff=cutoff_trunc, atol=atol)
+    end
   
   for substep in 1:length(sub_time_steps)
     psi, PH, info = tdvp(
@@ -34,6 +26,7 @@ function tdvp(
     )
     current_time += sub_time_steps[substep]
   end
+  #@show maxlinkdim(psi)
   return psi, PH, info
 end
 
