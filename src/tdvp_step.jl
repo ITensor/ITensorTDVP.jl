@@ -5,6 +5,29 @@ function tdvp(
   sub_time_steps = ITensorTDVP.sub_time_steps(order)
   sub_time_steps *= time_step
   global info
+
+  #psi_evolved = copy(psi)  #copy required, otherwise this tdvp function mutates psi in the loop (and subspace expansion if performed)
+  
+  nsite::Int = get(kwargs, :nsite, 2)
+  expand::Bool = get(kwargs, :expand, nsite == 2 ? false : (hasqns(psi) ? true : false )) 
+  ###TODO: Pass accuracy and other control parameters for subspace expansion instead of hardcoding
+  if expand
+    ###TODO: check that shallow copy leaves psi invariant in the following 'in-place' subspace expansion
+    maxdim = get(kwargs, :maxdim, 100)
+    @show kwargs
+    @show expand
+    @show nsite
+    @show maxdim
+    cutoff = get(kwargs, :cutoff, 1e-12)
+    atol = get(kwargs, :cutoff, 1e-12)
+    println("running subspace expansion sweep")
+    println("maxlinkdim before")
+    @show maxlinkdim(psi)
+    ITensorTDVP.subspace_expansion_sweep!(psi, PH;maxdim, cutoff, atol=atol)
+    println("maxlinkdim after")
+    @show maxlinkdim(psi)
+  end
+  
   for substep in 1:length(sub_time_steps)
     psi, PH, info = tdvp(
       orderings[substep], solver, PH, sub_time_steps[substep], psi; current_time, kwargs...
@@ -15,7 +38,7 @@ function tdvp(
 end
 
 function tdvp(direction::Base.Ordering, solver, PH, time_step::Number, psi::MPS; kwargs...)
-  PH = copy(PH)
+  #PH = copy(PH)    ###TODO: implement copy for PH, otherwhise this function may mutate PH
   psi = copy(psi)
 
   if length(psi) == 1
