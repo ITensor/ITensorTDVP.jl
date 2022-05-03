@@ -2,6 +2,8 @@
 # Possible improvements
 #  - allow a maxdim argument to be passed to `extend`
 #    and through `basis_extend`
+#  - current behavior is letting bond dimension get too
+#    big when used in imaginary time evolution
 #  - come up with better names:
 #    > should `basis_extend` be called `krylov_extend`?
 #    > should `extend` be called `basis_extend`?
@@ -9,6 +11,13 @@
 #    instead of H|psi>. Needed?
 #
 
+"""
+Given an MPS psi and a collection of MPS phis,
+returns an MPS which is equal to psi
+(has fidelity 1.0 with psi) but whose MPS basis
+is extended to contain a portion of the basis of
+the phis that is orthogonal to the MPS basis of psi.
+"""
 function extend(psi::MPS,
                 phis::Vector{MPS};
                 kwargs...)
@@ -92,7 +101,7 @@ function basis_extend(psi::MPS,
   phis = Vector{MPS}(undef,kdim)
   for k=1:kdim
     prev = k==1 ? psi : phis[k-1]
-    phis[k] = noprime(contract(H,prev;maxdim))
+    phis[k] = apply(H,prev;maxdim)
     normalize!(phis[k])
   end
 
