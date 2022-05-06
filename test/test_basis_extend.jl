@@ -17,6 +17,18 @@ using Printf
   @test inner(psix, phi) ≈ inner(psi, phi)
 end
 
+@testset "extend function with QNs" begin
+  N = 6
+  s = siteinds("S=1/2", N; conserve_qns=true)
+  state = [isodd(n) ? "Up" : "Dn" for n in 1:N]
+  psi = randomMPS(s, state; linkdims=4)
+  phi = randomMPS(s, state; linkdims=2)
+
+  psix = ITensorTDVP.extend(psi, [phi])
+  @test inner(psix, psi) ≈ inner(psi, psi)
+  @test inner(psix, phi) ≈ inner(psi, phi)
+end
+
 @testset "basis_extend" begin
   N = 10
 

@@ -1,3 +1,4 @@
+import ITensors: pause
 #
 # Possible improvements
 #  - allow a maxdim argument to be passed to `extend`
@@ -40,7 +41,7 @@ function extend(psi::MPS, phis::Vector{MPS}; kwargs...)
     # Make projector
     Id = ITensor(1.0)
     for r in rinds
-      Id *= delta(r', dag(r))
+      Id *= denseblocks(delta(r', dag(r)))
     end
     P = Id - prime(B, rinds) * dag(B)
 
@@ -70,8 +71,12 @@ function extend(psi::MPS, phis::Vector{MPS}; kwargs...)
       # Form direct sum of B and Bphi over left index
       bψ = commonind(B, S)
       bϕ = commonind(Bphi, D)
-      bx = Index(dim(bψ) + dim(bϕ), "bx_$(j-1)")
-      D1, D2 = ITensors.directsum_itensors(bψ, bϕ, bx)
+      if !hasqns(bψ)
+        bx = Index(dim(bψ) + dim(bϕ), "bx_$(j-1)")
+      else
+        bx = Index(vcat(space(bψ), space(bϕ)), "bx_$(j-1)")
+      end
+      D1, D2 = ITensors.directsum_itensors(bψ, bϕ, dag(bx))
       Bx = D1 * B + D2 * Bphi
     else
       Bx = B
