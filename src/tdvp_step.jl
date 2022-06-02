@@ -1,3 +1,4 @@
+# TODO: Rename `tdvp_step`?
 function tdvp(
   order::TDVPOrder, solver, PH, time_step::Number, psi::MPS; current_time=0.0, kwargs...
 )
@@ -14,6 +15,27 @@ function tdvp(
   return psi, PH, info
 end
 
+isforward(direction::Base.ForwardOrdering) = true
+isforward(direction::Base.ReverseOrdering) = false
+isreverse(direction) = !isforward(direction)
+
+function sweep_bonds(direction::Base.ForwardOrdering, n::Int; ncenter::Int)
+  return 1:(n - ncenter + 1)
+end
+
+function sweep_bonds(direction::Base.ReverseOrdering, n::Int; ncenter::Int)
+  return reverse(sweep_bonds(Base.Forward, n; ncenter))
+end
+
+is_forward_done(direction::Base.ForwardOrdering, b, n; ncenter) = (b + ncenter - 1 == n)
+is_forward_done(direction::Base.ReverseOrdering, b, n; ncenter) = false
+is_reverse_done(direction::Base.ForwardOrdering, b, n; ncenter) = false
+is_reverse_done(direction::Base.ReverseOrdering, b, n; ncenter) = (b == 1)
+function is_half_sweep_done(direction, b, n; ncenter)
+  return is_forward_done(direction, b, n; ncenter) || is_reverse_done(direction, b, n; ncenter)
+end
+
+# TODO: Rename `tdvp_sweep`?
 function tdvp(direction::Base.Ordering, solver, PH, time_step::Number, psi::MPS; kwargs...)
   PH = copy(PH)
   psi = copy(psi)
@@ -41,13 +63,13 @@ function tdvp(direction::Base.Ordering, solver, PH, time_step::Number, psi::MPS;
 
   N = length(psi)
   set_nsite!(PH, nsite)
-  if direction == Base.Forward
+  if isforward(direction)
     if !isortho(psi) || orthocenter(psi) != 1
       orthogonalize!(psi, 1)
     end
     @assert isortho(psi) && orthocenter(psi) == 1
     position!(PH, psi, 1)
-  elseif direction == Base.Reverse
+  elseif isreverse(direction)
     if !isortho(psi) || orthocenter(psi) != N - nsite + 1
       orthogonalize!(psi, N - nsite + 1)
     end
@@ -56,14 +78,7 @@ function tdvp(direction::Base.Ordering, solver, PH, time_step::Number, psi::MPS;
   end
 
   maxtruncerr = 0.0
-  for (b, ha) in sweepnext(N; ncenter=nsite)
-    # unidirectional (half-)sweeps only, skip over the other direction
-    if direction == Base.Forward && ha == 2
-      continue
-    elseif direction == Base.Reverse && ha == 1
-      continue
-    end
-
+  for b in sweep_bonds(direction, N; ncenter=nsite)
     # Do 'forwards' evolution step
     set_nsite!(PH, nsite)
     position!(PH, psi, b)
@@ -82,10 +97,10 @@ function tdvp(direction::Base.Ordering, solver, PH, time_step::Number, psi::MPS;
     if nsite == 1
       psi[b] = phi1
     elseif nsite == 2
-      ortho = ha == 1 ? "left" : "right"
+      ortho = isforward(direction) ? "left" : "right"
 
       drho = nothing
-      if noise > 0.0 && ha == 1
+      if noise > 0.0 && isforward(direction)
         drho = noise * noiseterm(PH, phi, ortho)
       end
 
@@ -108,9 +123,9 @@ function tdvp(direction::Base.Ordering, solver, PH, time_step::Number, psi::MPS;
     #
     # Do backwards evolution step
     #
-    if reverse_step && (ha == 1 && (b + nsite - 1 != N)) || (ha == 2 && b != 1)
-      b1 = (ha == 1 ? b + 1 : b)
-      Δ = (ha == 1 ? +1 : -1)
+    if reverse_step && !is_half_sweep_done(direction, b, N; ncenter=nsite)
+      b1 = (isforward(direction) ? b + 1 : b)
+      Δ = (isforward(direction) ? +1 : -1)
       if nsite == 2
         phi0 = psi[b1]
       elseif nsite == 1
@@ -118,9 +133,9 @@ function tdvp(direction::Base.Ordering, solver, PH, time_step::Number, psi::MPS;
         U, S, V = svd(phi1, uinds)
         psi[b] = U
         phi0 = S * V
-        if ha == 1
+        if isforward(direction)
           ITensors.setleftlim!(psi, b)
-        elseif ha == 2
+        elseif isreverse(direction)
           ITensors.setrightlim!(psi, b)
         end
       end
@@ -138,9 +153,9 @@ function tdvp(direction::Base.Ordering, solver, PH, time_step::Number, psi::MPS;
         psi[b1] = phi0
       elseif nsite == 1
         psi[b + Δ] = phi0 * psi[b + Δ]
-        if ha == 1
+        if isforward(direction)
           ITensors.setrightlim!(psi, b + Δ + 1)
-        elseif ha == 2
+        elseif isreverse(direction)
           ITensors.setleftlim!(psi, b + Δ - 1)
         end
       end
@@ -148,7 +163,7 @@ function tdvp(direction::Base.Ordering, solver, PH, time_step::Number, psi::MPS;
     end
 
     if outputlevel >= 2
-      @printf("Sweep %d, half %d, bond (%d,%d) \n", sw, ha, b, b + 1)
+      @printf("Sweep %d, direction %s, bond (%d,%d) \n", sw, direction, b, b + 1)
       print("  Truncated using")
       @printf(" cutoff=%.1E", cutoff)
       @printf(" maxdim=%.1E", maxdim)
@@ -163,16 +178,15 @@ function tdvp(direction::Base.Ordering, solver, PH, time_step::Number, psi::MPS;
       flush(stdout)
     end
 
-    half_sweep_is_done = ((b == 1 && ha == 2) || (b == N && ha == 1))
     update!(
       observer;
       psi,
       bond=b,
       sweep=sw,
-      half_sweep=ha,
+      half_sweep=isforward(direction) ? 1 : 2,
       spec,
       outputlevel,
-      half_sweep_is_done,
+      half_sweep_is_done=is_half_sweep_done(direction, b, N; ncenter=nsite),
       current_time,
     )
   end
