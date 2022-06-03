@@ -3,7 +3,7 @@ using ITensorTDVP
 using Observers
 using Printf
 
-using ITensorTDVP: tdvp_solver, process_sweeps, TDVPOrder
+using ITensorTDVP: tdvp_solver, tdvp_step, process_sweeps, TDVPOrder
 
 function tdvp_nonuniform_timesteps(
   solver,
@@ -22,7 +22,7 @@ function tdvp_nonuniform_timesteps(
   current_time = time_start
   for sw in 1:nsweeps
     sw_time = @elapsed begin
-      psi, PH, info = tdvp(
+      psi, PH, info = tdvp_step(
         tdvp_order,
         solver,
         PH,
