@@ -298,7 +298,9 @@ end
   trange = 0.0:tau:ttotal
   for (step, t) in enumerate(trange)
     nsite = (step <= 10 ? 2 : 1)
-    psi = tdvp(H, -tau, psi; cutoff, nsite, reverse_step, normalize=true, exponentiate_krylovdim=15)
+    psi = tdvp(
+      H, -tau, psi; cutoff, nsite, reverse_step, normalize=true, exponentiate_krylovdim=15
+    )
   end
 
   @test inner(psi', H, psi) < -4.25

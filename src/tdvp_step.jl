@@ -35,7 +35,9 @@ function is_half_sweep_done(direction, b, n; ncenter)
          is_reverse_done(direction, b, n; ncenter)
 end
 
-function tdvp_sweep(direction::Base.Ordering, solver, PH, time_step::Number, psi::MPS; kwargs...)
+function tdvp_sweep(
+  direction::Base.Ordering, solver, PH, time_step::Number, psi::MPS; kwargs...
+)
   PH = copy(PH)
   psi = copy(psi)
   if length(psi) == 1
@@ -407,5 +409,7 @@ function tdvp_site_update!(
   mindim,
   maxtruncerr,
 ) where {nsite,reverse_step}
-  return error("`tdvp` with `nsite=$nsite` and `reverse_step=$reverse_step` not implemented.")
+  return error(
+    "`tdvp` with `nsite=$nsite` and `reverse_step=$reverse_step` not implemented."
+  )
 end
