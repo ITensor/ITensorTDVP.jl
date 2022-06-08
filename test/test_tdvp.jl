@@ -273,13 +273,6 @@ end
     (observer!)=TDVPObserver(),
   )
 
-  #display(En1)
-  #display(En2)
-  #display(Sz1)
-  #display(Sz2)
-  #@show norm(Sz1 - Sz2)
-  #@show norm(En1 - En2)
-
   @test norm(Sz1 - Sz2) < 1e-3
   @test norm(En1 - En2) < 1e-3
 end
@@ -380,7 +373,7 @@ end
   @test norm(En1 - En2) < 1e-3
 end
 
-@testset "Imaginary Time Evolution" begin
+@testset "Imaginary Time Evolution" for reverse_step in [true, false]
   N = 10
   cutoff = 1e-12
   tau = 1.0
@@ -402,9 +395,10 @@ end
   trange = 0.0:tau:ttotal
   for (step, t) in enumerate(trange)
     nsite = (step <= 10 ? 2 : 1)
-    psi = tdvp(H, -tau, psi; cutoff, nsite, normalize=true, exponentiate_krylovdim=15)
+    psi = tdvp(
+      H, -tau, psi; cutoff, nsite, reverse_step, normalize=true, exponentiate_krylovdim=15
+    )
   end
-  #@show maxlinkdim(psi)
 
   @test inner(psi', H, psi) < -4.25
 end
