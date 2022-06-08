@@ -30,7 +30,6 @@ function tdvp_step(
   return psi, PH, info
 end
 
-
 isforward(direction::Base.ForwardOrdering) = true
 isforward(direction::Base.ReverseOrdering) = false
 isreverse(direction) = !isforward(direction)
