@@ -42,10 +42,11 @@ using Test
   @test inner(H, ψ, H, ψ) ≉ inner(ψ', H, ψ)^2 atol = 1e-1
   @test inner(H, ϕ, H, ϕ) ≈ inner(ϕ', H, ϕ)^2 atol = 1e-7
 
-  ϕ̃ = dmrg_x(ProjMPO(H), ψ; nsite=1, dmrg_x_kwargs...)
+  ϕ̃ = dmrg_x(ProjMPO(H), ϕ; nsite=1, dmrg_x_kwargs...)
 
   @test inner(ψ', H, ψ) / inner(ψ, ψ) ≈ inner(ϕ̃', H, ϕ̃) / inner(ϕ̃, ϕ̃) rtol = 1e-1
-  @test_broken inner(H, ϕ̃, H, ϕ̃) ≈ inner(ϕ̃', H, ϕ̃)^2 atol = 1e-7
+  @test inner(H, ϕ̃, H, ϕ̃) ≈ inner(ϕ̃', H, ϕ̃)^2 atol = 1e-7
+  @test abs(loginner(ϕ̃, ϕ) / n) ≈ 0.0 atol = 1e-8
 end
 
 nothing
