@@ -14,5 +14,5 @@ $ julia
 
 julia> ]
 
-pkg> add https://github.com/ITensor/ITensorTDVP.jl
+pkg> add https://github.com/mtfishman/ITensorTDVP.jl
 ```
