@@ -8,11 +8,11 @@
 
 This package is still under heavy development and the interface is still subject to change.
 
-To install this package, which has not yet been registered, you can use the following steps:
+To install this package, you can use the following steps:
 ```
 $ julia
 
 julia> ]
 
-pkg> add https://github.com/ITensor/ITensorTDVP.jl
+pkg> add ITensorTDVP
 ```
