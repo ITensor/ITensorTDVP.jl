@@ -47,14 +47,11 @@ end
 function subspace_expansion_sweep(
   ψ::MPS, PH::Union{ProjMPO,ProjMPOSum}; maxdim, cutoff, atol=1e-10, kwargs...
 )
-ψc=copy(ψ)
-PHc=copy(PH)
-subspace_expansion_sweep!(
-  ψc, PHc; maxdim, cutoff, atol=1e-10, kwargs...
-)
-return ψc,PHc
+  ψc = copy(ψ)
+  PHc = copy(PH)
+  subspace_expansion_sweep!(ψc, PHc; maxdim, cutoff, atol=1e-10, kwargs...)
+  return ψc, PHc
 end
-
 
 function subspace_expansion!(
   ψ::MPS,

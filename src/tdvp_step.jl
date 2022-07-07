@@ -16,7 +16,9 @@ function tdvp_step(
     cutoff = get(kwargs, :cutoff, 1e-11)
     atol = get(kwargs, :atol, 1e-12)
     cutoff_trunc = 0.5 * abs(time_step)^2 * cutoff ### cutoff_trunc is min. acceleration of population gain of expansion vectors, thus rescaling with timestep
-    psi,PH=ITensorTDVP.subspace_expansion_sweep(psi, PH; maxdim, cutoff=cutoff_trunc, atol=atol)
+    psi, PH = ITensorTDVP.subspace_expansion_sweep(
+      psi, PH; maxdim, cutoff=cutoff_trunc, atol=atol
+    )
   end
   for substep in 1:length(sub_time_steps)
     psi, PH, info = tdvp_sweep(
