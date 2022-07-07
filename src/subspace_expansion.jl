@@ -44,6 +44,18 @@ function subspace_expansion_sweep!(
   return nothing
 end
 
+function subspace_expansion_sweep(
+  ψ::MPS, PH::Union{ProjMPO,ProjMPOSum}; maxdim, cutoff, atol=1e-10, kwargs...
+)
+ψc=copy(ψ)
+PHc=copy(PH)
+subspace_expansion_sweep!(
+  ψc, PHc; maxdim, cutoff, atol=1e-10, kwargs...
+)
+return ψc,PHc
+end
+
+
 function subspace_expansion!(
   ψ::MPS,
   PH,
@@ -130,10 +142,10 @@ function subspace_expansion!(
 
   ###add expansion direction to current site tensors
   ALⁿ¹, newl = ITensors.directsum(
-    ϕ_1, dag(newL), uniqueinds(ϕ_1, newL), uniqueinds(newL, ϕ_1); tags=("Left",)
+    ϕ_1 => uniqueinds(ϕ_1, newL), dag(newL) => uniqueinds(newL, ϕ_1); tags=("Left",)
   )
   ARⁿ², newr = ITensors.directsum(
-    ϕ_2, dag(newR), uniqueinds(ϕ_2, newR), uniqueinds(newR, ϕ_2); tags=("Right",)
+    ϕ_2 => uniqueinds(ϕ_2, newR), dag(newR) => uniqueinds(newR, ϕ_2); tags=("Right",)
   )
 
   ###TODO remove assertions regarding expansion not exceeding maxdim ?
