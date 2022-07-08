@@ -3,7 +3,6 @@ module ITensorTDVP
 using ITensors
 using KrylovKit: exponentiate, eigsolve, svdsolve
 using Printf
-#using LinearAlgebra
 
 using TimerOutputs
 using Observers
