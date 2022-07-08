@@ -67,32 +67,32 @@ function subspace_expansion!(
   """
   expands in nullspace of site-tensors b
   """
-  #atol refers to the tolerance in nullspace determination (for finite MPS can probably be set rather small)
-  #cutoff refers to largest singular value of gradient (acceleration of population gain of expansion vectors) to keep
-  #this should be related to the cutoff in two-site TDVP: \Delta_rho_i = 0.5 * lambda_y * tau **2 
-  #note that in the initial SVD there is another cutoff parameter, that we set to roughly machine precision for the time being
-  #(allows to move bond-dimension between different partial QN sectors, if no such truncation occurs distribution of bond-dimensions
-  #between different QNs locally is static once bond dimension saturates maxdim.)
+  # atol refers to the tolerance in nullspace determination (for finite MPS can probably be set rather small)
+  # cutoff refers to largest singular value of gradient (acceleration of population gain of expansion vectors) to keep
+  # this should be related to the cutoff in two-site TDVP: \Delta_rho_i = 0.5 * lambda_y * tau **2 
+  # note that in the initial SVD there is another cutoff parameter `cutoff_compress`, that we set to roughly machine precision for the time being
+  # (allows to move bond-dimension between different partial QN sectors, if no such truncation occurs distribution of bond-dimensions
+  # between different QNs locally is static once bond dimension saturates maxdim.)
 
-  ##this should only work for the case where rlim-llim > 1
-  ##not a valid MPS otherwise anyway (since bond matrix not part of MPS unless so defined like in VidalMPS struct)
   llim, rlim = lims
   n1, n2 = b
   PH.nsite = 2
   old_linkdim = dim(commonind(ψ[n1], ψ[n2]))
   cutoff_compress = get(kwargs, :cutoff_compress, 1e-12)
 
-  ###move orthogonality center to bond, check whether there are vanishing contributions to the wavefunctions and truncate accordingly
+  # move orthogonality center to bond
+  # and check whether there are vanishing contributions to the wavefunctions
+  # truncate accordingly
+  # at the cost of unitarity but introducing flexibility of redistributing bond dimensions among QN sectors)
   if llim == n1
     @assert rlim == n2 + 1
     U, S, V = svd(
       ψ[n2], uniqueinds(ψ[n2], ψ[n1]); maxdim=maxdim, cutoff=cutoff_compress, kwargs...
-    )  ##lookup svd interface again
+    )
     ϕ_1 = ψ[n1] * V
     ϕ_2 = U
     old_linkdim = dim(commonind(U, S))
     bondtensor = S
-
   elseif rlim == n2
     @assert llim == n1 - 1
     U, S, V = svd(
@@ -104,40 +104,45 @@ function subspace_expansion!(
     bondtensor = S
   end
 
-  ###don't expand if we are already at maxdim
+  # don't expand if we are already at maxdim
   if old_linkdim >= maxdim
     println("not expanding")
     return nothing
   end
   position!(PH, ψ, min(n1, n2))
 
-  #orthogonalize(ψ,n1)
+  # orthogonalize(ψ,n1)
   linkind_l = commonind(ϕ_1, bondtensor)
   linkind_r = commonind(ϕ_2, bondtensor)
 
+  # compute nullspace to the left and right 
   NL = nullspace(ϕ_1, linkind_l; atol=atol)
   NR = nullspace(ϕ_2, linkind_r; atol=atol)
 
-  ###NOTE: This will fail for rank-1 trees with physical DOFs on leafs
-  ###NOTE: one-sided subspace expansion seems to not work well at least for trees according to Lachlan Lindoy
+  # if nullspace is empty (happen's for product states with QNs)
   if norm(NL) == 0.0 || norm(NR) == 0.0
     return bondtensor
   end
 
-  ###form 2site wavefunction
+  # form 2-site wavefunction
   ϕ = ϕ_1 * bondtensor * ϕ_2
 
-  ###get subspace expansion
+  # get subspace expansion
   newL, S, newR, success = _subspace_expand_core(
     ϕ, PH, NL, NR, ; maxdim=maxdim - old_linkdim, cutoff, kwargs...
   )
-  @assert success
-  #@show expanS
+
+  # ToDo: Handle failed subspace expansion properly. Maybe pass an argument whether to raise an error if subspace expansion fails
+  # @assert success
+
   if success == false
+    println(
+      "Subspace expansion not successful. This may indicate that 2-site TDVP also fails for the given state and Hamiltonian.",
+    )
     return nothing
   end
 
-  ###add expansion direction to current site tensors
+  # expand current site tensors
   ALⁿ¹, newl = ITensors.directsum(
     ϕ_1 => uniqueinds(ϕ_1, newL), dag(newL) => uniqueinds(newL, ϕ_1); tags=("Left",)
   )
@@ -145,7 +150,9 @@ function subspace_expansion!(
     ϕ_2 => uniqueinds(ϕ_2, newR), dag(newR) => uniqueinds(newR, ϕ_2); tags=("Right",)
   )
 
-  ###TODO remove assertions regarding expansion not exceeding maxdim ?
+  # Some checks
+  # ToDo: clean up
+  # ToDo: remove assertions regarding expansion not exceeding maxdim ?
   @assert (dim(commonind(newL, S)) + old_linkdim) <= maxdim
   @assert dim(commonind(newL, S)) == dim(commonind(newR, S))
   @assert(dim(uniqueind(ϕ_1, newL)) + dim(uniqueind(newL, ϕ_1)) == dim(newl))
@@ -155,7 +162,7 @@ function subspace_expansion!(
   @assert dim(newl) <= maxdim
   @assert dim(newr) <= maxdim
 
-  ###zero-pad bond-tensor (the orthogonality center)
+  # zero-pad bond-tensor (the orthogonality center)
   C = ITensor(dag(newl)..., dag(newr)...)
   ψC = bondtensor
   for I in eachindex(ψC)
@@ -165,13 +172,12 @@ function subspace_expansion!(
     end
   end
 
-  ###move orthogonality center back to site (should restore input orthogonality limits)
+  # move orthogonality center back to site (should restore input orthogonality limits)
   if rlim == n2
     ψ[n2] = ARⁿ²
   elseif rlim > n2
     ψ[n2] = noprime(ARⁿ² * C)
   end
-
   if llim == n1
     ψ[n1] = ALⁿ¹
   elseif llim < n1
@@ -197,6 +203,7 @@ function _subspace_expand_core(ϕ::ITensor, env, NL, NR; maxdim, cutoff, kwargs.
   if norm(ϕH) == 0.0
     return false, false, false, false
   end
+
   U, S, V = svd(
     ϕH,
     commoninds(ϕH, NL);
@@ -206,7 +213,6 @@ function _subspace_expand_core(ϕ::ITensor, env, NL, NR; maxdim, cutoff, kwargs.
     use_absolute_cutoff=true,
     kwargs...,
   )
-
   @assert dim(commonind(U, S)) <= maxdim
 
   NL *= dag(U)

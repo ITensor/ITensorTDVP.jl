@@ -5,17 +5,16 @@ function tdvp_step(
   sub_time_steps = ITensorTDVP.sub_time_steps(order)
   sub_time_steps *= time_step
   global info
-
-  #psi_evolved = copy(psi)  #copy required, otherwise this tdvp function mutates psi in the loop (and subspace expansion if performed)
-
   nsite::Int = get(kwargs, :nsite, 2)
   expand::Bool = get(kwargs, :expand, nsite == 2 ? false : (hasqns(psi) ? false : false))
 
   if expand
+    # do subspace expansion
     maxdim = get(kwargs, :maxdim, 100)
     cutoff = get(kwargs, :cutoff, 1e-11)
     atol = get(kwargs, :atol, 1e-12)
-    cutoff_trunc = 0.5 * abs(time_step)^2 * cutoff ### cutoff_trunc is min. acceleration of population gain of expansion vectors, thus rescaling with timestep
+    # cutoff_trunc is should scale with acceleration of population gain of expansion vectors, thus rescaling with timestep
+    cutoff_trunc = 0.5 * abs(time_step)^2 * cutoff
     psi, PH = ITensorTDVP.subspace_expansion_sweep(
       psi, PH; maxdim, cutoff=cutoff_trunc, atol=atol
     )
@@ -26,7 +25,7 @@ function tdvp_step(
     )
     current_time += sub_time_steps[substep]
   end
-  #@show maxlinkdim(psi)
+
   return psi, PH, info
 end
 
