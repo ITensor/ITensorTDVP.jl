@@ -8,7 +8,7 @@ using Test
 @testset "Basic TDVP" begin
   N = 10
   cutoff = 1e-12
-
+  #maxdim = 100
   s = siteinds("S=1/2", N)
 
   os = OpSum()
@@ -266,11 +266,108 @@ end
     H,
     -im * ttotal,
     phi;
+    nsite=2,
     time_step=-im * tau,
     cutoff,
     normalize=false,
     (observer!)=TDVPObserver(),
   )
+
+  @test norm(Sz1 - Sz2) < 1e-3
+  @test norm(En1 - En2) < 1e-3
+end
+
+@testset "Subspace expansions vs 2-site evolution" begin
+  N = 16
+  cutoff = 1e-12
+  tau = 0.05
+  ttotal = 2.0
+
+  s = siteinds("S=1/2", N; conserve_qns=true)
+
+  os = OpSum()
+  for j in 1:(N - 1)
+    os += 0.5, "S+", j, "S-", j + 1
+    os += 0.5, "S-", j, "S+", j + 1
+    os += "Sz", j, "Sz", j + 1
+  end
+
+  H = MPO(os, s)
+
+  psi = productMPS(s, n -> isodd(n) ? "Up" : "Dn")
+  phi = copy(psi)
+  c = div(N, 2)
+
+  #
+  # Evolve using TDVP
+  # 
+  struct TDVPObserver <: AbstractObserver end
+
+  Nsteps = convert(Int, ceil(abs(ttotal / tau)))
+  maxdims1 = zeros(Nsteps)
+  maxdims2 = zeros(Nsteps)
+
+  Sz1 = zeros(Nsteps)
+  En1 = zeros(Nsteps)
+  Sz2 = zeros(Nsteps)
+  En2 = zeros(Nsteps)
+
+  function ITensors.measure!(obs::TDVPObserver; sweep, bond, half_sweep, psi, kwargs...)
+    if bond == 1 && half_sweep == 2
+      Sz1[sweep] = expect(psi, "Sz"; sites=c)
+      En1[sweep] = real(inner(psi', H, psi))
+      maxdims1[sweep] = maxlinkdim(psi)
+    end
+  end
+
+  phi = productMPS(s, n -> isodd(n) ? "Up" : "Dn")
+
+  phi = tdvp(H, -im * tau, phi; nsite=2, time_step=-im * tau, cutoff, normalize=false)
+
+  psi = deepcopy(phi)
+
+  phi = tdvp(
+    H,
+    -im * ttotal,
+    phi;
+    nsite=2,
+    time_step=-im * tau,
+    cutoff=cutoff,
+    normalize=false,
+    (observer!)=TDVPObserver(),
+  )
+
+  function ITensors.measure!(obs::TDVPObserver; sweep, bond, half_sweep, psi, kwargs...)
+    if bond == 1 && half_sweep == 2
+      Sz2[sweep] = expect(psi, "Sz"; sites=c)
+      En2[sweep] = real(inner(psi', H, psi))
+      maxdims2[sweep] = maxlinkdim(psi)
+    end
+  end
+  psi = tdvp(
+    H,
+    -im * ttotal,
+    psi;
+    time_step=-im * tau,
+    cutoff=cutoff * 1e8,      ##not clear why this is so much larger than the 2-site TDVP cutoff for comparable bond dimensions?
+    cutoff_compress=cutoff,
+    normalize=false,
+    nsite=1,
+    maxdim=100,
+    expand=true,
+    atol=1e-10,
+    #cutoff=5e-2,
+    #atol=1e-11,
+    (observer!)=TDVPObserver(),
+  )
+  #display(En1)
+  #display(En2)
+  #display(Sz1)
+  #display(Sz2)
+  #@show norm(Sz1 - Sz2)
+  #@show norm(En1 - En2)
+  #@show(Sz1)
+  #@show(Sz2)
 
   @test norm(Sz1 - Sz2) < 1e-3
   @test norm(En1 - En2) < 1e-3
