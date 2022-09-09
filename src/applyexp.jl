@@ -34,7 +34,7 @@ function applyexp(H, tau::Number, x0; kwargs...)
 
   ElT = promote_type(typeof(tau), eltype(x0))
 
-  bigTmat = zeros(ElT, maxiter + 2, maxiter + 2)
+  bigTmat = zeros(ElT, maxiter + 3, maxiter + 3)
 
   nmatvec = 0
 
