@@ -1,14 +1,24 @@
 module ITensorTDVP
 
 using ITensors
-using KrylovKit: exponentiate, eigsolve
+using KrylovKit: exponentiate, eigsolve, svdsolve
 using Printf
+
 using TimerOutputs
 using Observers
 
 using ITensors:
-  AbstractMPS, @debug_check, @timeit_debug, check_hascommoninds, orthocenter, set_nsite!
-
+  AbstractMPS,
+  AbstractProjMPO,
+  @debug_check,
+  @timeit_debug,
+  check_hascommoninds,
+  orthocenter,
+  nullspace,
+  set_nsite!
+using ITensors.NDTensors
+using ITensors.NDTensors: eachdiagblock, blockview
+using ITensors.ITensorNetworkMaps
 # Compatibility of ITensor observer and Observers
 include("update_observer.jl")
 
@@ -25,6 +35,8 @@ include("tdvp_generic.jl")
 include("tdvp.jl")
 include("dmrg.jl")
 include("dmrg_x.jl")
+#include("nullspace.jl")
+include("subspace_expansion.jl")
 
 export tdvp, dmrg_x, to_vec, TimeDependentSum
 
