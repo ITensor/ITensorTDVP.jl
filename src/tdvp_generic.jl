@@ -67,7 +67,7 @@ function tdvp(solver, PH, t::Number, psi0::MPS; kwargs...)
   # This will be passed as a keyword argument to the
   # `solver`.
   current_time = time_start
-
+  info = nothing
   for sw in 1:nsweeps
     if !isnothing(write_when_maxdim_exceeds) && maxdim[sw] > write_when_maxdim_exceeds
       if outputlevel >= 2
@@ -118,7 +118,7 @@ function tdvp(solver, PH, t::Number, psi0::MPS; kwargs...)
     end
     isdone && break
   end
-  return psi
+  return psi, info
 end
 
 """

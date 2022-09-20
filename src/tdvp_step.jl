@@ -74,8 +74,9 @@ function tdvp_sweep(
     position!(PH, psi, N - nsite + 1)
   end
   maxtruncerr = 0.0
+  converged = 0
   for b in sweep_bonds(direction, N; ncenter=nsite)
-    current_time, maxtruncerr, spec = tdvp_site_update!(
+    current_time, maxtruncerr, spec, converged = tdvp_site_update!(
       solver,
       PH,
       psi,
@@ -128,7 +129,7 @@ function tdvp_sweep(
   end
   # Just to be sure:
   normalize && normalize!(psi)
-  return psi, PH, TDVPInfo(maxtruncerr)
+  return psi, PH, TDVPInfo(maxtruncerr, converged)
 end
 
 function tdvp_site_update!(
@@ -209,7 +210,7 @@ function tdvp_site_update!(
     Δ = (isforward(direction) ? +1 : -1)
     orthogonalize!(psi, b + Δ)
   end
-  return current_time, maxtruncerr, spec
+  return current_time, maxtruncerr, spec, info.converged
 end
 
 function tdvp_site_update!(
@@ -269,7 +270,7 @@ function tdvp_site_update!(
     end
     set_nsite!(PH, nsite)
   end
-  return current_time, maxtruncerr, spec
+  return current_time, maxtruncerr, spec, info.converged
 end
 
 function tdvp_site_update!(
@@ -321,7 +322,7 @@ function tdvp_site_update!(
     svd_alg,
   )
   maxtruncerr = max(maxtruncerr, spec.truncerr)
-  return current_time, maxtruncerr, spec
+  return current_time, maxtruncerr, spec, info.converged
 end
 
 function tdvp_site_update!(
@@ -386,7 +387,7 @@ function tdvp_site_update!(
     psi[b1] = phi0
     set_nsite!(PH, nsite)
   end
-  return current_time, maxtruncerr, spec
+  return current_time, maxtruncerr, spec, info.converged
 end
 
 function tdvp_site_update!(

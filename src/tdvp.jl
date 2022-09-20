@@ -44,7 +44,12 @@ function tdvp_solver(; kwargs...)
 end
 
 function tdvp(H, t::Number, psi0::MPS; kwargs...)
-  return tdvp(tdvp_solver(; kwargs...), H, t, psi0; kwargs...)
+  return_info = get(kwargs, :return_info, false)
+  if return_info
+    return tdvp(tdvp_solver(; kwargs...), H, t, psi0; kwargs...)
+  else
+    return tdvp(tdvp_solver(; kwargs...), H, t, psi0; kwargs...)[1]
+  end
 end
 
 function tdvp(t::Number, H, psi0::MPS; kwargs...)
@@ -54,3 +59,4 @@ end
 function tdvp(H, psi0::MPS, t::Number; kwargs...)
   return tdvp(H, t, psi0; kwargs...)
 end
+

@@ -59,9 +59,9 @@ end
 
   ψ₀ = complex.(MPS(s, j -> isodd(j) ? "↑" : "↓"))
 
-  ψₜ_ode = tdvp(ode_solver, H⃗₀, time_stop, ψ₀; time_step, maxdim, cutoff, nsite)
+  ψₜ_ode, info_ode = tdvp(ode_solver, H⃗₀, time_stop, ψ₀; time_step, maxdim, cutoff, nsite)
 
-  ψₜ_krylov = tdvp(krylov_solver, H⃗₀, time_stop, ψ₀; time_step, cutoff, nsite)
+  ψₜ_krylov, info_krylov = tdvp(krylov_solver, H⃗₀, time_stop, ψ₀; time_step, cutoff, nsite)
 
   ψₜ_full, _ = ode_solver(prod.(H⃗₀), time_stop, prod(ψ₀))
 
@@ -69,6 +69,8 @@ end
   @test norm(ψₜ_ode) ≈ 1
   @test norm(ψₜ_krylov) ≈ 1
   @test norm(ψₜ_full) ≈ 1
+  @test info_ode.converged == -1
+  @test info_krylov.converged == 1
 
   ode_err = norm(prod(ψₜ_ode) - ψₜ_full)
   krylov_err = norm(prod(ψₜ_krylov) - ψₜ_full)
