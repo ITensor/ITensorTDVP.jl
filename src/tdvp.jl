@@ -59,4 +59,3 @@ end
 function tdvp(H, psi0::MPS, t::Number; kwargs...)
   return tdvp(H, t, psi0; kwargs...)
 end
-
