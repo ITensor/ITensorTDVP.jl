@@ -30,7 +30,8 @@ function fit_contract_mpo(A::MPO, psi0::MPS; kwargs...)::MPS
 
   t = Inf
   reverse_step = false
-  psi = tdvp(contractmpo_solver(; kwargs...), H, t, psi0; reverse_step, kwargs...)
+  PH = ProjMPOApply(psi0,H)
+  psi = tdvp(contractmpo_solver(; kwargs...), PH, t, psi0; reverse_step, kwargs...)
 
   return psi
 end
