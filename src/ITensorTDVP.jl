@@ -28,6 +28,6 @@ include("dmrg_x.jl")
 include("projmpo_apply.jl")
 include("contract_mpo_mps.jl")
 
-export tdvp, dmrg_x, to_vec, TimeDependentSum, fit_contract_mpo
+export tdvp, dmrg_x, to_vec, TimeDependentSum
 
 end
