@@ -24,7 +24,7 @@ using Test
   Hpsi = apply(H, psi; alg="fit")
   @test inner(psi, Hpsi) ≈ inner(psi', H, psi) atol = 1E-5
 
-  Hpsi = apply(H, psi; nsweeps=2)
+  Hpsi = apply(H, psi; alg="fit", nsweeps=2)
   @test inner(psi, Hpsi) ≈ inner(psi', H, psi) atol = 1E-6
 end
 
