@@ -4,9 +4,9 @@ using Random
 using Test
 
 @testset "Contract MPO" begin
-  N = 20
+  N = 8
   s = siteinds("S=1/2", N)
-  psi = randomMPS(s; linkdims=10)
+  psi = randomMPS(s; linkdims=4)
 
   os = OpSum()
   for j in 1:(N - 1)
