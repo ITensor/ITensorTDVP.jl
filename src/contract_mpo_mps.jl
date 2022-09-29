@@ -12,7 +12,7 @@ function contractmpo_solver(; kwargs...)
 end
 
 function ITensors.contract(
-  ::ITensors.Algorithm"fit", A::MPO, psi0::MPS; nsweeps=1, kwargs...
+  ::ITensors.Algorithm"fit", A::MPO, psi0::MPS; init_mps=psi0, nsweeps=1, kwargs...
 )::MPS
   n = length(A)
   n != length(psi0) &&
@@ -30,7 +30,9 @@ function ITensors.contract(
   t = Inf
   reverse_step = false
   PH = ProjMPOApply(psi0, A)
-  psi = tdvp(contractmpo_solver(; kwargs...), PH, t, psi0; nsweeps, reverse_step, kwargs...)
+  psi = tdvp(
+    contractmpo_solver(; kwargs...), PH, t, init_mps; nsweeps, reverse_step, kwargs...
+  )
 
   return prime(psi, "Site")
 end
