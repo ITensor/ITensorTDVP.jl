@@ -5,7 +5,6 @@ function contractmpo_solver(; kwargs...)
       v *= PH.psi0[j]
     end
     Hpsi0 = contract(PH, v)
-    noprime!(Hpsi0)
     return Hpsi0, nothing
   end
   return solver
@@ -27,6 +26,21 @@ function ITensors.contract(
   # In case A and psi0 have the same link indices
   A = sim(linkinds, A)
 
+  # Fix site and link inds of init_mps
+  init_mps = deepcopy(init_mps)
+  init_mps = sim(linkinds, init_mps)
+  Ai = siteinds(A)
+  ti = Vector{Index}(undef,n)
+  for j=1:n 
+    for i in Ai[j]
+      if !hasind(psi0[j],i)
+        ti[j] = i
+        break
+      end
+    end
+  end
+  replace_siteinds!(init_mps,ti)
+
   t = Inf
   reverse_step = false
   PH = ProjMPOApply(psi0, A)
@@ -34,5 +48,5 @@ function ITensors.contract(
     contractmpo_solver(; kwargs...), PH, t, init_mps; nsweeps, reverse_step, kwargs...
   )
 
-  return prime(psi, "Site")
+  return psi
 end

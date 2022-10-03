@@ -56,7 +56,7 @@ function makeL!(P::ProjMPOApply, psi::MPS, k::Int)
   ll = max(ll, 0)
   L = lproj(P)
   while ll < k
-    L = L * P.psi0[ll + 1] * P.H[ll + 1] * dag(prime(psi[ll + 1]))
+    L = L * P.psi0[ll + 1] * P.H[ll + 1] * dag(psi[ll + 1])
     P.LR[ll + 1] = L
     ll += 1
   end
@@ -81,7 +81,7 @@ function makeR!(P::ProjMPOApply, psi::MPS, k::Int)
   rl = min(rl, N + 1)
   R = rproj(P)
   while rl > k
-    R = R * P.psi0[rl - 1] * P.H[rl - 1] * dag(prime(psi[rl - 1]))
+    R = R * P.psi0[rl - 1] * P.H[rl - 1] * dag(psi[rl - 1])
     P.LR[rl - 1] = R
     rl -= 1
   end
