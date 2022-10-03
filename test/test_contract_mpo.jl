@@ -30,9 +30,9 @@ using Test
   #
   t = siteinds("S=1/2", N)
   psit = deepcopy(psi)
-  for j=1:N
-    H[j] *= delta(s[j]',t[j])
-    psit[j] *= delta(s[j],t[j])
+  for j in 1:N
+    H[j] *= delta(s[j]', t[j])
+    psit[j] *= delta(s[j], t[j])
   end
 
   # Test with nsweeps=2

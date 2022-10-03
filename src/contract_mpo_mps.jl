@@ -30,16 +30,16 @@ function ITensors.contract(
   init_mps = deepcopy(init_mps)
   init_mps = sim(linkinds, init_mps)
   Ai = siteinds(A)
-  ti = Vector{Index}(undef,n)
-  for j=1:n 
+  ti = Vector{Index}(undef, n)
+  for j in 1:n
     for i in Ai[j]
-      if !hasind(psi0[j],i)
+      if !hasind(psi0[j], i)
         ti[j] = i
         break
       end
     end
   end
-  replace_siteinds!(init_mps,ti)
+  replace_siteinds!(init_mps, ti)
 
   t = Inf
   reverse_step = false
