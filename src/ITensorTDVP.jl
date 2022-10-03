@@ -2,6 +2,7 @@ module ITensorTDVP
 
 using ITensors
 using KrylovKit: exponentiate, eigsolve
+import KrylovKit
 using Printf
 using TimerOutputs
 using Observers
@@ -27,7 +28,12 @@ include("dmrg.jl")
 include("dmrg_x.jl")
 include("projmpo_apply.jl")
 include("contract_mpo_mps.jl")
+include("linsolve.jl")
 
-export tdvp, dmrg_x, to_vec, TimeDependentSum
+export tdvp, 
+       dmrg_x, 
+       to_vec, 
+       TimeDependentSum, 
+       linsolve
 
 end
