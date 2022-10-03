@@ -25,6 +25,8 @@ include("tdvp_generic.jl")
 include("tdvp.jl")
 include("dmrg.jl")
 include("dmrg_x.jl")
+include("projmpo_apply.jl")
+include("contract_mpo_mps.jl")
 
 export tdvp, dmrg_x, to_vec, TimeDependentSum
 
