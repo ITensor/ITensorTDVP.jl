@@ -8,7 +8,7 @@ using TimerOutputs
 using Observers
 
 using ITensors:
-  AbstractMPS, @debug_check, @timeit_debug, check_hascommoninds, orthocenter, set_nsite!
+  AbstractMPS, @debug_check, @timeit_debug, check_hascommoninds, orthocenter, ProjMPS, set_nsite!
 
 # Compatibility of ITensor observer and Observers
 include("update_observer.jl")
