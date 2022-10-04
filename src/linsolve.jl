@@ -20,9 +20,11 @@ function linsolve(A::MPO, b::MPS, x₀::MPS, a₀::Number=0, a₁::Number=1; rev
       ishermitian=get(kws, :ishermitian, false),
       tol=get(kws, :solver_tol, 1E-14),
       krylovdim=get(kws, :solver_krylovdim, 30),
-      maxiter=get(kws, :solver_maxiter, 4),
+      maxiter=get(kws, :solver_maxiter, 100),
       verbosity=get(kws, :solver_verbosity, 0),
     )
+    #@show solver_kwargs
+    #ITensors.pause()
     A = P.PH
     b = proj(only(P.pm))
     x, info = KrylovKit.linsolve(A, b, x₀, a₀, a₁; solver_kwargs...)
