@@ -19,6 +19,6 @@ end
 function dmrg(H, psi0::MPS; kwargs...)
   t = Inf # DMRG is TDVP with an infinite timestep and no reverse step
   reverse_step = false
-  psi = tdvp(eigsolve_solver(; kwargs...), H, t, psi0; reverse_step, kwargs...)
+  psi = sweep_update(eigsolve_solver(; kwargs...), H, t, psi0; reverse_step, kwargs...)
   return psi
 end

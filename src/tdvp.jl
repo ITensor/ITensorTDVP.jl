@@ -43,9 +43,42 @@ function tdvp_solver(; kwargs...)
   end
 end
 
+"""
+    tdvp(H::MPO,psi0::MPS,t::Number; kwargs...)
+    tdvp(H::MPO,psi0::MPS,t::Number; kwargs...)
+
+    tdvp(Hs::Vector{MPO},psi0::MPS,t::Number; kwargs...)
+    tdvp(Hs::Vector{MPO},psi0::MPS,t::Number, sweeps::Sweeps; kwargs...)
+
+Use the time dependent variational principle (TDVP) algorithm
+to compute `exp(t*H)*psi0` using an efficient algorithm based
+on alternating optimization of the MPS tensors and local Krylov
+exponentiation of H.
+
+The version of `tdvp` accepting a
+Vector of MPOs, Hs = [H1,H2,H3,...] means that H is defined
+as H = H1+H2+H3+...
+Note that this sum of MPOs is not actually computed; rather
+the set of MPOs [H1,H2,H3,..] is efficiently looped over at 
+each step of the algorithm when optimizing the MPS.
+                    
+Returns:
+* `psi::MPS` - time-evolved MPS
+
+Optional keyword arguments:
+* `outputlevel::Int = 1` - larger outputlevel values resulting in printing more information and 0 means no output
+* `observer` - object implementing the [Observer](@ref observer) interface which can perform measurements and stop early
+* `write_when_maxdim_exceeds::Int` - when the allowed maxdim exceeds this value, begin saving tensors to disk to free memory in large calculations
+"""
 function tdvp(H, t::Number, psi0::MPS; kwargs...)
-  return tdvp(tdvp_solver(; kwargs...), H, t, psi0; kwargs...)
+  return sweep_update(tdvp_solver(; kwargs...), H, t, psi0; kwargs...)
 end
+
+function tdvp(solver, H, t::Number, psi0::MPS; kwargs...)
+  return sweep_update(solver, H, t, psi0; kwargs...)
+end
+
+# Versions taking alternate argument ordering:
 
 function tdvp(t::Number, H, psi0::MPS; kwargs...)
   return tdvp(H, t, psi0; kwargs...)
@@ -54,3 +87,4 @@ end
 function tdvp(H, psi0::MPS, t::Number; kwargs...)
   return tdvp(H, t, psi0; kwargs...)
 end
+
