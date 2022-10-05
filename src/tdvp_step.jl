@@ -75,7 +75,7 @@ function tdvp_sweep(
   end
   maxtruncerr = 0.0
   for b in sweep_bonds(direction, N; ncenter=nsite)
-    current_time, maxtruncerr, spec = tdvp_site_update!(
+    current_time, maxtruncerr, spec = site_update!(
       solver,
       PH,
       psi,
@@ -131,7 +131,7 @@ function tdvp_sweep(
   return psi, PH, TDVPInfo(maxtruncerr)
 end
 
-function tdvp_site_update!(
+function site_update!(
   solver,
   PH,
   psi,
@@ -151,7 +151,7 @@ function tdvp_site_update!(
   mindim,
   maxtruncerr,
 )
-  return tdvp_site_update!(
+  return site_update!(
     Val(nsite),
     Val(reverse_step),
     solver,
@@ -173,7 +173,7 @@ function tdvp_site_update!(
   )
 end
 
-function tdvp_site_update!(
+function site_update!(
   nsite_val::Val{1},
   reverse_step_val::Val{false},
   solver,
@@ -212,7 +212,7 @@ function tdvp_site_update!(
   return current_time, maxtruncerr, spec
 end
 
-function tdvp_site_update!(
+function site_update!(
   nsite_val::Val{1},
   reverse_step_val::Val{true},
   solver,
@@ -272,7 +272,7 @@ function tdvp_site_update!(
   return current_time, maxtruncerr, spec
 end
 
-function tdvp_site_update!(
+function site_update!(
   nsite_val::Val{2},
   reverse_step_val::Val{false},
   solver,
@@ -324,7 +324,7 @@ function tdvp_site_update!(
   return current_time, maxtruncerr, spec
 end
 
-function tdvp_site_update!(
+function site_update!(
   nsite_val::Val{2},
   reverse_step_val::Val{true},
   solver,
@@ -389,7 +389,7 @@ function tdvp_site_update!(
   return current_time, maxtruncerr, spec
 end
 
-function tdvp_site_update!(
+function site_update!(
   ::Val{nsite},
   ::Val{reverse_step},
   solver,
