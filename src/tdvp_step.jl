@@ -1,4 +1,4 @@
-function tdvp_step(
+function update_step(
   order::TDVPOrder, solver, PH, time_step::Number, psi::MPS; current_time=0.0, kwargs...
 )
   orderings = ITensorTDVP.orderings(order)
@@ -6,7 +6,7 @@ function tdvp_step(
   sub_time_steps *= time_step
   global info
   for substep in 1:length(sub_time_steps)
-    psi, PH, info = tdvp_sweep(
+    psi, PH, info = local_sweep(
       orderings[substep], solver, PH, sub_time_steps[substep], psi; current_time, kwargs...
     )
     current_time += sub_time_steps[substep]
@@ -35,7 +35,7 @@ function is_half_sweep_done(direction, b, n; ncenter)
          is_reverse_done(direction, b, n; ncenter)
 end
 
-function tdvp_sweep(
+function local_sweep(
   direction::Base.Ordering, solver, PH, time_step::Number, psi::MPS; kwargs...
 )
   PH = copy(PH)

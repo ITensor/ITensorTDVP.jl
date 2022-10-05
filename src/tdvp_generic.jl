@@ -1,8 +1,8 @@
-function _tdvp_compute_nsweeps(t; kwargs...)
+function _compute_nsweeps(t; kwargs...)
   time_step::Number = get(kwargs, :time_step, t)
   nsweeps::Union{Int,Nothing} = get(kwargs, :nsweeps, nothing)
   if !isnothing(nsweeps) && time_step != t
-    error("Cannot specify both time_step and nsweeps in tdvp")
+    error("Cannot specify both time_step and nsweeps")
   elseif isfinite(time_step) && abs(time_step) > 0.0 && isnothing(nsweeps)
     nsweeps = convert(Int, ceil(abs(t / time_step)))
     if !(nsweeps * time_step ≈ t)
@@ -43,7 +43,7 @@ end
 function sweep_update(solver, PH, t::Number, psi0::MPS; kwargs...)
   reverse_step = get(kwargs, :reverse_step, true)
 
-  nsweeps = _tdvp_compute_nsweeps(t; kwargs...)
+  nsweeps = _compute_nsweeps(t; kwargs...)
   maxdim, mindim, cutoff, noise = process_sweeps(; nsweeps, kwargs...)
 
   time_start::Number = get(kwargs, :time_start, 0.0)
@@ -79,7 +79,7 @@ function sweep_update(solver, PH, t::Number, psi0::MPS; kwargs...)
     end
 
     sw_time = @elapsed begin
-      psi, PH, info = tdvp_step(
+      psi, PH, info = update_step(
         tdvp_order,
         solver,
         PH,
