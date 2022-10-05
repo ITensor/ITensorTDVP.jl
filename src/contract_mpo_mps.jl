@@ -1,3 +1,7 @@
+struct ContractMPOInfo
+  converged::Int
+end
+
 function contractmpo_solver(; kwargs...)
   function solver(PH, t, psi; kws...)
     v = ITensor(1.0)
@@ -5,7 +9,7 @@ function contractmpo_solver(; kwargs...)
       v *= PH.psi0[j]
     end
     Hpsi0 = contract(PH, v)
-    return Hpsi0, nothing
+    return Hpsi0, ContractMPOInfo(-1)
   end
   return solver
 end
@@ -44,7 +48,7 @@ function ITensors.contract(
   t = Inf
   reverse_step = false
   PH = ProjMPOApply(psi0, A)
-  psi = tdvp(
+  psi, info = tdvp(
     contractmpo_solver(; kwargs...), PH, t, init_mps; nsweeps, reverse_step, kwargs...
   )
 

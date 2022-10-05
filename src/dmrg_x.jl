@@ -13,5 +13,6 @@ end
 
 function dmrg_x(PH, psi0::MPS; reverse_step=false, kwargs...)
   t = Inf
-  return tdvp(dmrg_x_solver, PH, t, psi0; reverse_step, kwargs...)[1]
+  psi, info = tdvp(dmrg_x_solver, PH, t, psi0; reverse_step, kwargs...)
+  return psi
 end
