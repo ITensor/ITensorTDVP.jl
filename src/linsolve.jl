@@ -1,3 +1,4 @@
+
 function proj(P::ProjMPS)
   ϕ = prime(linkinds, P.M)
   p = ITensor(1.0)
@@ -9,11 +10,15 @@ function proj(P::ProjMPS)
   return dag(p)
 end
 
-# Compute a solution x to the linear system:
-#
-# (a₀ + a₁ * A)*x = b
-#
-# using starting guess x₀.
+"""
+Compute a solution x to the linear system:
+
+(a₀ + a₁ * A)*x = b
+
+using starting guess x₀. Leaving a₀, a₁
+set to their default values solves the 
+system A*x = b.
+"""
 function linsolve(A::MPO, b::MPS, x₀::MPS, a₀::Number=0, a₁::Number=1; reverse_step=false, kwargs...)
   function linsolve_solver(P::ProjMPO_MPS, t, x₀; kws...)
     solver_kwargs = (;
@@ -27,6 +32,9 @@ function linsolve(A::MPO, b::MPS, x₀::MPS, a₀::Number=0, a₁::Number=1; rev
     #ITensors.pause()
     A = P.PH
     b = proj(only(P.pm))
+    #@show inds(product(A,x₀))
+    #@show norm(product(A,x₀)-b)
+    #ITensors.pause()
     x, info = KrylovKit.linsolve(A, b, x₀, a₀, a₁; solver_kwargs...)
     return x, nothing
   end
@@ -34,3 +42,4 @@ function linsolve(A::MPO, b::MPS, x₀::MPS, a₀::Number=0, a₁::Number=1; rev
   P = ProjMPO_MPS(A, [b])
   return tdvp(linsolve_solver, P, t, x₀; reverse_step, kwargs...)
 end
+
