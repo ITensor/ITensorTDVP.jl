@@ -28,6 +28,8 @@ include("dmrg.jl")
 include("dmrg_x.jl")
 include("projmpo_apply.jl")
 include("contract_mpo_mps.jl")
+include("projmps2.jl")
+include("projmpo_mps2.jl")
 include("linsolve.jl")
 
 export tdvp, 

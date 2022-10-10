@@ -58,6 +58,7 @@ function tdvp_sweep(
   mindim::Integer = get(kwargs, :mindim, 1)
   cutoff::Real = get(kwargs, :cutoff, 1E-16)
   noise::Real = get(kwargs, :noise, 0.0)
+
   N = length(psi)
   set_nsite!(PH, nsite)
   if isforward(direction)
@@ -94,6 +95,12 @@ function tdvp_sweep(
       maxdim,
       mindim,
       maxtruncerr,
+      solver_which_eigenvalue = get(kwargs, :solver_which_eigenvalue, :SR),
+      solver_tol=get(kwargs, :solver_tol, 1E-14),
+      solver_krylovdim=get(kwargs, :solver_krylovdim, 3),
+      solver_maxiter=get(kwargs, :solver_maxiter, 1),
+      solver_verbosity=get(kwargs, :solver_verbosity, 0),
+      ishermitian=get(kwargs, :ishermitian, false)
     )
     if outputlevel >= 2
       if nsite == 1
@@ -150,6 +157,12 @@ function tdvp_site_update!(
   maxdim,
   mindim,
   maxtruncerr,
+    solver_which_eigenvalue,
+    solver_tol,
+    solver_krylovdim,
+    solver_maxiter,
+    solver_verbosity,
+    ishermitian
 )
   return tdvp_site_update!(
     Val(nsite),
@@ -170,6 +183,12 @@ function tdvp_site_update!(
     maxdim,
     mindim,
     maxtruncerr,
+    solver_which_eigenvalue,
+    solver_tol,
+    solver_krylovdim,
+    solver_maxiter,
+    solver_verbosity,
+    ishermitian
   )
 end
 
@@ -192,6 +211,12 @@ function tdvp_site_update!(
   maxdim,
   mindim,
   maxtruncerr,
+  solver_which_eigenvalue,
+  solver_tol,
+  solver_krylovdim,
+  solver_maxiter,
+  solver_verbosity,
+  ishermitian
 )
   N = length(psi)
   nsite = 1
@@ -199,7 +224,13 @@ function tdvp_site_update!(
   set_nsite!(PH, nsite)
   position!(PH, psi, b)
   phi1 = psi[b]
-  phi1, info = solver(PH, time_step, phi1; current_time, outputlevel)
+  phi1, info = solver(PH, time_step, phi1; current_time, outputlevel,
+    solver_which_eigenvalue,
+    solver_tol,
+    solver_krylovdim,
+    solver_maxiter,
+    solver_verbosity,
+    ishermitian)
   current_time += time_step
   normalize && (phi1 /= norm(phi1))
   spec = nothing
@@ -231,6 +262,12 @@ function tdvp_site_update!(
   maxdim,
   mindim,
   maxtruncerr,
+  solver_which_eigenvalue,
+  solver_tol,
+  solver_krylovdim,
+  solver_maxiter,
+  solver_verbosity,
+  ishermitian
 )
   N = length(psi)
   nsite = 1
@@ -238,7 +275,13 @@ function tdvp_site_update!(
   set_nsite!(PH, nsite)
   position!(PH, psi, b)
   phi1 = psi[b]
-  phi1, info = solver(PH, time_step, phi1; current_time, outputlevel)
+  phi1, info = solver(PH, time_step, phi1; current_time, outputlevel,
+    solver_which_eigenvalue,
+    solver_tol,
+    solver_krylovdim,
+    solver_maxiter,
+    solver_verbosity,
+    ishermitian)
   current_time += time_step
   normalize && (phi1 /= norm(phi1))
   spec = nothing
@@ -258,7 +301,13 @@ function tdvp_site_update!(
     end
     set_nsite!(PH, nsite - 1)
     position!(PH, psi, b1)
-    phi0, info = solver(PH, -time_step, phi0; current_time, outputlevel)
+    phi0, info = solver(PH, -time_step, phi0; current_time, outputlevel,
+      solver_which_eigenvalue,
+      solver_tol,
+      solver_krylovdim,
+      solver_maxiter,
+      solver_verbosity,
+      ishermitian)
     current_time -= time_step
     normalize && (phi0 ./= norm(phi0))
     psi[b + Δ] = phi0 * psi[b + Δ]
@@ -291,6 +340,12 @@ function tdvp_site_update!(
   maxdim,
   mindim,
   maxtruncerr,
+  solver_which_eigenvalue,
+  solver_tol,
+  solver_krylovdim,
+  solver_maxiter,
+  solver_verbosity,
+  ishermitian
 )
   N = length(psi)
   nsite = 2
@@ -298,7 +353,13 @@ function tdvp_site_update!(
   set_nsite!(PH, nsite)
   position!(PH, psi, b)
   phi1 = psi[b] * psi[b + 1]
-  phi1, info = solver(PH, time_step, phi1; current_time, outputlevel)
+  phi1, info = solver(PH, time_step, phi1; current_time, outputlevel,
+    solver_which_eigenvalue,
+    solver_tol,
+    solver_krylovdim,
+    solver_maxiter,
+    solver_verbosity,
+    ishermitian)
   current_time += time_step
   normalize && (phi1 /= norm(phi1))
   spec = nothing
@@ -343,6 +404,12 @@ function tdvp_site_update!(
   maxdim,
   mindim,
   maxtruncerr,
+  solver_which_eigenvalue,
+  solver_tol,
+  solver_krylovdim,
+  solver_maxiter,
+  solver_verbosity,
+  ishermitian
 )
   N = length(psi)
   nsite = 2
@@ -350,7 +417,13 @@ function tdvp_site_update!(
   set_nsite!(PH, nsite)
   position!(PH, psi, b)
   phi1 = psi[b] * psi[b + 1]
-  phi1, info = solver(PH, time_step, phi1; current_time, outputlevel)
+  phi1, info = solver(PH, time_step, phi1; current_time, outputlevel,
+    solver_which_eigenvalue,
+    solver_tol,
+    solver_krylovdim,
+    solver_maxiter,
+    solver_verbosity,
+    ishermitian)
   current_time += time_step
   normalize && (phi1 /= norm(phi1))
   spec = nothing
@@ -380,7 +453,13 @@ function tdvp_site_update!(
     phi0 = psi[b1]
     set_nsite!(PH, nsite - 1)
     position!(PH, psi, b1)
-    phi0, info = solver(PH, -time_step, phi0; current_time, outputlevel)
+    phi0, info = solver(PH, -time_step, phi0; current_time, outputlevel,
+      solver_which_eigenvalue,
+      solver_tol,
+      solver_krylovdim,
+      solver_maxiter,
+      solver_verbosity,
+      ishermitian)
     current_time -= time_step
     normalize && (phi0 ./= norm(phi0))
     psi[b1] = phi0
@@ -408,6 +487,11 @@ function tdvp_site_update!(
   maxdim,
   mindim,
   maxtruncerr,
+    solver_which_eigenvalue,
+    solver_tol,
+    solver_krylovdim,
+    solver_maxiter,
+    solver_verbosity, ishermitian
 ) where {nsite,reverse_step}
   return error(
     "`tdvp` with `nsite=$nsite` and `reverse_step=$reverse_step` not implemented."

@@ -18,23 +18,17 @@ using Test
   end
   H = MPO(os, s)
 
-  # Correct x
+  # Correct x is x_c
   x_c = randomMPS(s; linkdims=4)
-
+  # Compute b
   b = apply(H, x_c; cutoff)
 
-  #x0 = copy(b)
-  #x0 = copy(x_c)
   x0 = randomMPS(s;linkdims=10)
-  x = linsolve(H, b, x0; cutoff, maxdim, nsweeps, ishermitian=true)
+  x = linsolve(H, b, x0; cutoff, maxdim, nsweeps, ishermitian=true, solver_tol=1E-14)
 
   @show linkdims(x)
   @show norm(apply(H, x) - b)
-  @show norm(apply(H, x_c) - b)
   @show norm(x-x_c)
-
-  #@show inner(x,x)
-  #@show inner(x_c,x)/sqrt(inner(x,x))
 
 end
 
