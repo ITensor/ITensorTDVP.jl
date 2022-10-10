@@ -2,13 +2,19 @@ module ITensorTDVP
 
 using ITensors
 using KrylovKit: exponentiate, eigsolve
-import KrylovKit
+using KrylovKit: KrylovKit
 using Printf
 using TimerOutputs
 using Observers
 
 using ITensors:
-  AbstractMPS, @debug_check, @timeit_debug, check_hascommoninds, orthocenter, ProjMPS, set_nsite!
+  AbstractMPS,
+  @debug_check,
+  @timeit_debug,
+  check_hascommoninds,
+  orthocenter,
+  ProjMPS,
+  set_nsite!
 
 # Compatibility of ITensor observer and Observers
 include("update_observer.jl")
@@ -32,10 +38,6 @@ include("projmps2.jl")
 include("projmpo_mps2.jl")
 include("linsolve.jl")
 
-export tdvp, 
-       dmrg_x, 
-       to_vec, 
-       TimeDependentSum, 
-       linsolve
+export tdvp, dmrg_x, to_vec, TimeDependentSum, linsolve
 
 end

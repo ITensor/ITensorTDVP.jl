@@ -23,13 +23,12 @@ using Test
   # Compute b
   b = apply(H, x_c; cutoff)
 
-  x0 = randomMPS(s;linkdims=10)
-  x = linsolve(H, b, x0; cutoff, maxdim, nsweeps, ishermitian=true, solver_tol=1E-14)
+  x0 = randomMPS(s; linkdims=10)
+  x = linsolve(H, b, x0; cutoff, maxdim, nsweeps, ishermitian=true, solver_tol=1E-6)
 
-  @show linkdims(x)
-  @show norm(apply(H, x) - b)
-  @show norm(x-x_c)
-
+  #@show linkdims(x)
+  @show norm(x - x_c)
+  @test norm(x - x_c) < 1E-4
 end
 
 nothing

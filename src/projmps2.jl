@@ -1,4 +1,5 @@
-import ITensors: AbstractProjMPO, makeL!, makeR!, set_nsite!, contract, OneITensor, site_range
+import ITensors:
+  AbstractProjMPO, makeL!, makeR!, set_nsite!, contract, OneITensor, site_range
 import Base: copy
 
 """
@@ -49,7 +50,7 @@ function makeL!(P::ProjMPS2, psi::MPS, k::Int)
   ll = max(ll, 0)
   L = lproj(P)
   while ll < k
-    L = L * psi[ll + 1] * dag(prime(P.M[ll + 1],"Link"))
+    L = L * psi[ll + 1] * dag(prime(P.M[ll + 1], "Link"))
     P.LR[ll + 1] = L
     ll += 1
   end
@@ -74,7 +75,7 @@ function makeR!(P::ProjMPS2, psi::MPS, k::Int)
   rl = min(rl, N + 1)
   R = rproj(P)
   while rl > k
-    R = R * psi[rl - 1] * dag(prime(P.M[rl - 1],"Link"))
+    R = R * psi[rl - 1] * dag(prime(P.M[rl - 1], "Link"))
     P.LR[rl - 1] = R
     rl -= 1
   end
@@ -84,7 +85,7 @@ end
 
 function contract(P::ProjMPS2, v::ITensor)
   itensor_map = Union{ITensor,OneITensor}[lproj(P)]
-  append!(itensor_map, [prime(t,"Link") for t in P.M[site_range(P)]])
+  append!(itensor_map, [prime(t, "Link") for t in P.M[site_range(P)]])
   push!(itensor_map, rproj(P))
 
   # Reverse the contraction order of the map if
@@ -104,7 +105,7 @@ end
 
 function proj_mps(P::ProjMPS2)
   itensor_map = Union{ITensor,OneITensor}[lproj(P)]
-  append!(itensor_map, [prime(t,"Link") for t in P.M[site_range(P)]])
+  append!(itensor_map, [prime(t, "Link") for t in P.M[site_range(P)]])
   push!(itensor_map, rproj(P))
 
   # Reverse the contraction order of the map if
@@ -115,7 +116,7 @@ function proj_mps(P::ProjMPS2)
   end
 
   # Apply the map
-  m = ITensor(1.)
+  m = ITensor(1.0)
   for it in itensor_map
     m *= it
   end
