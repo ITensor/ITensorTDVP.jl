@@ -43,7 +43,7 @@ using Test
   psi_guess = copy(psi)
   truncate!(psi_guess; maxdim=2)
   Hpsi = apply(H, psi; alg="fit", nsweeps=4, init_mps=psi_guess)
-  @test inner(psi, Hpsi) ≈ inner(psit, H, psi) atol = 1E-5
+  @test inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1E-5
 
   # Test with nsite=1
   Hpsi_guess = apply(H, psi; alg="naive", cutoff=1E-4)
