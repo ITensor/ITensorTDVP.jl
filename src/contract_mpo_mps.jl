@@ -1,7 +1,3 @@
-struct ContractMPOInfo
-  converged::Int
-end
-
 function contractmpo_solver(; kwargs...)
   function solver(PH, t, psi; kws...)
     v = ITensor(1.0)
@@ -9,7 +5,7 @@ function contractmpo_solver(; kwargs...)
       v *= PH.psi0[j]
     end
     Hpsi0 = contract(PH, v)
-    return Hpsi0, ContractMPOInfo(-1)
+    return Hpsi0, nothing
   end
   return solver
 end

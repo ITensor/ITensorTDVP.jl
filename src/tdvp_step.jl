@@ -201,6 +201,7 @@ function tdvp_site_update!(
   position!(PH, psi, b)
   phi1 = psi[b]
   phi1, info = solver(PH, time_step, phi1; current_time, outputlevel)
+  converged = isnothing(info) ? -1 : info.converged
   current_time += time_step
   normalize && (phi1 /= norm(phi1))
   spec = nothing
@@ -210,7 +211,7 @@ function tdvp_site_update!(
     Δ = (isforward(direction) ? +1 : -1)
     orthogonalize!(psi, b + Δ)
   end
-  return current_time, maxtruncerr, spec, info.converged
+  return current_time, maxtruncerr, spec, converged
 end
 
 function tdvp_site_update!(
@@ -240,6 +241,7 @@ function tdvp_site_update!(
   position!(PH, psi, b)
   phi1 = psi[b]
   phi1, info = solver(PH, time_step, phi1; current_time, outputlevel)
+  converged = isnothing(info) ? -1 : info.converged
   current_time += time_step
   normalize && (phi1 /= norm(phi1))
   spec = nothing
@@ -270,7 +272,7 @@ function tdvp_site_update!(
     end
     set_nsite!(PH, nsite)
   end
-  return current_time, maxtruncerr, spec, info.converged
+  return current_time, maxtruncerr, spec, converged
 end
 
 function tdvp_site_update!(
@@ -300,6 +302,7 @@ function tdvp_site_update!(
   position!(PH, psi, b)
   phi1 = psi[b] * psi[b + 1]
   phi1, info = solver(PH, time_step, phi1; current_time, outputlevel)
+  converged = isnothing(info) ? -1 : info.converged
   current_time += time_step
   normalize && (phi1 /= norm(phi1))
   spec = nothing
@@ -322,7 +325,7 @@ function tdvp_site_update!(
     svd_alg,
   )
   maxtruncerr = max(maxtruncerr, spec.truncerr)
-  return current_time, maxtruncerr, spec, info.converged
+  return current_time, maxtruncerr, spec, converged
 end
 
 function tdvp_site_update!(
@@ -352,6 +355,7 @@ function tdvp_site_update!(
   position!(PH, psi, b)
   phi1 = psi[b] * psi[b + 1]
   phi1, info = solver(PH, time_step, phi1; current_time, outputlevel)
+  converged = isnothing(info) ? -1 : info.converged
   current_time += time_step
   normalize && (phi1 /= norm(phi1))
   spec = nothing
@@ -382,12 +386,13 @@ function tdvp_site_update!(
     set_nsite!(PH, nsite - 1)
     position!(PH, psi, b1)
     phi0, info = solver(PH, -time_step, phi0; current_time, outputlevel)
+    converged = isnothing(info) ? -1 : info.converged
     current_time -= time_step
     normalize && (phi0 ./= norm(phi0))
     psi[b1] = phi0
     set_nsite!(PH, nsite)
   end
-  return current_time, maxtruncerr, spec, info.converged
+  return current_time, maxtruncerr, spec, converged
 end
 
 function tdvp_site_update!(

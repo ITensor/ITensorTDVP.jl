@@ -2,10 +2,6 @@ using DifferentialEquations
 using ITensors
 using ITensorTDVP
 
-struct ODEInfo
-  converged::Int
-end
-
 function ode_solver(
   H::TimeDependentSum,
   time_step,
@@ -26,7 +22,7 @@ function ode_solver(
   prob = ODEProblem(f, u₀, time_span)
   sol = solve(prob, solver_alg; kwargs...)
   uₜ = sol.u[end]
-  return ITensor_from_vec(uₜ), ODEInfo(-1)
+  return ITensor_from_vec(uₜ), nothing
 end
 
 function krylov_solver(
