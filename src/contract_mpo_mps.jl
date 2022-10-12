@@ -44,7 +44,7 @@ function ITensors.contract(
   t = Inf
   reverse_step = false
   PH = ProjMPOApply(psi0, A)
-  psi, info = tdvp(
+  psi = tdvp(
     contractmpo_solver(; kwargs...), PH, t, init_mps; nsweeps, reverse_step, kwargs...
   )
 

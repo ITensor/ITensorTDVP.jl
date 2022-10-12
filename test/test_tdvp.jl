@@ -114,13 +114,12 @@ end
     return psi, info
   end
 
-  ψ1, info = tdvp(solver, H, -0.1im, ψ0; cutoff, nsite=1)
+  ψ1 = tdvp(solver, H, -0.1im, ψ0; cutoff, nsite=1)
 
-  @test ψ1 ≈ tdvp(solver, -0.1im, H, ψ0; cutoff, nsite=1)[1]
-  @test ψ1 ≈ tdvp(solver, H, ψ0, -0.1im; cutoff, nsite=1)[1]
+  @test ψ1 ≈ tdvp(solver, -0.1im, H, ψ0; cutoff, nsite=1)
+  @test ψ1 ≈ tdvp(solver, H, ψ0, -0.1im; cutoff, nsite=1)
 
   @test norm(ψ1) ≈ 1.0
-  @test info.converged == 1
 
   ## Should lose fidelity:
   #@test abs(inner(ψ0,ψ1)) < 0.9
@@ -369,13 +368,17 @@ end
     return nothing
   end
 
+  function identity_info(; info)    
+    return info
+  end
+
   obs = Observer("Sz" => measure_sz, "En" => measure_en)
 
   step_measure_sz(; psi) = expect(psi, "Sz"; sites=c)
 
   step_measure_en(; psi) = real(inner(psi', H, psi))
 
-  step_obs = Observer("Sz" => step_measure_sz, "En" => step_measure_en)
+  step_obs = Observer("Sz" => step_measure_sz, "En" => step_measure_en, "info" => identity_info)
 
   psi2 = MPS(s, n -> isodd(n) ? "Up" : "Dn")
   tdvp(
@@ -394,11 +397,13 @@ end
 
   Sz2_step = results(step_obs)["Sz"]
   En2_step = results(step_obs)["En"]
+  infos_step = results(step_obs)["info"]
 
   @test Sz1 ≈ Sz2
   @test En1 ≈ En2
   @test Sz1 ≈ Sz2_step
   @test En1 ≈ En2_step
+  @test isnothing(findfirst(x -> x.converged != 1, infos_step)) #info.converged should always be 1
 end
 
 nothing
