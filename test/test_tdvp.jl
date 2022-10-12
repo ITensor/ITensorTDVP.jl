@@ -368,7 +368,7 @@ end
     return nothing
   end
 
-  function identity_info(; info)    
+  function identity_info(; info)
     return info
   end
 
@@ -378,7 +378,9 @@ end
 
   step_measure_en(; psi) = real(inner(psi', H, psi))
 
-  step_obs = Observer("Sz" => step_measure_sz, "En" => step_measure_en, "info" => identity_info)
+  step_obs = Observer(
+    "Sz" => step_measure_sz, "En" => step_measure_en, "info" => identity_info
+  )
 
   psi2 = MPS(s, n -> isodd(n) ? "Up" : "Dn")
   tdvp(
