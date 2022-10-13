@@ -6,7 +6,7 @@ function update_step(
   sub_time_steps *= time_step
   global info
   for substep in 1:length(sub_time_steps)
-    psi, PH, info = local_sweep(
+    psi, PH, info = update_sweep(
       orderings[substep], solver, PH, sub_time_steps[substep], psi; current_time, kwargs...
     )
     current_time += sub_time_steps[substep]
@@ -35,7 +35,7 @@ function is_half_sweep_done(direction, b, n; ncenter)
          is_reverse_done(direction, b, n; ncenter)
 end
 
-function local_sweep(
+function update_sweep(
   direction::Base.Ordering, solver, PH, time_step::Number, psi::MPS; kwargs...
 )
   PH = copy(PH)
