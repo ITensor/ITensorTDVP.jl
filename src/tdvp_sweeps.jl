@@ -4,11 +4,11 @@ function process_sweeps(s::Sweeps)
   )
 end
 
-function sweep_update(H, t::Number, psi0::MPS, sweeps::Sweeps; kwargs...)
+function alternating_update(H, t::Number, psi0::MPS, sweeps::Sweeps; kwargs...)
   return tdvp(H, t, psi0; process_sweeps(sweeps)..., kwargs...)
 end
 
-function sweep_update(solver, H, t::Number, psi0::MPS, sweeps::Sweeps; kwargs...)
+function alternating_update(solver, H, t::Number, psi0::MPS, sweeps::Sweeps; kwargs...)
   return tdvp(solver, H, t, psi0; process_sweeps(sweeps)..., kwargs...)
 end
 

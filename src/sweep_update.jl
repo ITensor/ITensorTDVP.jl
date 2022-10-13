@@ -40,7 +40,7 @@ function process_sweeps(; kwargs...)
   return (; maxdim, mindim, cutoff, noise)
 end
 
-function sweep_update(solver, PH, t::Number, psi0::MPS; kwargs...)
+function alternating_update(solver, PH, t::Number, psi0::MPS; kwargs...)
   reverse_step = get(kwargs, :reverse_step, true)
 
   nsweeps = _compute_nsweeps(t; kwargs...)
@@ -121,32 +121,32 @@ function sweep_update(solver, PH, t::Number, psi0::MPS; kwargs...)
   return psi
 end
 
-function sweep_update(solver, H::MPO, t::Number, psi0::MPS; kwargs...)
+function alternating_update(solver, H::MPO, t::Number, psi0::MPS; kwargs...)
   check_hascommoninds(siteinds, H, psi0)
   check_hascommoninds(siteinds, H, psi0')
   # Permute the indices to have a better memory layout
   # and minimize permutations
   H = ITensors.permute(H, (linkind, siteinds, linkind))
   PH = ProjMPO(H)
-  return sweep_update(solver, PH, t, psi0; kwargs...)
+  return alternating_update(solver, PH, t, psi0; kwargs...)
 end
 
 # Some alternate versions to allow other orderings of arguments:
 
-function sweep_update(solver, t::Number, H, psi0::MPS; kwargs...)
-  return sweep_update(solver, H, t, psi0; kwargs...)
+function alternating_update(solver, t::Number, H, psi0::MPS; kwargs...)
+  return alternating_update(solver, H, t, psi0; kwargs...)
 end
 
-function sweep_update(solver, H, psi0::MPS, t::Number; kwargs...)
-  return sweep_update(solver, H, t, psi0; kwargs...)
+function alternating_update(solver, H, psi0::MPS, t::Number; kwargs...)
+  return alternating_update(solver, H, t, psi0; kwargs...)
 end
 
-function sweep_update(solver, Hs::Vector{MPO}, t::Number, psi0::MPS; kwargs...)
+function alternating_update(solver, Hs::Vector{MPO}, t::Number, psi0::MPS; kwargs...)
   for H in Hs
     check_hascommoninds(siteinds, H, psi0)
     check_hascommoninds(siteinds, H, psi0')
   end
   Hs .= ITensors.permute.(Hs, Ref((linkind, siteinds, linkind)))
   PHs = ProjMPOSum(Hs)
-  return sweep_update(solver, PHs, t, psi0; kwargs...)
+  return alternating_update(solver, PHs, t, psi0; kwargs...)
 end

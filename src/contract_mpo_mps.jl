@@ -44,7 +44,7 @@ function ITensors.contract(
   t = Inf
   reverse_step = false
   PH = ProjMPOApply(psi0, A)
-  psi = sweep_update(
+  psi = alternating_update(
     contractmpo_solver(; kwargs...), PH, t, init_mps; nsweeps, reverse_step, kwargs...
   )
 

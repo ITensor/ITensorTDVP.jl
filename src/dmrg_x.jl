@@ -9,5 +9,5 @@ end
 
 function dmrg_x(PH, psi0::MPS; reverse_step=false, kwargs...)
   t = Inf
-  return sweep_update(dmrg_x_solver, PH, t, psi0; reverse_step, kwargs...)
+  return alternating_update(dmrg_x_solver, PH, t, psi0; reverse_step, kwargs...)
 end

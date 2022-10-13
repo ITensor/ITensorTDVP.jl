@@ -71,11 +71,11 @@ Optional keyword arguments:
 * `write_when_maxdim_exceeds::Int` - when the allowed maxdim exceeds this value, begin saving tensors to disk to free memory in large calculations
 """
 function tdvp(H, t::Number, psi0::MPS; kwargs...)
-  return sweep_update(tdvp_solver(; kwargs...), H, t, psi0; kwargs...)
+  return alternating_update(tdvp_solver(; kwargs...), H, t, psi0; kwargs...)
 end
 
 function tdvp(solver, H, t::Number, psi0::MPS; kwargs...)
-  return sweep_update(solver, H, t, psi0; kwargs...)
+  return alternating_update(solver, H, t, psi0; kwargs...)
 end
 
 # Versions taking alternate argument ordering:
