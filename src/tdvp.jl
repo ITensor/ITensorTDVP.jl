@@ -74,10 +74,6 @@ function tdvp(H, t::Number, psi0::MPS; kwargs...)
   return alternating_update(tdvp_solver(; kwargs...), H, t, psi0; kwargs...)
 end
 
-function tdvp(solver, H, t::Number, psi0::MPS; kwargs...)
-  return alternating_update(solver, H, t, psi0; kwargs...)
-end
-
 # Versions taking alternate argument ordering:
 
 function tdvp(t::Number, H, psi0::MPS; kwargs...)
