@@ -343,8 +343,7 @@ end
     )
   end
 
-  # @test psi ≈ psi2 fails for reverse_step=true
-  @test psi ≈ psi2 rtol = 1e-8
+  @test psi ≈ psi2 rtol = 1e-6
 
   en1 = inner(psi', H, psi)
   en2 = inner(psi2', H, psi2)
