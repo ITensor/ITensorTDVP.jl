@@ -18,27 +18,26 @@ using Test
   end
   H = MPO(os, s)
 
-  state = [isodd(n) ? "Up" : "Dn" for n=1:N]
+  state = [isodd(n) ? "Up" : "Dn" for n in 1:N]
 
   # Correct x is x_c
-  x_c = randomMPS(s,state; linkdims=4)
+  x_c = randomMPS(s, state; linkdims=4)
   # Compute b
   b = apply(H, x_c; cutoff)
 
-  x0 = randomMPS(s,state; linkdims=10)
+  x0 = randomMPS(s, state; linkdims=10)
   x = linsolve(H, b, x0; cutoff, maxdim, nsweeps, ishermitian=true, solver_tol=1E-6)
 
   @show norm(x - x_c)
   @test norm(x - x_c) < 1E-4
 
-
   #
   # Test complex case
   #
-  x_c = randomMPS(s,state; linkdims=4) + 0.1im * randomMPS(s,state; linkdims=2)
+  x_c = randomMPS(s, state; linkdims=4) + 0.1im * randomMPS(s, state; linkdims=2)
   b = apply(H, x_c; cutoff)
 
-  x0 = randomMPS(s,state; linkdims=10)
+  x0 = randomMPS(s, state; linkdims=10)
   x = linsolve(H, b, x0; cutoff, maxdim, nsweeps, ishermitian=true, solver_tol=1E-6)
 
   @show norm(x - x_c)
