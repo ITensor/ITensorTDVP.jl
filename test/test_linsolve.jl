@@ -8,7 +8,7 @@ using Test
   nsweeps = 2
 
   N = 8
-  s = siteinds("S=1/2", N)
+  s = siteinds("S=1/2", N; conserve_qns=true)
 
   os = OpSum()
   for j in 1:(N - 1)
@@ -18,15 +18,29 @@ using Test
   end
   H = MPO(os, s)
 
+  state = [isodd(n) ? "Up" : "Dn" for n=1:N]
+
   # Correct x is x_c
-  x_c = randomMPS(s; linkdims=4)
+  x_c = randomMPS(s,state; linkdims=4)
   # Compute b
   b = apply(H, x_c; cutoff)
 
-  x0 = randomMPS(s; linkdims=10)
+  x0 = randomMPS(s,state; linkdims=10)
   x = linsolve(H, b, x0; cutoff, maxdim, nsweeps, ishermitian=true, solver_tol=1E-6)
 
-  #@show linkdims(x)
+  @show norm(x - x_c)
+  @test norm(x - x_c) < 1E-4
+
+
+  #
+  # Test complex case
+  #
+  x_c = randomMPS(s,state; linkdims=4) + 0.1im * randomMPS(s,state; linkdims=2)
+  b = apply(H, x_c; cutoff)
+
+  x0 = randomMPS(s,state; linkdims=10)
+  x = linsolve(H, b, x0; cutoff, maxdim, nsweeps, ishermitian=true, solver_tol=1E-6)
+
   @show norm(x - x_c)
   @test norm(x - x_c) < 1E-4
 end

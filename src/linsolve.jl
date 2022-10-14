@@ -29,7 +29,7 @@ function linsolve(
       maxiter=kws[:solver_maxiter],
       verbosity=kws[:solver_verbosity],
     )
-    b = only(proj_mps(P))
+    b = dag(only(proj_mps(P)))
     x, info = KrylovKit.linsolve(P, b, x₀, a₀, a₁; solver_kwargs...)
     return x, nothing
   end

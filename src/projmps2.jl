@@ -105,7 +105,7 @@ end
 
 function proj_mps(P::ProjMPS2)
   itensor_map = Union{ITensor,OneITensor}[lproj(P)]
-  append!(itensor_map, [prime(t, "Link") for t in P.M[site_range(P)]])
+  append!(itensor_map, [dag(prime(t, "Link")) for t in P.M[site_range(P)]])
   push!(itensor_map, rproj(P))
 
   # Reverse the contraction order of the map if
@@ -118,6 +118,7 @@ function proj_mps(P::ProjMPS2)
   # Apply the map
   m = ITensor(1.0)
   for it in itensor_map
+    #@show inds(it)
     m *= it
   end
   return m
