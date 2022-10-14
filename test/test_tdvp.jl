@@ -28,12 +28,10 @@ using Test
   @test ψ1 ≈ tdvp(-0.1im, H, ψ0; nsweeps=1, cutoff, nsite=1)
   @test ψ1 ≈ tdvp(H, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1)
   #Different backend solvers, default solver_backend = "applyexp"
-  @test ψ1 ≈ tdvp(H, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1, solver_backend = "exponentiate")
-
+  @test ψ1 ≈ tdvp(H, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1, solver_backend="exponentiate")
 
   @test norm(ψ1) ≈ 1.0
-  
- 
+
   ## Should lose fidelity:
   #@test abs(inner(ψ0,ψ1)) < 0.9
 
@@ -42,9 +40,9 @@ using Test
 
   # Time evolve backwards:
   ψ2 = tdvp(H, +0.1im, ψ1; nsweeps=1, cutoff)
-  
+
   #Different backend solvers, default solver_backend = "applyexp"
-  @test ψ2 ≈ tdvp(H, +0.1im, ψ1; nsweeps=1, cutoff, solver_backend = "exponentiate")
+  @test ψ2 ≈ tdvp(H, +0.1im, ψ1; nsweeps=1, cutoff, solver_backend="exponentiate")
 
   @test norm(ψ2) ≈ 1.0
 
@@ -78,9 +76,9 @@ end
 
   @test ψ1 ≈ tdvp(-0.1im, Hs, ψ0; nsweeps=1, cutoff, nsite=1)
   @test ψ1 ≈ tdvp(Hs, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1)
-  
+
   #Different backend solvers, default solver_backend = "applyexp"
-  @test ψ1 ≈ tdvp(Hs, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1, solver_backend = "exponentiate")
+  @test ψ1 ≈ tdvp(Hs, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1, solver_backend="exponentiate")
 
   @test norm(ψ1) ≈ 1.0
 
@@ -94,7 +92,7 @@ end
   ψ2 = tdvp(Hs, +0.1im, ψ1; nsweeps=1, cutoff)
 
   #Different backend solvers, default solver_backend = "applyexp"
-  @test ψ2 ≈ tdvp(Hs, +0.1im, ψ1; nsweeps=1, cutoff, solver_backend = "exponentiate")
+  @test ψ2 ≈ tdvp(Hs, +0.1im, ψ1; nsweeps=1, cutoff, solver_backend="exponentiate")
 
   @test norm(ψ2) ≈ 1.0
 
@@ -205,7 +203,7 @@ end
       solver_tol=1e-12,
       solver_maxiter=500,
       solver_krylovdim=25,
-      solver_solver_backend = "exponentiate"
+      solver_solver_backend="exponentiate",
     )
     push!(Sz_tdvp2, real(expect(psi2, "Sz"; sites=c:c)[1]))
 
@@ -333,13 +331,21 @@ end
     )
     #Different backend solvers, default solver_backend = "applyexp"
     psi2 = tdvp(
-      H, -tau, psi2; cutoff, nsite, reverse_step, normalize=true, exponentiate_krylovdim=15,
-      solver_backend = "exponentiate"
+      H,
+      -tau,
+      psi2;
+      cutoff,
+      nsite,
+      reverse_step,
+      normalize=true,
+      exponentiate_krylovdim=15,
+      solver_backend="exponentiate",
     )
   end
 
   # @test psi ≈ psi2 fails for reverse_step=true
-  
+  @test psi ≈ psi2 rtol = 1e-8
+
   en1 = inner(psi', H, psi)
   en2 = inner(psi2', H, psi2)
   @test en1 < -4.25
