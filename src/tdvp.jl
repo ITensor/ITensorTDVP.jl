@@ -9,7 +9,7 @@ function exponentiate_solver(; kwargs...)
       verbosity=get(kwargs, :solver_outputlevel, 0),
       eager=true,
     )
-    psi, info = exponentiate(H, t, psi0; solver_kwargs..., kws...)
+    psi, info = exponentiate(H, t, psi0; solver_kwargs...)
     return psi, info
   end
   return solver
