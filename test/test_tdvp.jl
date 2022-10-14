@@ -405,7 +405,7 @@ end
   @test En1 ≈ En2
   @test Sz1 ≈ Sz2_step
   @test En1 ≈ En2_step
-  @test isnothing(findfirst(x -> x.converged != 1, infos_step)) #info.converged should always be 1
+  @test all(x -> x.info.converged == 1, infos_step)
 end
 
 nothing

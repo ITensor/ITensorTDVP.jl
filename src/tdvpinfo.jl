@@ -5,5 +5,5 @@
 """
 struct TDVPInfo
   maxtruncerr::Float64
-  converged::Int
+  info::Any #determined by signature of solver fed into tdvp
 end
