@@ -1,7 +1,9 @@
 function _tdvp_compute_nsweeps(t; kwargs...)
   time_step::Number = get(kwargs, :time_step, t)
   nsweeps::Union{Int,Nothing} = get(kwargs, :nsweeps, nothing)
-  if !isnothing(nsweeps) && time_step != t
+  if isinf(t) && isnothing(nsweeps)
+    nsweeps = 1
+  elseif !isnothing(nsweeps) && time_step != t
     error("Cannot specify both time_step and nsweeps in tdvp")
   elseif isfinite(time_step) && abs(time_step) > 0.0 && isnothing(nsweeps)
     nsweeps = convert(Int, ceil(abs(t / time_step)))
