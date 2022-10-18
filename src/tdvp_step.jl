@@ -4,7 +4,7 @@ function tdvp_step(
   orderings = ITensorTDVP.orderings(order)
   sub_time_steps = ITensorTDVP.sub_time_steps(order)
   sub_time_steps *= time_step
-  global info
+  info = nothing
   for substep in 1:length(sub_time_steps)
     psi, PH, info = tdvp_sweep(
       orderings[substep], solver, PH, sub_time_steps[substep], psi; current_time, kwargs...
@@ -75,8 +75,9 @@ function tdvp_sweep(
     position!(PH, psi, N - nsite + 1)
   end
   maxtruncerr = 0.0
+  info = nothing
   for b in sweep_bonds(direction, N; ncenter=nsite)
-    current_time, maxtruncerr, spec = tdvp_site_update!(
+    current_time, maxtruncerr, spec, info = tdvp_site_update!(
       solver,
       PH,
       psi,
@@ -125,6 +126,7 @@ function tdvp_sweep(
       outputlevel,
       half_sweep_is_done=is_half_sweep_done(direction, b, N; ncenter=nsite),
       current_time,
+      info,
     )
   end
   # Just to be sure:
@@ -210,7 +212,7 @@ function tdvp_site_update!(
     Δ = (isforward(direction) ? +1 : -1)
     orthogonalize!(psi, b + Δ)
   end
-  return current_time, maxtruncerr, spec
+  return current_time, maxtruncerr, spec, info
 end
 
 function tdvp_site_update!(
@@ -270,7 +272,7 @@ function tdvp_site_update!(
     end
     set_nsite!(PH, nsite)
   end
-  return current_time, maxtruncerr, spec
+  return current_time, maxtruncerr, spec, info
 end
 
 function tdvp_site_update!(
@@ -322,7 +324,7 @@ function tdvp_site_update!(
     svd_alg,
   )
   maxtruncerr = max(maxtruncerr, spec.truncerr)
-  return current_time, maxtruncerr, spec
+  return current_time, maxtruncerr, spec, info
 end
 
 function tdvp_site_update!(
@@ -387,7 +389,7 @@ function tdvp_site_update!(
     psi[b1] = phi0
     set_nsite!(PH, nsite)
   end
-  return current_time, maxtruncerr, spec
+  return current_time, maxtruncerr, spec, info
 end
 
 function tdvp_site_update!(

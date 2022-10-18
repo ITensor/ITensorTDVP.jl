@@ -410,7 +410,11 @@ end
     return nothing
   end
 
-  obs = Observer("Sz" => measure_sz, "En" => measure_en)
+  function identity_info(; info)
+    return info
+  end
+
+  obs = Observer("Sz" => measure_sz, "En" => measure_en, "info" => identity_info)
 
   step_measure_sz(; psi) = expect(psi, "Sz"; sites=c)
 
@@ -432,6 +436,7 @@ end
 
   Sz2 = results(obs)["Sz"]
   En2 = results(obs)["En"]
+  infos = results(obs)["info"]
 
   Sz2_step = results(step_obs)["Sz"]
   En2_step = results(step_obs)["En"]
@@ -440,6 +445,8 @@ end
   @test En1 ≈ En2
   @test Sz1 ≈ Sz2_step
   @test En1 ≈ En2_step
+  @test all(x -> x.converged == 1, infos)
+  @test length(values(infos)) == 180
 end
 
 nothing
