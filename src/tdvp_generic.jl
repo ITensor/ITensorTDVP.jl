@@ -98,7 +98,7 @@ function tdvp(solver, PH, t::Number, psi0::MPS; kwargs...)
 
     current_time += time_step
 
-    update!(step_observer; psi, sweep=sw, outputlevel, current_time, info)
+    update!(step_observer; psi, sweep=sw, outputlevel, current_time)
 
     if outputlevel >= 1
       print("After sweep ", sw, ":")

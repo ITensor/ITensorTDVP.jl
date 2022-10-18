@@ -372,15 +372,14 @@ end
     return info
   end
 
-  obs = Observer("Sz" => measure_sz, "En" => measure_en)
+  obs = Observer("Sz" => measure_sz, "En" => measure_en, "info" => identity_info)
 
   step_measure_sz(; psi) = expect(psi, "Sz"; sites=c)
 
   step_measure_en(; psi) = real(inner(psi', H, psi))
 
   step_obs = Observer(
-    "Sz" => step_measure_sz, "En" => step_measure_en, "info" => identity_info
-  )
+    "Sz" => step_measure_sz, "En" => step_measure_en)
 
   psi2 = MPS(s, n -> isodd(n) ? "Up" : "Dn")
   tdvp(
@@ -396,16 +395,17 @@ end
 
   Sz2 = results(obs)["Sz"]
   En2 = results(obs)["En"]
+  infos = results(obs)["info"]
 
   Sz2_step = results(step_obs)["Sz"]
   En2_step = results(step_obs)["En"]
-  infos_step = results(step_obs)["info"]
 
   @test Sz1 ≈ Sz2
   @test En1 ≈ En2
   @test Sz1 ≈ Sz2_step
   @test En1 ≈ En2_step
-  @test all(x -> x.info.converged == 1, infos_step)
+  @test all(x -> x.converged == 1, infos)
+  @test length(values(infos)) == 180
 end
 
 nothing

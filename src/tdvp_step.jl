@@ -125,11 +125,12 @@ function tdvp_sweep(
       outputlevel,
       half_sweep_is_done=is_half_sweep_done(direction, b, N; ncenter=nsite),
       current_time,
+      info
     )
   end
   # Just to be sure:
   normalize && normalize!(psi)
-  return psi, PH, TDVPInfo(maxtruncerr, info)
+  return psi, PH, TDVPInfo(maxtruncerr)
 end
 
 function tdvp_site_update!(
