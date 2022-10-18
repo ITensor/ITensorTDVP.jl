@@ -378,8 +378,7 @@ end
 
   step_measure_en(; psi) = real(inner(psi', H, psi))
 
-  step_obs = Observer(
-    "Sz" => step_measure_sz, "En" => step_measure_en)
+  step_obs = Observer("Sz" => step_measure_sz, "En" => step_measure_en)
 
   psi2 = MPS(s, n -> isodd(n) ? "Up" : "Dn")
   tdvp(

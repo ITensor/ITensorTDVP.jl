@@ -125,7 +125,7 @@ function tdvp_sweep(
       outputlevel,
       half_sweep_is_done=is_half_sweep_done(direction, b, N; ncenter=nsite),
       current_time,
-      info
+      info,
     )
   end
   # Just to be sure:
