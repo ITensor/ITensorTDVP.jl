@@ -36,6 +36,7 @@ using Random
     #
     # Test complex case
     #
+    Random.seed!(1234)
     x_c = randomMPS(s, state; linkdims=4) + 0.1im * randomMPS(s, state; linkdims=2)
     b = apply(H, x_c; cutoff)
 
@@ -43,7 +44,7 @@ using Random
     x = linsolve(H, b, x0; cutoff, maxdim, nsweeps, ishermitian=true, solver_tol=1E-6)
 
     @show norm(x - x_c)
-    @test norm(x - x_c) < 1E-4
+    @test norm(x - x_c) < 1E-3
   end
 end
 
