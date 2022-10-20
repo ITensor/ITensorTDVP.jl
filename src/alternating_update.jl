@@ -1,8 +1,10 @@
 function _compute_nsweeps(t; kwargs...)
   time_step::Number = get(kwargs, :time_step, t)
   nsweeps::Union{Int,Nothing} = get(kwargs, :nsweeps, nothing)
-  if !isnothing(nsweeps) && time_step != t
-    error("Cannot specify both time_step and nsweeps")
+  if isinf(t) && isnothing(nsweeps)
+    nsweeps = 1
+  elseif !isnothing(nsweeps) && time_step != t
+    error("Cannot specify both time_step and nsweeps in tdvp")
   elseif isfinite(time_step) && abs(time_step) > 0.0 && isnothing(nsweeps)
     nsweeps = convert(Int, ceil(abs(t / time_step)))
     if !(nsweeps * time_step ≈ t)
@@ -67,7 +69,7 @@ function alternating_update(solver, PH, t::Number, psi0::MPS; kwargs...)
   # This will be passed as a keyword argument to the
   # `solver`.
   current_time = time_start
-
+  info = nothing
   for sw in 1:nsweeps
     if !isnothing(write_when_maxdim_exceeds) && maxdim[sw] > write_when_maxdim_exceeds
       if outputlevel >= 2

@@ -4,7 +4,7 @@ function update_step(
   orderings = ITensorTDVP.orderings(order)
   sub_time_steps = ITensorTDVP.sub_time_steps(order)
   sub_time_steps *= time_step
-  global info
+  info = nothing
   for substep in 1:length(sub_time_steps)
     psi, PH, info = update_sweep(
       orderings[substep], solver, PH, sub_time_steps[substep], psi; current_time, kwargs...
@@ -58,6 +58,7 @@ function update_sweep(
   mindim::Integer = get(kwargs, :mindim, 1)
   cutoff::Real = get(kwargs, :cutoff, 1E-16)
   noise::Real = get(kwargs, :noise, 0.0)
+
   N = length(psi)
   set_nsite!(PH, nsite)
   if isforward(direction)
@@ -74,8 +75,9 @@ function update_sweep(
     position!(PH, psi, N - nsite + 1)
   end
   maxtruncerr = 0.0
+  info = nothing
   for b in sweep_bonds(direction, N; ncenter=nsite)
-    current_time, maxtruncerr, spec = site_update!(
+    current_time, maxtruncerr, spec, info = site_update!(
       solver,
       PH,
       psi,
@@ -124,6 +126,7 @@ function update_sweep(
       outputlevel,
       half_sweep_is_done=is_half_sweep_done(direction, b, N; ncenter=nsite),
       current_time,
+      info,
     )
   end
   # Just to be sure:
@@ -209,7 +212,7 @@ function site_update!(
     Δ = (isforward(direction) ? +1 : -1)
     orthogonalize!(psi, b + Δ)
   end
-  return current_time, maxtruncerr, spec
+  return current_time, maxtruncerr, spec, info
 end
 
 function site_update!(
@@ -269,7 +272,7 @@ function site_update!(
     end
     set_nsite!(PH, nsite)
   end
-  return current_time, maxtruncerr, spec
+  return current_time, maxtruncerr, spec, info
 end
 
 function site_update!(
@@ -321,7 +324,7 @@ function site_update!(
     svd_alg,
   )
   maxtruncerr = max(maxtruncerr, spec.truncerr)
-  return current_time, maxtruncerr, spec
+  return current_time, maxtruncerr, spec, info
 end
 
 function site_update!(
@@ -386,7 +389,7 @@ function site_update!(
     psi[b1] = phi0
     set_nsite!(PH, nsite)
   end
-  return current_time, maxtruncerr, spec
+  return current_time, maxtruncerr, spec, info
 end
 
 function site_update!(
