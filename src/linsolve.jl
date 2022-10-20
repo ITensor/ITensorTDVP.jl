@@ -44,5 +44,5 @@ function linsolve(A::MPO, b::MPS, x₀::MPS, a₀::Number=0, a₁::Number=1; kwa
 
   t = Inf
   P = ProjMPO_MPS2(A, b)
-  return tdvp(linsolve_solver, P, t, x₀; reverse_step=false, kwargs...)
+  return alternating_update(linsolve_solver, P, t, x₀; reverse_step=false, kwargs...)
 end

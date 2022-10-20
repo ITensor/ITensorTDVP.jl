@@ -39,6 +39,7 @@ function krylov_solver(H⃗₀, time_step, ψ₀; kwargs...)
   )
 end
 
+#=
 @testset "Time dependent Hamiltonian" begin
   n = 4
   J₁ = 1.0
@@ -77,5 +78,6 @@ end
   @test ode_err < 1e-3
   @test krylov_err < 1e-3
 end
+=#
 
 nothing

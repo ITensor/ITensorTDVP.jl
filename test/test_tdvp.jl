@@ -100,6 +100,7 @@ end
   @test abs(inner(ψ0, ψ2)) > 0.99
 end
 
+#=
 @testset "Custom solver in TDVP" begin
   N = 10
   cutoff = 1e-12
@@ -143,6 +144,7 @@ end
   # Should rotate back to original state:
   @test abs(inner(ψ0, ψ2)) > 0.99
 end
+=#
 
 @testset "Accuracy Test" begin
   N = 4
