@@ -7,6 +7,8 @@ import KrylovKit: linsolve
 using Printf
 using TimerOutputs
 using Observers
+using ITensorNetworks
+using IterTools: partition
 
 using ITensors:
   AbstractMPS,
@@ -16,6 +18,9 @@ using ITensors:
   orthocenter,
   ProjMPS,
   set_nsite!
+
+# Unify(?) MPS and trees
+include("tree_patch.jl")
 
 # Compatibility of ITensor observer and Observers
 include("update_observer.jl")
@@ -34,10 +39,12 @@ include("tdvp.jl")
 include("dmrg.jl")
 include("dmrg_x.jl")
 include("projmpo_apply.jl")
-include("contract_mpo_mps.jl")
+include("projttno_apply.jl")
+include("contract_operator_state.jl")
 include("projmps2.jl")
 include("projmpo_mps2.jl")
 include("linsolve.jl")
+include("tree_sweeper.jl")
 
 export tdvp, dmrg_x, to_vec, TimeDependentSum, linsolve
 
