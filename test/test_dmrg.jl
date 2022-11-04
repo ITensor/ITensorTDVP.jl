@@ -39,7 +39,7 @@ end
   c = named_comb_tree(tooth_lengths)
   s = siteinds("S=1/2", c)
 
-  os = heisenberg_graph(c)
+  os = heisenberg(c)
 
   H = TTNO(os, s)
 

@@ -3,7 +3,6 @@ using ITensorTDVP
 using ITensorTDVP.ITensorNetworks # cannot directly use unregistered dependencies in tests without environments clashing...
 using Random
 using Test
-include("utils.jl")
 
 @testset "Contract MPO" begin
   N = 20
@@ -61,7 +60,7 @@ end
   s = siteinds("S=1/2", c)
   psi = normalize!(randomTTNS(s; link_space=8))
 
-  os = heisenberg_graph(c; J1=1, J2=1)
+  os = heisenberg(c; J1=1, J2=1)
   H = TTNO(os, s)
 
   # Test basic usage with default parameters

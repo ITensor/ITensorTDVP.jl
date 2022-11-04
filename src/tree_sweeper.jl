@@ -9,9 +9,9 @@ using ITensorNetworks: AbstractEdge, AbstractDataGraph
 
 Auxiliary object specifying a single local update step in a tree sweeping algorithm.
 """
-struct SweepStep{V}
+struct SweepStep{V} # parametrize on position type?
   pos::Union{Vector{<:V},NamedDimEdge{V}}
-  time_direction::Base.Ordering
+  time_direction::Base.Ordering # definitely want this to be an integer
 end
 
 # field access
@@ -116,6 +116,7 @@ function sweep_steps(::Base.ForwardOrdering, s::OneSiteTreeSweeper{V}) where {V}
   return steps
 end
 
+# is this even necessary?
 function sweep_steps(::Base.ReverseOrdering, s::OneSiteTreeSweeper{V}) where {V}
   edges = reverse.(reverse(post_order_dfs_edges(s.graph, s.root_vertex)))
   steps = [SweepStep{V}([s.root_vertex], Base.Forward)]
@@ -175,6 +176,7 @@ function sweep_steps(::Base.ForwardOrdering, s::TwoSiteTreeSweeper{V}) where {V}
   return steps
 end
 
+# is this even necessary?
 function sweep_steps(::Base.ReverseOrdering, s::TwoSiteTreeSweeper{V}) where {V}
   edges = reverse.(reverse(post_order_dfs_edges(s.graph, s.root_vertex)))
   steps = [SweepStep{V}([src(edges[1]), dst(edges[1])], Base.Forward)]

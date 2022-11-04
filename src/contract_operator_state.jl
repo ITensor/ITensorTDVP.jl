@@ -32,7 +32,7 @@ function ITensors.contract(
   # In case A and psi0 have the same link indices
   A = sim(linkinds, A)
 
-  # Fix site and link inds of init_mps
+  # Fix site and link inds of init_state
   init_state = deepcopy(init_state)
   init_state = sim(linkinds, init_state)
   for v in vertices(psi0)

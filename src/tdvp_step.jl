@@ -71,7 +71,7 @@ function tdvp_sweep(
       sweep_step;
       current_time,
       outputlevel,
-      time_step,
+      time_step, # handle time_step prefactor here?
       normalize,
       noise,
       which_decomp,
@@ -132,7 +132,7 @@ function _extract_tensor!(psi::TreeLikeState, e::NamedDimEdge{Tuple})
   return S * V
 end
 
-# sort of multi-site replacebond!
+# sort of multi-site replacebond!; use dense TTNS constructor instead!
 function _insert_tensor!(psi::TreeLikeState, phi::ITensor, pos::Vector{<:Tuple}; kwargs...)
   which_decomp::Union{String,Nothing} = get(kwargs, :which_decomp, nothing)
   normalize::Bool = get(kwargs, :normalize, false)
@@ -179,7 +179,7 @@ function tdvp_local_update!(
   mindim,
   maxtruncerr,
 )
-  orthogonalize!(psi, current_ortho(sweep_step))
+  orthogonalize!(psi, current_ortho(sweep_step)) # choose the one that is closest to previous ortho center?
   phi = _extract_tensor!(psi, pos(sweep_step))
   time_step = time_prefactor(sweep_step) * time_step
   set_nsite!(PH, nsite(sweep_step))

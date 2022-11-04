@@ -55,8 +55,8 @@ end
   cutoff = 1e-8
 
   s = siteinds("S=1/2", c)
-  ℋ₁₀ = heisenberg_graph(c; J1=J₁, J2=0.0)
-  ℋ₂₀ = heisenberg_graph(c; J1=0.0, J2=J₂)
+  ℋ₁₀ = heisenberg(c; J1=J₁, J2=0.0)
+  ℋ₂₀ = heisenberg(c; J1=0.0, J2=J₂)
   ℋ⃗₀ = [ℋ₁₀, ℋ₂₀]
   H⃗₀ = [TTNO(ℋ₀, s) for ℋ₀ in ℋ⃗₀]
 
