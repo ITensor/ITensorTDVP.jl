@@ -81,7 +81,7 @@ end
 
   # Test with less good initial guess MPS not equal to psi
   psi_guess = copy(psi)
-  truncate!(psi_guess; maxdim=2)
+  psi_guess = truncate(psi_guess; maxdim=2)
   Hpsi = apply(H, psi; alg="fit", nsweeps=4, init_state=psi_guess)
   @test_broken inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1E-5 # broken when rebasing local draft on remote main, fix this
 

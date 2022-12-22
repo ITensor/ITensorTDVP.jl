@@ -7,6 +7,7 @@ import KrylovKit: linsolve
 using Printf
 using TimerOutputs
 using Observers
+using NamedGraphs
 using ITensorNetworks
 using IterTools: partition
 

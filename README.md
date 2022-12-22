@@ -6,22 +6,13 @@
 [![Coverage](https://codecov.io/gh/mtfishman/ITensorTDVP.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/mtfishman/ITensorTDVP.jl)
 [![Code Style: Blue](https://img.shields.io/badge/code%20style-blue-4495d1.svg)](https://github.com/invenia/BlueStyle)
 
-This particular branch contains an experimental draft of sweeping algorithms for tree tensor
-networks, which in turn relies on several unregistered packages and experimental forks.
+This package is under heavy development and the interface is subject to change.
 
-To install this version of the package, you can use the following steps:
+To install this package, you can use the following steps:
 ```
 $ julia
 
 julia> ]
 
-pkg> add https://github.com/mtfishman/MultiDimDictionaries.jl
-
-pkg> add https://github.com/mtfishman/NamedGraphs.jl
-
-pkg> add https://github.com/mtfishman/DataGraphs.jl
-
-pkg> add https://github.com/leburgel/ITensorNetworks.jl#tree_sweeping
-
-pkg> add https://github.com/leburgel/ITensorTDVP.jl#tree_sweeping
+pkg> add ITensorTDVP
 ```

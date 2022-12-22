@@ -45,7 +45,7 @@ function tdvp_sweep(
     )
   end
   sweep_type = _get_sweep_type(kwargs)
-  root_vertex::Tuple = get(kwargs, :root_vertex, default_root_vertex(underlying_graph(PH)))
+  root_vertex = get(kwargs, :root_vertex, default_root_vertex(underlying_graph(PH)))
   reverse_step::Bool = get(kwargs, :reverse_step, true)
   normalize::Bool = get(kwargs, :normalize, false)
   which_decomp::Union{String,Nothing} = get(kwargs, :which_decomp, nothing)
@@ -64,7 +64,7 @@ function tdvp_sweep(
   maxtruncerr = 0.0
   info = nothing
   for sweep_step in sweep_steps(sweeper)
-    current_time, maxtruncerr, spec, info = tdvp_local_update!(
+    psi, PH, current_time, maxtruncerr, spec, info = tdvp_local_update(
       solver,
       PH,
       psi,
@@ -101,7 +101,7 @@ function tdvp_sweep(
       flush(stdout)
     end
     # very much draft, observer interface to be discussed...
-    if isforward(time_direction(sweep_step))
+    if time_direction(sweep_step) == +1
       obs_update!(
         observer,
         psi,
@@ -123,17 +123,19 @@ end
 
 # draft for unification of different nsite and time direction updates
 
-_extract_tensor!(psi::TreeLikeState, pos::Vector{<:Tuple}) = prod(psi[v] for v in pos)
+function _extract_tensor(psi::TreeLikeState, pos::Vector)
+  return psi, prod(psi[v] for v in pos)
+end
 
-function _extract_tensor!(psi::TreeLikeState, e::NamedDimEdge{Tuple})
+function _extract_tensor(psi::TreeLikeState, e::NamedEdge)
   left_inds = uniqueinds(psi, e)
   U, S, V = svd(psi[src(e)], left_inds; lefttags=tags(psi, e), righttags=tags(psi, e))
   psi[src(e)] = U
-  return S * V
+  return psi, S * V
 end
 
 # sort of multi-site replacebond!; use dense TTNS constructor instead!
-function _insert_tensor!(psi::TreeLikeState, phi::ITensor, pos::Vector{<:Tuple}; kwargs...)
+function _insert_tensor(psi::TreeLikeState, phi::ITensor, pos::Vector; kwargs...)
   which_decomp::Union{String,Nothing} = get(kwargs, :which_decomp, nothing)
   normalize::Bool = get(kwargs, :normalize, false)
   eigen_perturbation = get(kwargs, :eigen_perturbation, nothing)
@@ -145,24 +147,24 @@ function _insert_tensor!(psi::TreeLikeState, phi::ITensor, pos::Vector{<:Tuple};
       phi, indsTe; which_decomp, tags=tags(psi, e), eigen_perturbation, kwargs...
     )
     psi[v] = L
-    set_ortho_center!(psi, [vnext])
     eigen_perturbation = nothing # brrrrr
   end
-  @assert isortho(psi) && only(ortho_center(psi)) == last(pos)
   psi[last(pos)] = phi
+  psi = set_ortho_center(psi, [last(pos)])
+  @assert isortho(psi) && only(ortho_center(psi)) == last(pos)
   normalize && (psi[last(pos)] ./= norm(psi[last(pos)]))
-  return spec # TODO: return maxtruncerr, will not be caught in cases where insertion executes multiple factorizations
+  return psi, spec # TODO: return maxtruncerr, will not be caught in cases where insertion executes multiple factorizations
 end
 
-function _insert_tensor!(
-  psi::TreeLikeState, phi::ITensor, e::NamedDimEdge{Tuple}; kwargs...
+function _insert_tensor(
+  psi::TreeLikeState, phi::ITensor, e::NamedEdge; kwargs...
 )
   psi[dst(e)] *= phi
-  set_ortho_center!(psi, [dst(e)])
-  return nothing
+  psi = set_ortho_center(psi, [dst(e)])
+  return psi, nothing
 end
 
-function tdvp_local_update!(
+function tdvp_local_update(
   solver,
   PH,
   psi,
@@ -179,11 +181,11 @@ function tdvp_local_update!(
   mindim,
   maxtruncerr,
 )
-  orthogonalize!(psi, current_ortho(sweep_step)) # choose the one that is closest to previous ortho center?
-  phi = _extract_tensor!(psi, pos(sweep_step))
-  time_step = time_prefactor(sweep_step) * time_step
-  set_nsite!(PH, nsite(sweep_step))
-  position!(PH, psi, pos(sweep_step))
+  psi = orthogonalize(psi, current_ortho(sweep_step)) # choose the one that is closest to previous ortho center?
+  psi, phi = _extract_tensor(psi, pos(sweep_step))
+  time_step = time_direction(sweep_step) * time_step
+  PH = set_nsite(PH, nsite(sweep_step))
+  PH = position(PH, psi, pos(sweep_step))
   phi, info = solver(PH, time_step, phi; current_time, outputlevel)
   current_time += time_step
   normalize && (phi /= norm(phi))
@@ -192,7 +194,7 @@ function tdvp_local_update!(
   if noise > 0.0 && isforward(direction)
     drho = noise * noiseterm(PH, phi, ortho) # TODO: actually implement this for trees...
   end
-  spec = _insert_tensor!(
+  psi, spec = _insert_tensor(
     psi,
     phi,
     pos(sweep_step);
@@ -206,5 +208,5 @@ function tdvp_local_update!(
     svd_alg,
   )
   maxtruncerr = isnothing(spec) ? maxtruncerr : max(maxtruncerr, spec.truncerr)
-  return current_time, maxtruncerr, spec, info
+  return psi, PH, current_time, maxtruncerr, spec, info
 end

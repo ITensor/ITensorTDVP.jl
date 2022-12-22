@@ -1,13 +1,14 @@
 import ITensorNetworks:
-  AbstractProjTTNO, make_environment!, _separate_first_two, environment
+  AbstractProjTTNO, shift_position, make_environment!, _separate_first_two, environment
 using Dictionaries: Dictionary, unset!, set!
 
-mutable struct ProjTTNOApply <: AbstractProjTTNO
-  pos::Union{Vector{<:Tuple},NamedDimEdge{Tuple}}
-  psi0::TTNS
-  H::TTNO
-  environments::Dictionary{NamedDimEdge{Tuple},ITensor}
+struct ProjTTNOApply{V} <: AbstractProjTTNO{V}
+  pos::Union{Vector{<:V},NamedEdge{V}}
+  psi0::TTNS{V}
+  H::TTNO{V}
+  environments::Dictionary{NamedEdge{V},ITensor}
 end
+
 function ProjTTNOApply(psi0::TTNS, H::TTNO)
   return ProjTTNOApply(eltype(H)[], psi0, H, Dictionary{edgetype(H),ITensor}())
 end
@@ -16,11 +17,15 @@ function copy(P::ProjTTNOApply)
   return ProjTTNOApply(P.pos, copy(P.psi0), copy(P.H), copy(P.environments))
 end
 
-function set_nsite!(P::ProjTTNOApply, nsite)
+function set_nsite(P::ProjTTNOApply, nsite)
   return P
 end
 
-function make_environment!(P::ProjTTNOApply, psi::TTNS, e::NamedDimEdge{Tuple})::ITensor
+function shift_position(P::ProjTTNOApply, pos)
+  return ProjTTNOApply(pos, P.psi0, P.H, P.environments)
+end
+
+function make_environment!(P::ProjTTNOApply{V}, psi::TTNS{V}, e::NamedEdge{V})::ITensor where {V}
   # invalidate environment for opposite edge direction if necessary
   reverse(e) ∈ incident_edges(P) || unset!(P.environments, reverse(e))
   # do nothing if valid envivalid environment already present

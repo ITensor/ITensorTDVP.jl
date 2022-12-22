@@ -9,23 +9,20 @@ using ITensorNetworks: AbstractEdge, AbstractDataGraph
 
 Auxiliary object specifying a single local update step in a tree sweeping algorithm.
 """
-struct SweepStep{V} # parametrize on position type?
-  pos::Union{Vector{<:V},NamedDimEdge{V}}
-  time_direction::Base.Ordering # definitely want this to be an integer
+struct SweepStep{V} # TODO: parametrize on position type
+  pos::Union{Vector{<:V},NamedEdge{V}}
+  time_direction::Int
 end
 
 # field access
 pos(st::SweepStep) = st.pos
 nsite(st::SweepStep) = isa(pos(st), AbstractEdge) ? 0 : length(pos(st))
 time_direction(st::SweepStep) = st.time_direction
-time_prefactor(st::SweepStep) = time_prefactor(time_direction(st))
-time_prefactor(::Base.ForwardOrdering) = 1
-time_prefactor(::Base.ReverseOrdering) = -1
 
 # utility
 current_ortho(st::SweepStep) = current_ortho(typeof(pos(st)), st)
 current_ortho(::Type{<:Vector{<:V}}, st::SweepStep{V}) where {V} = first(pos(st)) # not very clean...
-current_ortho(::Type{NamedDimEdge{V}}, st::SweepStep{V}) where {V} = src(pos(st))
+current_ortho(::Type{NamedEdge{V}}, st::SweepStep{V}) where {V} = src(pos(st))
 
 # 
 # Abstract tree sweeper type
@@ -42,8 +39,8 @@ function (::Type{SWT})(
 end
 
 function (::Type{SWT})(
-  graph::NamedDimGraph{V};
-  direction=Base.Forward,
+  graph::NamedGraph{V};
+  direction=+1,
   root_vertex::V=default_root_vertex(graph),
   reverse_step=false,
 ) where {SWT<:AbstractTreeSweeper,V}
@@ -85,13 +82,13 @@ end
 One-site sweeper for tree graphs.
 """
 struct OneSiteTreeSweeper{V} <: AbstractTreeSweeper{V}
-  graph::NamedDimGraph{V}
+  graph::NamedGraph{V}
   root_vertex::V
   leaf_vertex::V
   direction::Base.Ordering
   reverse_step::Bool
   function OneSiteTreeSweeper{V}(
-    graph::NamedDimGraph{V},
+    graph::NamedGraph{V},
     root_vertex::V,
     leaf_vertex::V,
     direction::Base.Ordering,
@@ -109,20 +106,20 @@ function sweep_steps(::Base.ForwardOrdering, s::OneSiteTreeSweeper{V}) where {V}
   edges = post_order_dfs_edges(s.graph, s.root_vertex)
   steps = SweepStep{V}[]
   for e in edges
-    push!(steps, SweepStep{V}([src(e)], Base.Forward))
-    do_reverse_step(s) && push!(steps, SweepStep{V}(e, Base.Reverse))
+    push!(steps, SweepStep{V}([src(e)], +1))
+    do_reverse_step(s) && push!(steps, SweepStep{V}(e, -1))
   end
-  push!(steps, SweepStep{V}([s.root_vertex], Base.Forward))
+  push!(steps, SweepStep{V}([s.root_vertex], +1))
   return steps
 end
 
 # is this even necessary?
 function sweep_steps(::Base.ReverseOrdering, s::OneSiteTreeSweeper{V}) where {V}
   edges = reverse.(reverse(post_order_dfs_edges(s.graph, s.root_vertex)))
-  steps = [SweepStep{V}([s.root_vertex], Base.Forward)]
+  steps = [SweepStep{V}([s.root_vertex], +1)]
   for e in edges
-    do_reverse_step(s) && push!(steps, SweepStep{V}(e, Base.Reverse))
-    push!(steps, SweepStep{V}([dst(e)], Base.Forward))
+    do_reverse_step(s) && push!(steps, SweepStep{V}(e, -1))
+    push!(steps, SweepStep{V}([dst(e)], +1))
   end
   return steps
 end
@@ -145,13 +142,13 @@ end
 Two-site sweeper for tree graphs.
 """
 struct TwoSiteTreeSweeper{V} <: AbstractTreeSweeper{V}
-  graph::NamedDimGraph{V}
+  graph::NamedGraph{V}
   root_vertex::V
   leaf_vertex::V
   direction::Base.Ordering
   reverse_step::Bool
   function TwoSiteTreeSweeper{V}(
-    graph::NamedDimGraph{V},
+    graph::NamedGraph{V},
     root_vertex::V,
     leaf_vertex::V,
     direction::Base.Ordering,
@@ -169,20 +166,20 @@ function sweep_steps(::Base.ForwardOrdering, s::TwoSiteTreeSweeper{V}) where {V}
   edges = post_order_dfs_edges(s.graph, s.root_vertex)
   steps = SweepStep{V}[]
   for e in edges[1:(end - 1)]
-    push!(steps, SweepStep{V}([src(e), dst(e)], Base.Forward))
-    do_reverse_step(s) && push!(steps, SweepStep{V}([dst(e)], Base.Reverse))
+    push!(steps, SweepStep{V}([src(e), dst(e)], +1))
+    do_reverse_step(s) && push!(steps, SweepStep{V}([dst(e)], -1))
   end
-  push!(steps, SweepStep{V}([src(edges[end]), dst(edges[end])], Base.Forward))
+  push!(steps, SweepStep{V}([src(edges[end]), dst(edges[end])], +1))
   return steps
 end
 
 # is this even necessary?
 function sweep_steps(::Base.ReverseOrdering, s::TwoSiteTreeSweeper{V}) where {V}
   edges = reverse.(reverse(post_order_dfs_edges(s.graph, s.root_vertex)))
-  steps = [SweepStep{V}([src(edges[1]), dst(edges[1])], Base.Forward)]
+  steps = [SweepStep{V}([src(edges[1]), dst(edges[1])], +1)]
   for e in edges[2:end]
-    do_reverse_step(s) && push!(steps, SweepStep{V}([src(e)], Base.Reverse))
-    push!(steps, SweepStep{V}([src(e), dst(e)], Base.Forward))
+    do_reverse_step(s) && push!(steps, SweepStep{V}([src(e)], -1))
+    push!(steps, SweepStep{V}([src(e), dst(e)], +1))
   end
   return steps
 end

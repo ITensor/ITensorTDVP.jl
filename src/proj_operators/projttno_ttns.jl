@@ -1,8 +1,10 @@
+# TODO
+
 import ITensorNetworks:
   AbstractProjTTNO, make_environment!, _separate_first_two, environment
 using Dictionaries: Dictionary, unset!, set!
 
-mutable struct ProjTTNO_TTNS <: AbstractProjTTNO # questionable inheritance?
+struct ProjTTNO_TTNS <: AbstractProjTTNO # questionable inheritance?
   PH::ProjTTNO
   Ms::Vector{ProjTTNS}
 end
@@ -28,7 +30,7 @@ function set_nsite!(P::ProjTTNO_TTNS, nsite)
 end
 
 function position!(
-  P::ProjTTNO_TTNS, psi::TTNS, pos::Union{Vector{<:Tuple},NamedDimEdge{Tuple}}
+  P::ProjTTNO_TTNS, psi::TTNS, pos::Union{Vector{<:Tuple},NamedEdge{Tuple}}
 )
   position!(P.PH, psi, pos)
   for m in P.Ms
@@ -36,7 +38,7 @@ function position!(
   end
 end
 
-# function make_environment!(P:::ProjTTNO_TTNS, psi::TTNS, e::NamedDimEdge{Tuple})
+# function make_environment!(P:::ProjTTNO_TTNS, psi::TTNS, e::NamedEdge{Tuple})
 #   make_environment!(P.PH, psi, e)
 #   for m in P.Ms
 #     make_environment!(m, psi, e)

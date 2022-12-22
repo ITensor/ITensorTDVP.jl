@@ -1,11 +1,13 @@
+# TODO
+
 import ITensorNetworks:
   AbstractProjTTNO, make_environment!, _separate_first_two, environment
 using Dictionaries: Dictionary, unset!, set!
 
 mutable struct ProjTTNS <: AbstractProjTTNO # questionable inheritance?
-  pos::Union{Vector{<:Tuple},NamedDimEdge{Tuple}}
+  pos::Union{Vector{<:Tuple},NamedEdge{Tuple}}
   M::TTNS
-  environments::Dictionary{NamedDimEdge{Tuple},ITensor}
+  environments::Dictionary{NamedEdge{Tuple},ITensor}
 end
 
 # patch due to inheriting from AbstractProjTTNO while instances have no TTNO field...
@@ -25,7 +27,7 @@ function set_nsite!(P::ProjTTNS, nsite)
   return P
 end
 
-function make_environment!(P::ProjTTNS, psi::TTNS, e::NamedDimEdge{Tuple})::ITensor
+function make_environment!(P::ProjTTNS, psi::TTNS, e::NamedEdge{Tuple})::ITensor
   # invalidate environment for opposite edge direction if necessary
   reverse(e) ∈ incident_edges(P) || unset!(P.environments, reverse(e))
   # do nothing if valid envivalid environment already present

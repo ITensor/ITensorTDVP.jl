@@ -306,7 +306,7 @@ using Test
       cutoff,
       normalize=false,
       (observer!)=TDVPObserver(),
-      root_vertex=(N,), # defaults to (1,), which breaks observer equality
+      root_vertex=N, # defaults to 1, which breaks observer equality
     )
 
     @test norm(Sz1 - Sz2) < 1e-3
@@ -402,7 +402,7 @@ using Test
       cutoff,
       normalize=false,
       (observer!)=TDVPObserver(),
-      root_vertex=(N,), # defaults to (1,), which breaks observer equality
+      root_vertex=N, # defaults to 1, which breaks observer equality
     )
 
     #
@@ -445,7 +445,7 @@ using Test
       normalize=false,
       (observer!)=obs,
       (step_observer!)=step_obs,
-      root_vertex=(N,), # defaults to (1,), which breaks observer equality
+      root_vertex=N, # defaults to 1, which breaks observer equality
     )
 
     Sz2 = results(obs)["Sz"]
@@ -720,7 +720,7 @@ end
       cutoff,
       normalize=false,
       (observer!)=TDVPObserver(),
-      root_vertex=(3, 2)
+      root_vertex=(3, 2),
     )
 
     @test norm(Sz1 - Sz2) < 5e-3
@@ -792,7 +792,7 @@ end
   #     cutoff,
   #     normalize=false,
   #     (observer!)=TDVPObserver(),
-  #     root_vertex=(N,)
+  #     root_vertex=N,
   #   )
 
   #   #
@@ -831,7 +831,7 @@ end
   #     normalize=false,
   #     (observer!)=obs,
   #     (step_observer!)=step_obs,
-  #     root_vertex=(N,)
+  #     root_vertex=N,
   #   )
 
   #   Sz2 = results(obs)["Sz"]
