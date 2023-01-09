@@ -42,7 +42,7 @@ function process_sweeps(; kwargs...)
   return (; maxdim, mindim, cutoff, noise)
 end
 
-function tdvp(solver, PH, t::Number, psi0::TreeLikeState; kwargs...)
+function tdvp(solver, PH, t::Number, psi0::IsTreeState; kwargs...)
   reverse_step = get(kwargs, :reverse_step, true)
 
   nsweeps = _tdvp_compute_nsweeps(t; kwargs...)
@@ -124,8 +124,8 @@ function tdvp(solver, PH, t::Number, psi0::TreeLikeState; kwargs...)
 end
 
 """
-    tdvp(H::TreeLikeOperator,psi0::TreeLikeState,t::Number; kwargs...)
-    tdvp(H::TreeLikeOperator,psi0::TreeLikeState,t::Number; kwargs...)
+    tdvp(H::IsTreeOperator,psi0::IsTreeState,t::Number; kwargs...)
+    tdvp(H::IsTreeOperator,psi0::IsTreeState,t::Number; kwargs...)
 
 Use the time dependent variational principle (TDVP) algorithm
 to compute `exp(t*H)*psi0` using an efficient algorithm based
@@ -133,14 +133,14 @@ on alternating optimization of the MPS tensors and local Krylov
 exponentiation of H.
                     
 Returns:
-* `psi::TreeLikeState` - time-evolved state
+* `psi::IsTreeState` - time-evolved state
 
 Optional keyword arguments:
 * `outputlevel::Int = 1` - larger outputlevel values resulting in printing more information and 0 means no output
 * `observer` - object implementing the [Observer](@ref observer) interface which can perform measurements and stop early
 * `write_when_maxdim_exceeds::Int` - when the allowed maxdim exceeds this value, begin saving tensors to disk to free memory in large calculations
 """
-function tdvp(solver, H::TreeLikeOperator, t::Number, psi0::TreeLikeState; kwargs...)
+function tdvp(solver, H::IsTreeOperator, t::Number, psi0::IsTreeState; kwargs...)
   check_hascommoninds(siteinds, H, psi0)
   check_hascommoninds(siteinds, H, psi0')
   # Permute the indices to have a better memory layout
@@ -150,11 +150,11 @@ function tdvp(solver, H::TreeLikeOperator, t::Number, psi0::TreeLikeState; kwarg
   return tdvp(solver, PH, t, psi0; kwargs...)
 end
 
-function tdvp(solver, t::Number, H, psi0::TreeLikeState; kwargs...)
+function tdvp(solver, t::Number, H, psi0::IsTreeState; kwargs...)
   return tdvp(solver, H, t, psi0; kwargs...)
 end
 
-function tdvp(solver, H, psi0::TreeLikeState, t::Number; kwargs...)
+function tdvp(solver, H, psi0::IsTreeState, t::Number; kwargs...)
   return tdvp(solver, H, t, psi0; kwargs...)
 end
 
@@ -178,7 +178,7 @@ Returns:
 * `psi::MPS` - time-evolved MPS
 """
 function tdvp(
-  solver, Hs::Vector{<:TreeLikeOperator}, t::Number, psi0::TreeLikeState; kwargs...
+  solver, Hs::Vector{<:IsTreeOperator}, t::Number, psi0::IsTreeState; kwargs...
 )
   for H in Hs
     check_hascommoninds(siteinds, H, psi0)

@@ -3,7 +3,7 @@ function tdvp_step(
   solver,
   PH,
   time_step::Number,
-  psi::TreeLikeState;
+  psi::IsTreeState;
   current_time=0.0,
   kwargs...,
 )
@@ -25,17 +25,17 @@ isforward(direction::Base.ReverseOrdering) = false
 isreverse(direction) = !isforward(direction)
 
 # very much draft, interface to be discussed
-function _get_sweep_type(kwargs)
-  sweep_type = get(kwargs, :sweep_type, nothing)
-  isnothing(sweep_type) || return sweep_type
+function _get_sweep_generator(kwargs)
+  sweep_generator = get(kwargs, :sweep_generator, nothing)
+  isnothing(sweep_generator) || return sweep_type
   nsite::Int = get(kwargs, :nsite, 2)
-  nsite == 1 && return OneSiteTreeSweeper
-  nsite == 2 && return TwoSiteTreeSweeper
+  nsite == 1 && return one_site_sweep
+  nsite == 2 && return two_site_sweep
   return error("Unsupported value $nsite for nsite keyword argument.")
 end
 
 function tdvp_sweep(
-  direction::Base.Ordering, solver, PH, time_step::Number, psi::TreeLikeState; kwargs...
+  direction::Base.Ordering, solver, PH, time_step::Number, psi::IsTreeState; kwargs...
 )
   PH = copy(PH)
   psi = copy(psi)
@@ -44,7 +44,7 @@ function tdvp_sweep(
       "`tdvp` currently does not support system sizes of 1. You can diagonalize the MPO tensor directly with tools like `LinearAlgebra.eigen`, `KrylovKit.exponentiate`, etc.",
     )
   end
-  sweep_type = _get_sweep_type(kwargs)
+  sweep_generator = _get_sweep_generator(kwargs)
   root_vertex = get(kwargs, :root_vertex, default_root_vertex(underlying_graph(PH)))
   reverse_step::Bool = get(kwargs, :reverse_step, true)
   normalize::Bool = get(kwargs, :normalize, false)
@@ -59,11 +59,9 @@ function tdvp_sweep(
   cutoff::Real = get(kwargs, :cutoff, 1E-16)
   noise::Real = get(kwargs, :noise, 0.0)
 
-  sweeper = sweep_type(underlying_graph(PH); direction, root_vertex, reverse_step)
-
   maxtruncerr = 0.0
   info = nothing
-  for sweep_step in sweep_steps(sweeper)
+  for sweep_step in sweep_generator(direction, underlying_graph(PH), root_vertex, reverse_step; state=psi, kwargs...)
     psi, PH, current_time, maxtruncerr, spec, info = tdvp_local_update(
       solver,
       PH,
@@ -71,7 +69,7 @@ function tdvp_sweep(
       sweep_step;
       current_time,
       outputlevel,
-      time_step, # handle time_step prefactor here?
+      time_step, # TODO: handle time_step prefactor here?
       normalize,
       noise,
       which_decomp,
@@ -110,7 +108,6 @@ function tdvp_sweep(
         half_sweep=isforward(direction) ? 1 : 2,
         spec,
         outputlevel,
-        half_sweep_is_done=is_half_sweep_done(sweeper, sweep_step),
         current_time,
         info,
       )
@@ -123,11 +120,11 @@ end
 
 # draft for unification of different nsite and time direction updates
 
-function _extract_tensor(psi::TreeLikeState, pos::Vector)
+function _extract_tensor(psi::IsTreeState, pos::Vector)
   return psi, prod(psi[v] for v in pos)
 end
 
-function _extract_tensor(psi::TreeLikeState, e::NamedEdge)
+function _extract_tensor(psi::IsTreeState, e::NamedEdge)
   left_inds = uniqueinds(psi, e)
   U, S, V = svd(psi[src(e)], left_inds; lefttags=tags(psi, e), righttags=tags(psi, e))
   psi[src(e)] = U
@@ -135,7 +132,7 @@ function _extract_tensor(psi::TreeLikeState, e::NamedEdge)
 end
 
 # sort of multi-site replacebond!; use dense TTNS constructor instead!
-function _insert_tensor(psi::TreeLikeState, phi::ITensor, pos::Vector; kwargs...)
+function _insert_tensor(psi::IsTreeState, phi::ITensor, pos::Vector; kwargs...)
   which_decomp::Union{String,Nothing} = get(kwargs, :which_decomp, nothing)
   normalize::Bool = get(kwargs, :normalize, false)
   eigen_perturbation = get(kwargs, :eigen_perturbation, nothing)
@@ -147,17 +144,17 @@ function _insert_tensor(psi::TreeLikeState, phi::ITensor, pos::Vector; kwargs...
       phi, indsTe; which_decomp, tags=tags(psi, e), eigen_perturbation, kwargs...
     )
     psi[v] = L
-    eigen_perturbation = nothing # brrrrr
+    eigen_perturbation = nothing # TODO: fix this
   end
   psi[last(pos)] = phi
   psi = set_ortho_center(psi, [last(pos)])
   @assert isortho(psi) && only(ortho_center(psi)) == last(pos)
   normalize && (psi[last(pos)] ./= norm(psi[last(pos)]))
-  return psi, spec # TODO: return maxtruncerr, will not be caught in cases where insertion executes multiple factorizations
+  return psi, spec # TODO: return maxtruncerr, will not be correct in cases where insertion executes multiple factorizations
 end
 
 function _insert_tensor(
-  psi::TreeLikeState, phi::ITensor, e::NamedEdge; kwargs...
+  psi::IsTreeState, phi::ITensor, e::NamedEdge; kwargs...
 )
   psi[dst(e)] *= phi
   psi = set_ortho_center(psi, [dst(e)])

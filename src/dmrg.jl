@@ -16,7 +16,7 @@ function eigsolve_solver(; kwargs...)
   return solver
 end
 
-function dmrg(H, psi0::TreeLikeState; kwargs...)
+function dmrg(H, psi0::IsTreeState; kwargs...)
   t = Inf # DMRG is TDVP with an infinite timestep and no reverse step
   reverse_step = false
   psi = tdvp(eigsolve_solver(; kwargs...), H, t, psi0; reverse_step, kwargs...)

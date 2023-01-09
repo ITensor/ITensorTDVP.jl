@@ -16,7 +16,6 @@ import ITensorNetworks:
 import ITensors:
   AbstractProjMPO,
   orthocenter,
-  orthogonalize!,
   position!,
   set_ortho_lims,
   tags,
@@ -24,10 +23,10 @@ import ITensors:
   siteinds,
   position!
 
-const TreeLikeState = Union{MPS,TTNS}
-const TreeLikeOperator = Union{MPO,TTNO}
-const TreeLikeProjOperator = Union{AbstractProjMPO,AbstractProjTTNO}
-const TreeLikeProjOperatorSum = Union{ProjMPOSum,ProjTTNOSum}
+const IsTreeState = Union{MPS,TTNS}
+const IsTreeOperator = Union{MPO,TTNO}
+const IsTreeProjOperator = Union{AbstractProjMPO,AbstractProjTTNO}
+const IsTreeProjOperatorSum = Union{ProjMPOSum,ProjTTNOSum}
 
 # number of vertices and edges
 nv(psi::AbstractMPS) = length(psi)

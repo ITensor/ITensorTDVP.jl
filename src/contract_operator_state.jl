@@ -12,12 +12,12 @@ end
 
 function ITensors.contract(
   ::ITensors.Algorithm"fit",
-  A::TreeLikeOperator,
+  A::IsTreeOperator,
   psi0::ST;
   init_state=psi0,
   nsweeps=1,
   kwargs...,
-)::ST where {ST<:TreeLikeState}
+)::ST where {ST<:IsTreeState}
   n = nv(A)
   n != nv(psi0) && throw(
     DimensionMismatch("Number of sites operator ($n) and state ($(nv(psi0))) do not match"),

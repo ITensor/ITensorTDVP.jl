@@ -43,14 +43,14 @@ function tdvp_solver(; kwargs...)
   end
 end
 
-function tdvp(H, t::Number, psi0::TreeLikeState; kwargs...)
+function tdvp(H, t::Number, psi0::IsTreeState; kwargs...)
   return tdvp(tdvp_solver(; kwargs...), H, t, psi0; kwargs...)
 end
 
-function tdvp(t::Number, H, psi0::TreeLikeState; kwargs...)
+function tdvp(t::Number, H, psi0::IsTreeState; kwargs...)
   return tdvp(H, t, psi0; kwargs...)
 end
 
-function tdvp(H, psi0::TreeLikeState, t::Number; kwargs...)
+function tdvp(H, psi0::IsTreeState, t::Number; kwargs...)
   return tdvp(H, t, psi0; kwargs...)
 end
