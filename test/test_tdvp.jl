@@ -633,7 +633,7 @@ end
       )
       push!(Sz_tdvp, real(expect("Sz", psi; sites=[c])[c]))
       push!(Sz_exact, real(scalar(dag(prime(psix, s[c])) * Szc * psix)))
-      F = abs(scalar(dag(psix) * prod(psi)))
+      F = abs(scalar(dag(psix) * contract(psi)))
     end
 
     @test norm(Sz_tdvp - Sz_exact) < 1e-5 # broken when rebasing local draft on remote main, fix this
