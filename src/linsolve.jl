@@ -18,14 +18,10 @@ Keyword arguments:
   - `solver_maxiter::Int=100` - max number outer iterations (restarts) to do in the solver step
   - `solver_tol::Float64=1E-14` - tolerance or error goal of the solver
 """
-function linsolve(A::MPO, b::MPS, x₀::MPS, a₀::Number=0, a₁::Number=1; solver_kwargs=(;), tdvp_kwargs...)
-  function linsolve_solver(
-    P::ProjMPO_MPS2,
-    t,
-    x₀;
-    current_time,
-    outputlevel,
-  )
+function linsolve(
+  A::MPO, b::MPS, x₀::MPS, a₀::Number=0, a₁::Number=1; solver_kwargs=(;), tdvp_kwargs...
+)
+  function linsolve_solver(P::ProjMPO_MPS2, t, x₀; current_time, outputlevel)
     b = dag(only(proj_mps(P)))
     x, info = KrylovKit.linsolve(P, b, x₀, a₀, a₁; solver_kwargs...)
     return x, nothing
