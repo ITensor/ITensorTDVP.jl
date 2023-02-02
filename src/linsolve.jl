@@ -10,13 +10,16 @@ system A*x = b.
 
 To adjust the balance between accuracy of solution
 and speed of the algorithm, it is recommed to first try
-adjusting the `solver_tol` keyword argument descibed below.
+adjusting the solver keyword arguments as descibed below.
 
 Keyword arguments:
-  - `ishermitian::Bool=false` - should set to true if the MPO A is Hermitian
-  - `solver_krylovdim::Int=30` - max number of Krylov vectors to build on each solver iteration
-  - `solver_maxiter::Int=100` - max number outer iterations (restarts) to do in the solver step
-  - `solver_tol::Float64=1E-14` - tolerance or error goal of the solver
+  - `nsweeps`, `cutoff`, `maxdim`, etc. (like for other MPO/MPS solvers).
+  - `solver_kwargs=(;)` - a `NamedTuple` containing keyword arguments that will get forwarded to the local solver,
+    in this case `KrylovKit.linsolve` which is a GMRES linear solver. For example:
+    ```juli
+    linsolve(A, b, x; maxdim=100, cutoff=1e-8, nsweeps=10, solver_kwargs=(; ishermitian=true, tol=1e-6, maxiter=20, krylovdim=30))
+    ```
+    See `KrylovKit.jl` documentation for more details on available keyword arguments.
 """
 function linsolve(
   A::MPO, b::MPS, x₀::MPS, a₀::Number=0, a₁::Number=1; solver_kwargs=(;), tdvp_kwargs...
