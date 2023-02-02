@@ -4,13 +4,13 @@ using Test
 using Random
 
 @testset "Linsolve" begin
-  @testset "Linsolve Basics" begin
+  @testset "Linsolve Basics" for conserve_qns in (false, true)
     cutoff = 1E-11
     maxdim = 8
     nsweeps = 2
 
     N = 8
-    s = siteinds("S=1/2", N; conserve_qns=true)
+    s = siteinds("S=1/2", N; conserve_qns)
 
     os = OpSum()
     for j in 1:(N - 1)
@@ -41,7 +41,8 @@ using Random
     b = apply(H, x_c; cutoff)
 
     x0 = randomMPS(s, state; linkdims=10)
-    x = linsolve(H, b, x0; cutoff, maxdim, nsweeps, ishermitian=true, solver_tol=1E-6)
+    solver_kwargs = (; tol=1e-6)
+    x = linsolve(H, b, x0; cutoff, maxdim, nsweeps, ishermitian=true, solver_kwargs)
 
     @show norm(x - x_c)
     @test norm(x - x_c) < 1E-3
