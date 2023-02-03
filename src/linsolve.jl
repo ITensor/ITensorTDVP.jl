@@ -22,7 +22,7 @@ Keyword arguments:
     See `KrylovKit.jl` documentation for more details on available keyword arguments.
 """
 function linsolve(
-  A::MPO, b::MPS, x₀::MPS, a₀::Number=0, a₁::Number=1; solver_kwargs=(;), tdvp_kwargs...
+  A::MPO, b::MPS, x₀::MPS, a₀::Number=false, a₁::Number=true; solver_kwargs=(;), tdvp_kwargs...
 )
   function linsolve_solver(P::ProjMPO_MPS2, t, x₀; current_time, outputlevel)
     b = dag(only(proj_mps(P)))

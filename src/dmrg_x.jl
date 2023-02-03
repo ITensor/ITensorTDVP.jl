@@ -1,5 +1,5 @@
 function dmrg_x_solver(PH, t, psi0; kwargs...)
-  H = contract(PH, ITensor(1.0))
+  H = contract(PH, ITensor(true))
   D, U = eigen(H; ishermitian=true)
   u = uniqueind(U, H)
   max_overlap, max_ind = findmax(abs, array(psi0 * U))

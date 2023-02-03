@@ -1,6 +1,6 @@
 function contractmpo_solver(; kwargs...)
   function solver(PH, t, psi; kws...)
-    v = ITensor(1.0)
+    v = ITensor(true)
     for j in (PH.lpos + 1):(PH.rpos - 1)
       v *= PH.psi0[j]
     end
