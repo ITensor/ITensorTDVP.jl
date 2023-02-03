@@ -3,8 +3,10 @@ using ITensorTDVP
 using Test
 using Random
 
-@testset "linsolve with conserve_qns=$conserve_qns and eltype=$eltype" for conserve_qns in (false, true),
+@testset "linsolve with conserve_qns=$conserve_qns and eltype=$eltype" for conserve_qns in
+                                                                           (false, true),
   eltype in (Float32, Float64, ComplexF32, ComplexF64)
+
   N = 6
   s = siteinds("S=1/2", N; conserve_qns)
 
