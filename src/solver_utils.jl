@@ -28,7 +28,7 @@ struct TimeDependentSum{S,T}
   f::Vector{S}
   H0::T
 end
-TimeDependentSum(f::Vector, H0::ProjMPOSum) = TimeDependentSum(f, ITensors.term(H0))
+TimeDependentSum(f::Vector, H0::ProjMPOSum) = TimeDependentSum(f, ITensors.terms(H0))
 Base.length(H::TimeDependentSum) = length(H.f)
 
 function Base.:*(c::Number, H::TimeDependentSum)
