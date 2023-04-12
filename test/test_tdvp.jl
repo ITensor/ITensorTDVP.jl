@@ -434,12 +434,12 @@ end
     (step_observer!)=step_obs,
   )
 
-  Sz2 = results(obs)["Sz"]
-  En2 = results(obs)["En"]
-  infos = results(obs)["info"]
+  Sz2 = filter(!isnothing, obs.Sz)
+  En2 = filter(!isnothing, obs.En)
+  infos = obs.info
 
-  Sz2_step = results(step_obs)["Sz"]
-  En2_step = results(step_obs)["En"]
+  Sz2_step = step_obs.Sz
+  En2_step = step_obs.En
 
   @test Sz1 ≈ Sz2
   @test En1 ≈ En2
