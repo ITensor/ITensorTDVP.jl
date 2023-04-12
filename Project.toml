@@ -1,7 +1,7 @@
 name = "ITensorTDVP"
 uuid = "25707e16-a4db-4a07-99d9-4d67b7af0342"
 authors = ["Matthew Fishman <mfishman@flatironinstitute.org> and contributors"]
-version = "0.2.0"
+version = "0.1.2"
 
 [deps]
 ITensors = "9136182c-28ba-11e9-034c-db9fb085ebd5"
