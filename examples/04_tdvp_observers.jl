@@ -64,11 +64,10 @@ psi_f = tdvp(
   (observer!)=obs,
 )
 
-res = results(obs)
-steps = res["steps"]
-times = res["times"]
-psis = res["psis"]
-Sz = res["Sz"]
+steps = obs.steps
+times = obs.times
+psis = obs.psis
+Sz = obs.Sz
 
 println("\nResults")
 println("=======")
