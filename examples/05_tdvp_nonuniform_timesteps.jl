@@ -29,9 +29,8 @@ psi = tdvp_nonuniform_timesteps(
   ProjMPO(H), psi0; time_steps, cutoff, outputlevel, (step_observer!)=obs
 )
 
-res = results(obs)
-times = res["times"]
-psis = res["psis"]
+times = obs.times
+psis = obs.psis
 
 println("\nResults")
 println("=======")
