@@ -414,13 +414,13 @@ end
     return info
   end
 
-  obs = Observer("Sz" => measure_sz, "En" => measure_en, "info" => identity_info)
+  obs = observer("Sz" => measure_sz, "En" => measure_en, "info" => identity_info)
 
   step_measure_sz(; psi) = expect(psi, "Sz"; sites=c)
 
   step_measure_en(; psi) = real(inner(psi', H, psi))
 
-  step_obs = Observer("Sz" => step_measure_sz, "En" => step_measure_en)
+  step_obs = observer("Sz" => step_measure_sz, "En" => step_measure_en)
 
   psi2 = MPS(s, n -> isodd(n) ? "Up" : "Dn")
   tdvp(

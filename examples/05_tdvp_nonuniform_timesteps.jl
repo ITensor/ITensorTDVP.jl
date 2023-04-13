@@ -19,7 +19,7 @@ outputlevel = 1
 nsteps = 10
 time_steps = [n ≤ 2 ? -0.2im : -0.1im for n in 1:nsteps]
 
-obs = Observer("times" => (; current_time) -> current_time, "psis" => (; psi) -> psi)
+obs = observer("times" => (; current_time) -> current_time, "psis" => (; psi) -> psi)
 
 s = siteinds("S=1/2", N; conserve_qns=true)
 H = MPO(heisenberg(N), s)

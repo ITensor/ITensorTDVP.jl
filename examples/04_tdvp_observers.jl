@@ -48,7 +48,7 @@ function return_state(; psi, bond, half_sweep)
   return nothing
 end
 
-obs = Observer(
+obs = observer(
   "steps" => step, "times" => current_time, "psis" => return_state, "Sz" => measure_sz
 )
 
