@@ -13,7 +13,7 @@ function tdvp_nonuniform_timesteps(
   reverse_step=true,
   time_start=0.0,
   order=2,
-  (step_observer!)=Observer(),
+  (step_observer!)=observer(),
   kwargs...,
 )
   nsweeps = length(time_steps)
