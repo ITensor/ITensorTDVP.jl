@@ -27,8 +27,8 @@ using Test
 
   @test ψ1 ≈ tdvp(-0.1im, H, ψ0; nsweeps=1, cutoff, nsite=1)
   @test ψ1 ≈ tdvp(H, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1)
-  #Different backend solvers, default solver_backend = "applyexp"
-  @test ψ1 ≈ tdvp(H, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1, solver_backend="exponentiate")
+  #Different backend solvers, default solver_backend = "exponentiate"
+  @test ψ1 ≈ tdvp(H, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1, solver_backend="applyexp")
 
   @test norm(ψ1) ≈ 1.0
 
@@ -41,8 +41,8 @@ using Test
   # Time evolve backwards:
   ψ2 = tdvp(H, +0.1im, ψ1; nsweeps=1, cutoff)
 
-  #Different backend solvers, default solver_backend = "applyexp"
-  @test ψ2 ≈ tdvp(H, +0.1im, ψ1; nsweeps=1, cutoff, solver_backend="exponentiate")
+  #Different backend solvers, default solver_backend = "exponentiate"
+  @test ψ2 ≈ tdvp(H, +0.1im, ψ1; nsweeps=1, cutoff, solver_backend="applyexp")
 
   @test norm(ψ2) ≈ 1.0
 
@@ -77,8 +77,8 @@ end
   @test ψ1 ≈ tdvp(-0.1im, Hs, ψ0; nsweeps=1, cutoff, nsite=1)
   @test ψ1 ≈ tdvp(Hs, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1)
 
-  #Different backend solvers, default solver_backend = "applyexp"
-  @test ψ1 ≈ tdvp(Hs, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1, solver_backend="exponentiate")
+  #Different backend solvers, default solver_backend = "exponentiate"
+  @test ψ1 ≈ tdvp(Hs, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1, solver_backend="applyexp")
 
   @test norm(ψ1) ≈ 1.0
 
@@ -91,8 +91,8 @@ end
   # Time evolve backwards:
   ψ2 = tdvp(Hs, +0.1im, ψ1; nsweeps=1, cutoff)
 
-  #Different backend solvers, default solver_backend = "applyexp"
-  @test ψ2 ≈ tdvp(Hs, +0.1im, ψ1; nsweeps=1, cutoff, solver_backend="exponentiate")
+  #Different backend solvers, default solver_backend = "exponentiate"
+  @test ψ2 ≈ tdvp(Hs, +0.1im, ψ1; nsweeps=1, cutoff, solver_backend="applyexp")
 
   @test norm(ψ2) ≈ 1.0
 
@@ -200,7 +200,6 @@ end
       solver_tol=1e-12,
       solver_maxiter=500,
       solver_krylovdim=25,
-      solver_solver_backend="exponentiate",
     )
     push!(Sz_tdvp2, real(expect(psi2, "Sz"; sites=c:c)[1]))
 
@@ -326,7 +325,7 @@ end
     psi = tdvp(
       H, -tau, psi; cutoff, nsite, reverse_step, normalize=true, exponentiate_krylovdim=15
     )
-    #Different backend solvers, default solver_backend = "applyexp"
+    #Different backend solver, default solver_backend = "exponentiate"
     psi2 = tdvp(
       H,
       -tau,
@@ -336,7 +335,7 @@ end
       reverse_step,
       normalize=true,
       exponentiate_krylovdim=15,
-      solver_backend="exponentiate",
+      solver_backend="applyexp",
     )
   end
 
