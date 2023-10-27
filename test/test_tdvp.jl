@@ -27,6 +27,8 @@ using Test
 
   @test ψ1 ≈ tdvp(-0.1im, H, ψ0; nsweeps=1, cutoff, nsite=1)
   @test ψ1 ≈ tdvp(H, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1)
+  #Different backend solvers, default solver_backend = "exponentiate"
+  @test ψ1 ≈ tdvp(H, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1, solver_backend="applyexp")
 
   @test norm(ψ1) ≈ 1.0
 
@@ -38,6 +40,9 @@ using Test
 
   # Time evolve backwards:
   ψ2 = tdvp(H, +0.1im, ψ1; nsweeps=1, cutoff)
+
+  #Different backend solvers, default solver_backend = "exponentiate"
+  @test ψ2 ≈ tdvp(H, +0.1im, ψ1; nsweeps=1, cutoff, solver_backend="applyexp")
 
   @test norm(ψ2) ≈ 1.0
 
@@ -72,6 +77,9 @@ end
   @test ψ1 ≈ tdvp(-0.1im, Hs, ψ0; nsweeps=1, cutoff, nsite=1)
   @test ψ1 ≈ tdvp(Hs, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1)
 
+  #Different backend solvers, default solver_backend = "exponentiate"
+  @test ψ1 ≈ tdvp(Hs, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1, solver_backend="applyexp")
+
   @test norm(ψ1) ≈ 1.0
 
   ## Should lose fidelity:
@@ -82,6 +90,9 @@ end
 
   # Time evolve backwards:
   ψ2 = tdvp(Hs, +0.1im, ψ1; nsweeps=1, cutoff)
+
+  #Different backend solvers, default solver_backend = "exponentiate"
+  @test ψ2 ≈ tdvp(Hs, +0.1im, ψ1; nsweeps=1, cutoff, solver_backend="applyexp")
 
   @test norm(ψ2) ≈ 1.0
 
@@ -115,9 +126,6 @@ end
   end
 
   ψ1 = tdvp(solver, H, -0.1im, ψ0; cutoff, nsite=1)
-
-  @test ψ1 ≈ tdvp(solver, -0.1im, H, ψ0; cutoff, nsite=1)
-  @test ψ1 ≈ tdvp(solver, H, ψ0, -0.1im; cutoff, nsite=1)
 
   @test norm(ψ1) ≈ 1.0
 
@@ -156,9 +164,11 @@ end
   Ut = exp(-im * tau * HM)
 
   psi = productMPS(s, n -> isodd(n) ? "Up" : "Dn")
+  psi2 = deepcopy(psi)
   psix = prod(psi)
 
   Sz_tdvp = Float64[]
+  Sz_tdvp2 = Float64[]
   Sz_exact = Float64[]
 
   c = div(N, 2)
@@ -180,11 +190,25 @@ end
       solver_krylovdim=25,
     )
     push!(Sz_tdvp, real(expect(psi, "Sz"; sites=c:c)[1]))
+
+    psi2 = tdvp(
+      H,
+      -im * tau,
+      psi2;
+      cutoff,
+      normalize=false,
+      solver_tol=1e-12,
+      solver_maxiter=500,
+      solver_krylovdim=25,
+    )
+    push!(Sz_tdvp2, real(expect(psi2, "Sz"; sites=c:c)[1]))
+
     push!(Sz_exact, real(scalar(dag(prime(psix, s[c])) * Szc * psix)))
     F = abs(scalar(dag(psix) * prod(psi)))
   end
 
   @test norm(Sz_tdvp - Sz_exact) < 1e-5
+  @test norm(Sz_tdvp2 - Sz_exact) < 1e-5
 end
 
 @testset "TEBD Comparison" begin
@@ -218,7 +242,7 @@ end
   append!(gates, reverse(gates))
 
   psi = productMPS(s, n -> isodd(n) ? "Up" : "Dn")
-  phi = copy(psi)
+  phi = deepcopy(psi)
   c = div(N, 2)
 
   #
@@ -272,18 +296,11 @@ end
     (observer!)=TDVPObserver(),
   )
 
-  #display(En1)
-  #display(En2)
-  #display(Sz1)
-  #display(Sz2)
-  #@show norm(Sz1 - Sz2)
-  #@show norm(En1 - En2)
-
   @test norm(Sz1 - Sz2) < 1e-3
   @test norm(En1 - En2) < 1e-3
 end
 
-@testset "Imaginary Time Evolution" begin
+@testset "Imaginary Time Evolution" for reverse_step in [true, false]
   N = 10
   cutoff = 1e-12
   tau = 1.0
@@ -301,15 +318,33 @@ end
   H = MPO(os, s)
 
   psi = randomMPS(s; linkdims=2)
-
+  psi2 = deepcopy(psi)
   trange = 0.0:tau:ttotal
   for (step, t) in enumerate(trange)
     nsite = (step <= 10 ? 2 : 1)
-    psi = tdvp(H, -tau, psi; cutoff, nsite, normalize=true, exponentiate_krylovdim=15)
+    psi = tdvp(
+      H, -tau, psi; cutoff, nsite, reverse_step, normalize=true, exponentiate_krylovdim=15
+    )
+    #Different backend solver, default solver_backend = "exponentiate"
+    psi2 = tdvp(
+      H,
+      -tau,
+      psi2;
+      cutoff,
+      nsite,
+      reverse_step,
+      normalize=true,
+      exponentiate_krylovdim=15,
+      solver_backend="applyexp",
+    )
   end
-  #@show maxlinkdim(psi)
 
-  @test inner(psi', H, psi) < -4.25
+  @test psi ≈ psi2 rtol = 1e-6
+
+  en1 = inner(psi', H, psi)
+  en2 = inner(psi2', H, psi2)
+  @test en1 < -4.25
+  @test en1 ≈ en2
 end
 
 @testset "Observers" begin
@@ -374,13 +409,17 @@ end
     return nothing
   end
 
-  obs = Observer("Sz" => measure_sz, "En" => measure_en)
+  function identity_info(; info)
+    return info
+  end
+
+  obs = observer("Sz" => measure_sz, "En" => measure_en, "info" => identity_info)
 
   step_measure_sz(; psi) = expect(psi, "Sz"; sites=c)
 
   step_measure_en(; psi) = real(inner(psi', H, psi))
 
-  step_obs = Observer("Sz" => step_measure_sz, "En" => step_measure_en)
+  step_obs = observer("Sz" => step_measure_sz, "En" => step_measure_en)
 
   psi2 = MPS(s, n -> isodd(n) ? "Up" : "Dn")
   tdvp(
@@ -394,16 +433,19 @@ end
     (step_observer!)=step_obs,
   )
 
-  Sz2 = results(obs)["Sz"]
-  En2 = results(obs)["En"]
+  Sz2 = filter(!isnothing, obs.Sz)
+  En2 = filter(!isnothing, obs.En)
+  infos = obs.info
 
-  Sz2_step = results(step_obs)["Sz"]
-  En2_step = results(step_obs)["En"]
+  Sz2_step = step_obs.Sz
+  En2_step = step_obs.En
 
   @test Sz1 ≈ Sz2
   @test En1 ≈ En2
   @test Sz1 ≈ Sz2_step
   @test En1 ≈ En2_step
+  @test all(x -> x.converged == 1, infos)
+  @test length(values(infos)) == 180
 end
 
 nothing

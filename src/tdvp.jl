@@ -9,7 +9,7 @@ function exponentiate_solver(; kwargs...)
       verbosity=get(kwargs, :solver_outputlevel, 0),
       eager=true,
     )
-    psi, info = exponentiate(H, t, psi0; solver_kwargs..., kws...)
+    psi, info = exponentiate(H, t, psi0; solver_kwargs...)
     return psi, info
   end
   return solver
@@ -31,7 +31,7 @@ function applyexp_solver(; kwargs...)
 end
 
 function tdvp_solver(; kwargs...)
-  solver_backend = get(kwargs, :solver_backend, "applyexp")
+  solver_backend = get(kwargs, :solver_backend, "exponentiate")
   if solver_backend == "applyexp"
     return applyexp_solver(; kwargs...)
   elseif solver_backend == "exponentiate"

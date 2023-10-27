@@ -48,7 +48,7 @@ function return_state(; psi, bond, half_sweep)
   return nothing
 end
 
-obs = Observer(
+obs = observer(
   "steps" => step, "times" => current_time, "psis" => return_state, "Sz" => measure_sz
 )
 
@@ -64,11 +64,10 @@ psi_f = tdvp(
   (observer!)=obs,
 )
 
-res = results(obs)
-steps = res["steps"]
-times = res["times"]
-psis = res["psis"]
-Sz = res["Sz"]
+steps = obs.steps
+times = obs.times
+psis = obs.psis
+Sz = obs.Sz
 
 println("\nResults")
 println("=======")

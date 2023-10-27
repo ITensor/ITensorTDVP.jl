@@ -18,6 +18,7 @@ end
 
 struct ApplyExpInfo
   numops::Int
+  converged::Int
 end
 
 function applyexp(H, tau::Number, x0; kwargs...)
@@ -34,7 +35,7 @@ function applyexp(H, tau::Number, x0; kwargs...)
 
   ElT = promote_type(typeof(tau), eltype(x0))
 
-  bigTmat = zeros(ElT, maxiter + 2, maxiter + 2)
+  bigTmat = zeros(ElT, maxiter + 3, maxiter + 3)
 
   nmatvec = 0
 
@@ -67,7 +68,7 @@ function applyexp(H, tau::Number, x0; kwargs...)
       tmat_exp = exp(tau * tmat)
       linear_comb = tmat_exp[:, 1]
       xt = assemble_lanczos_vecs(lanczos_vectors, linear_comb, nrm)
-      return xt, ApplyExpInfo(nmatvec)
+      return xt, ApplyExpInfo(nmatvec, 1)
     end
 
     # update next lanczos vector
@@ -105,8 +106,10 @@ function applyexp(H, tau::Number, x0; kwargs...)
       end
 
       if ((error < tol) || (iter == maxiter))
+        converged = 1
         if (iter == maxiter)
           println("warning: applyexp not converged in $maxiter steps")
+          converged = 0
         end
 
         # Assemble the time evolved state
@@ -117,7 +120,7 @@ function applyexp(H, tau::Number, x0; kwargs...)
           println("  Number of iterations: $iter")
         end
 
-        return xt, ApplyExpInfo(nmatvec)
+        return xt, ApplyExpInfo(nmatvec, converged)
       end
     end  # end convergence test
   end # iter
