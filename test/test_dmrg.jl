@@ -29,7 +29,7 @@ using Test
     H, psi; nsweeps, maxdim, cutoff, nsite, solver_krylovdim=3, solver_maxiter=1
   )
 
-  e2, psi2 = dmrg(H, psi, sweeps; normalize=false, outputlevel=0)
+  e2, psi2 = dmrg(H, psi, sweeps; outputlevel=0)
 
   @test inner(psi', H, psi) ≈ inner(psi2', H, psi2)
 end
