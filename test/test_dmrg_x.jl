@@ -3,7 +3,7 @@ using ITensorTDVP
 using Random
 using Test
 
-@testset "DMRG-X" begin
+@testset "DMRG-X (conserve_qns=$conserve_qns)" for conserve_qns in [false, true]
   function heisenberg(n; h=zeros(n))
     os = OpSum()
     for j in 1:(n - 1)
@@ -20,7 +20,7 @@ using Test
   end
 
   n = 10
-  s = siteinds("S=1/2", n)
+  s = siteinds("S=1/2", n; conserve_qns)
 
   Random.seed!(12)
 
