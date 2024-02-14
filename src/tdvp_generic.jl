@@ -1,4 +1,4 @@
-function _tdvp_compute_nsweeps(t; time_step=t, nsweeps=nothing)
+function _tdvp_compute_nsweeps(t; time_step=default_time_step(t), nsweeps=default_nsweeps())
   if isinf(t) && isnothing(nsweeps)
     nsweeps = 1
   elseif !isnothing(nsweeps) && time_step != t
@@ -9,7 +9,6 @@ function _tdvp_compute_nsweeps(t; time_step=t, nsweeps=nothing)
       error("Time step $time_step not commensurate with total time t=$t")
     end
   end
-
   return nsweeps
 end
 
@@ -25,13 +24,7 @@ function _extend_sweeps_param(param, nsweeps)
   return eparam
 end
 
-function process_sweeps(;
-  nsweeps=1,
-  maxdim=fill(typemax(Int), nsweeps),
-  mindim=fill(1, nsweeps),
-  cutoff=fill(1E-16, nsweeps),
-  noise=fill(0, nsweeps),
-)
+function process_sweeps(; nsweeps, maxdim, mindim, cutoff, noise)
   maxdim = _extend_sweeps_param(maxdim, nsweeps)
   mindim = _extend_sweeps_param(mindim, nsweeps)
   cutoff = _extend_sweeps_param(cutoff, nsweeps)
@@ -39,23 +32,30 @@ function process_sweeps(;
   return (; maxdim, mindim, cutoff, noise)
 end
 
-function tdvp(solver,
+function tdvp(
+  solver,
   PH,
   t::Number,
   psi0::MPS;
-  reverse_step=true,
-  time_start=0,
-  time_step=t,
-  order=2,
-  checkdone=nothing,
-  write_when_maxdim_exceeds=nothing,
-  (observer!)=NoObserver(),
-  (step_observer!)=NoObserver(),
-  outputlevel=0,
-  kwargs...
+  nsweeps=default_nsweeps(),
+  checkdone=default_checkdone(),
+  write_when_maxdim_exceeds=default_write_when_maxdim_exceeds(),
+  nsite=default_nsite(),
+  reverse_step=default_reverse_step(),
+  time_start=default_time_start(),
+  time_step=default_time_step(t),
+  order=default_order(),
+  (observer!)=default_observer!(),
+  (step_observer!)=default_step_observer!(),
+  outputlevel=default_outputlevel(),
+  normalize=default_normalize(),
+  maxdim=default_maxdim(),
+  mindim=default_mindim(),
+  cutoff=default_cutoff(Float64),
+  noise=default_noise(),
 )
-  nsweeps = _tdvp_compute_nsweeps(t; kwargs...)
-  maxdim, mindim, cutoff, noise = process_sweeps(; nsweeps, kwargs...)
+  nsweeps = _tdvp_compute_nsweeps(t; time_step, nsweeps)
+  maxdim, mindim, cutoff, noise = process_sweeps(; nsweeps, maxdim, mindim, cutoff, noise)
   tdvp_order = TDVPOrder(order, Base.Forward)
   psi = copy(psi0)
 
@@ -83,7 +83,8 @@ function tdvp(solver,
         PH,
         time_step,
         psi;
-        kwargs...,
+        ## kwargs...,
+        nsite,
         current_time,
         reverse_step,
         sweep,
@@ -110,7 +111,7 @@ function tdvp(solver,
 
     isdone = false
     if !isnothing(checkdone)
-      isdone = checkdone(; psi, sweep, outputlevel, kwargs...)
+      isdone = checkdone(; psi, sweep, outputlevel) #, kwargs...)
     elseif observer! isa ITensors.AbstractObserver
       isdone = checkdone!(observer!; psi, sweep, outputlevel)
     end

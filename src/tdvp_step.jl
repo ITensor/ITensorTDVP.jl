@@ -41,19 +41,19 @@ function tdvp_sweep(
   PH,
   time_step::Number,
   psi::MPS;
-  nsite=2,
-  reverse_step=true,
-  normalize=false,
   which_decomp=nothing,
   svd_alg=nothing,
-  observer=NoObserver(),
-  outputlevel=0,
-  sweep=1,
-  current_time=0,
-  maxdim=typemax(Int),
-  mindim=1,
-  cutoff=eps(real(typeof(time_step))),
-  noise=0,
+  sweep=default_sweep(),
+  current_time=default_current_time(),
+  nsite=default_nsite(),
+  reverse_step=default_reverse_step(),
+  normalize=default_normalize(),
+  (observer!)=default_observer!(),
+  outputlevel=default_outputlevel(),
+  maxdim=default_maxdim(),
+  mindim=default_mindim(),
+  cutoff=default_cutoff(time_step),
+  noise=default_noise(),
 )
   PH = copy(PH)
   psi = copy(psi)
@@ -120,7 +120,7 @@ function tdvp_sweep(
       flush(stdout)
     end
     update!(
-      observer;
+      observer!;
       psi,
       bond=b,
       sweep,
