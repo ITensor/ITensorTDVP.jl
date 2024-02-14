@@ -25,7 +25,7 @@ function applyexp(
   H,
   tau::Number,
   x0;
-  maxiter=default_solver_maxiter(applyexp),
+  maxiter=default_solver_krylovdim(applyexp),
   tol=default_solver_tol(applyexp),
   outputlevel=default_solver_outputlevel(applyexp),
   normcutoff=1e-7,
