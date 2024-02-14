@@ -1,11 +1,9 @@
-function _tdvp_compute_nsweeps(t; kwargs...)
-  time_step::Number = get(kwargs, :time_step, t)
-  nsweeps::Union{Int,Nothing} = get(kwargs, :nsweeps, nothing)
+function _tdvp_compute_nsweeps(t; time_step=t, nsweeps=nothing)
   if isinf(t) && isnothing(nsweeps)
     nsweeps = 1
   elseif !isnothing(nsweeps) && time_step != t
     error("Cannot specify both time_step and nsweeps in tdvp")
-  elseif isfinite(time_step) && abs(time_step) > 0.0 && isnothing(nsweeps)
+  elseif isfinite(time_step) && abs(time_step) > 0 && isnothing(nsweeps)
     nsweeps = convert(Int, ceil(abs(t / time_step)))
     if !(nsweeps * time_step ≈ t)
       error("Time step $time_step not commensurate with total time t=$t")
@@ -27,40 +25,38 @@ function _extend_sweeps_param(param, nsweeps)
   return eparam
 end
 
-function process_sweeps(; kwargs...)
-  nsweeps = get(kwargs, :nsweeps, 1)
-  maxdim = get(kwargs, :maxdim, fill(typemax(Int), nsweeps))
-  mindim = get(kwargs, :mindim, fill(1, nsweeps))
-  cutoff = get(kwargs, :cutoff, fill(1E-16, nsweeps))
-  noise = get(kwargs, :noise, fill(0.0, nsweeps))
-
+function process_sweeps(;
+  nsweeps=1,
+  maxdim=fill(typemax(Int), nsweeps),
+  mindim=fill(1, nsweeps),
+  cutoff=fill(1E-16, nsweeps),
+  noise=fill(0, nsweeps),
+)
   maxdim = _extend_sweeps_param(maxdim, nsweeps)
   mindim = _extend_sweeps_param(mindim, nsweeps)
   cutoff = _extend_sweeps_param(cutoff, nsweeps)
   noise = _extend_sweeps_param(noise, nsweeps)
-
   return (; maxdim, mindim, cutoff, noise)
 end
 
-function tdvp(solver, PH, t::Number, psi0::MPS; kwargs...)
-  reverse_step = get(kwargs, :reverse_step, true)
-
+function tdvp(solver,
+  PH,
+  t::Number,
+  psi0::MPS;
+  reverse_step=true,
+  time_start=0,
+  time_step=t,
+  order=2,
+  checkdone=nothing,
+  write_when_maxdim_exceeds=nothing,
+  (observer!)=NoObserver(),
+  (step_observer!)=NoObserver(),
+  outputlevel=0,
+  kwargs...
+)
   nsweeps = _tdvp_compute_nsweeps(t; kwargs...)
   maxdim, mindim, cutoff, noise = process_sweeps(; nsweeps, kwargs...)
-
-  time_start::Number = get(kwargs, :time_start, 0.0)
-  time_step::Number = get(kwargs, :time_step, t)
-  order = get(kwargs, :order, 2)
   tdvp_order = TDVPOrder(order, Base.Forward)
-
-  checkdone = get(kwargs, :checkdone, nothing)
-  write_when_maxdim_exceeds::Union{Int,Nothing} = get(
-    kwargs, :write_when_maxdim_exceeds, nothing
-  )
-  observer = get(kwargs, :observer!, NoObserver())
-  step_observer = get(kwargs, :step_observer!, NoObserver())
-  outputlevel::Int = get(kwargs, :outputlevel, 0)
-
   psi = copy(psi0)
 
   # Keep track of the start of the current time step.
@@ -70,17 +66,17 @@ function tdvp(solver, PH, t::Number, psi0::MPS; kwargs...)
   # `solver`.
   current_time = time_start
   info = nothing
-  for sw in 1:nsweeps
-    if !isnothing(write_when_maxdim_exceeds) && maxdim[sw] > write_when_maxdim_exceeds
+  for sweep in 1:nsweeps
+    if !isnothing(write_when_maxdim_exceeds) && maxdim[sweep] > write_when_maxdim_exceeds
       if outputlevel >= 2
         println(
-          "write_when_maxdim_exceeds = $write_when_maxdim_exceeds and maxdim(sweeps, sw) = $(maxdim(sweeps, sw)), writing environment tensors to disk",
+          "write_when_maxdim_exceeds = $write_when_maxdim_exceeds and maxdim(sweeps, sw) = $(maxdim(sweeps, sweep)), writing environment tensors to disk",
         )
       end
       PH = disk(PH)
     end
 
-    sw_time = @elapsed begin
+    sweep_time = @elapsed begin
       psi, PH, info = tdvp_step(
         tdvp_order,
         solver,
@@ -90,33 +86,33 @@ function tdvp(solver, PH, t::Number, psi0::MPS; kwargs...)
         kwargs...,
         current_time,
         reverse_step,
-        sweep=sw,
-        maxdim=maxdim[sw],
-        mindim=mindim[sw],
-        cutoff=cutoff[sw],
-        noise=noise[sw],
+        sweep,
+        maxdim=maxdim[sweep],
+        mindim=mindim[sweep],
+        cutoff=cutoff[sweep],
+        noise=noise[sweep],
       )
     end
 
     current_time += time_step
 
-    update!(step_observer; psi, sweep=sw, outputlevel, current_time)
+    update!(step_observer!; psi, sweep, outputlevel, current_time)
 
     if outputlevel >= 1
-      print("After sweep ", sw, ":")
+      print("After sweep ", sweep, ":")
       print(" maxlinkdim=", maxlinkdim(psi))
       @printf(" maxerr=%.2E", info.maxtruncerr)
       print(" current_time=", round(current_time; digits=3))
-      print(" time=", round(sw_time; digits=3))
+      print(" time=", round(sweep_time; digits=3))
       println()
       flush(stdout)
     end
 
     isdone = false
     if !isnothing(checkdone)
-      isdone = checkdone(; psi, sweep=sw, outputlevel, kwargs...)
-    elseif observer isa ITensors.AbstractObserver
-      isdone = checkdone!(observer; psi, sweep=sw, outputlevel)
+      isdone = checkdone(; psi, sweep, outputlevel, kwargs...)
+    elseif observer! isa ITensors.AbstractObserver
+      isdone = checkdone!(observer!; psi, sweep, outputlevel)
     end
     isdone && break
   end

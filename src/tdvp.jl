@@ -1,37 +1,55 @@
-function exponentiate_solver(; kwargs...)
-  function solver(H, t, psi0; kws...)
-    solver_kwargs = (;
-      ishermitian=get(kwargs, :ishermitian, true),
-      issymmetric=get(kwargs, :issymmetric, true),
-      tol=get(kwargs, :solver_tol, 1E-12),
-      krylovdim=get(kwargs, :solver_krylovdim, 30),
-      maxiter=get(kwargs, :solver_maxiter, 100),
-      verbosity=get(kwargs, :solver_outputlevel, 0),
+function exponentiate_solver(;
+  ishermitian=true,
+  issymmetric=true,
+  solver_tol=1e-12,
+  solver_krylovdim=30,
+  solver_maxiter=100,
+  solver_outputlevel=0,
+  kwargs...,
+)
+  function solver(H, t, psi0)
+    psi, info = exponentiate(
+      H,
+      t,
+      psi0;
+      ishermitian,
+      issymmetric,
+      tol=solver_tol,
+      krylovdim=solver_krylovdim,
+      maxiter=solver_maxiter,
+      verbosity=solver_outputlevel,
       eager=true,
     )
-    psi, info = exponentiate(H, t, psi0; solver_kwargs...)
     return psi, info
   end
   return solver
 end
 
-function applyexp_solver(; kwargs...)
-  function solver(H, t, psi0; kws...)
-    tol_per_unit_time = get(kwargs, :solver_tol, 1E-8)
-    solver_kwargs = (;
-      maxiter=get(kwargs, :solver_krylovdim, 30),
-      outputlevel=get(kwargs, :solver_outputlevel, 0),
+function applyexp_solver(;
+  solver_tol=1e-8,
+  solver_krylovdim=30,
+  solver_outputlevel=0,
+)
+  function solver(H, t, psi0)
+    # applyexp tol is absolute, compute from solver_tol:
+    tol = abs(t) * solver_tol
+    psi, info = applyexp(
+      H,
+      t,
+      psi0;
+      tol,
+      maxiter=solver_krylovdim,
+      outputlevel=solver_outputlevel,
     )
-    #applyexp tol is absolute, compute from tol_per_unit_time:
-    tol = abs(t) * tol_per_unit_time
-    psi, info = applyexp(H, t, psi0; tol, solver_kwargs..., kws...)
     return psi, info
   end
   return solver
 end
 
-function tdvp_solver(; kwargs...)
-  solver_backend = get(kwargs, :solver_backend, "exponentiate")
+function tdvp_solver(;
+  solver_backend="exponentiate",
+  kwargs...,
+)
   if solver_backend == "applyexp"
     return applyexp_solver(; kwargs...)
   elseif solver_backend == "exponentiate"

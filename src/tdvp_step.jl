@@ -1,8 +1,8 @@
 function tdvp_step(
-  order::TDVPOrder, solver, PH, time_step::Number, psi::MPS; current_time=0.0, kwargs...
+  order::TDVPOrder, solver, PH, time_step::Number, psi::MPS; current_time=0, kwargs...
 )
   orderings = ITensorTDVP.orderings(order)
-  sub_time_steps = ITensorTDVP.sub_time_steps(order)
+  sub_time_steps = eltype(time_step).(ITensorTDVP.sub_time_steps(order))
   sub_time_steps *= time_step
   info = nothing
   for substep in 1:length(sub_time_steps)
@@ -36,7 +36,24 @@ function is_half_sweep_done(direction, b, n; ncenter)
 end
 
 function tdvp_sweep(
-  direction::Base.Ordering, solver, PH, time_step::Number, psi::MPS; kwargs...
+  direction::Base.Ordering,
+  solver,
+  PH,
+  time_step::Number,
+  psi::MPS;
+  nsite=2,
+  reverse_step=true,
+  normalize=false,
+  which_decomp=nothing,
+  svd_alg=nothing,
+  observer=NoObserver(),
+  outputlevel=0,
+  sweep=1,
+  current_time=0,
+  maxdim=typemax(Int),
+  mindim=1,
+  cutoff=eps(real(typeof(time_step))),
+  noise=0,
 )
   PH = copy(PH)
   psi = copy(psi)
@@ -45,20 +62,6 @@ function tdvp_sweep(
       "`tdvp` currently does not support system sizes of 1. You can diagonalize the MPO tensor directly with tools like `LinearAlgebra.eigen`, `KrylovKit.exponentiate`, etc.",
     )
   end
-  nsite::Int = get(kwargs, :nsite, 2)
-  reverse_step::Bool = get(kwargs, :reverse_step, true)
-  normalize::Bool = get(kwargs, :normalize, false)
-  which_decomp::Union{String,Nothing} = get(kwargs, :which_decomp, nothing)
-  svd_alg::String = get(kwargs, :svd_alg, "divide_and_conquer")
-  observer = get(kwargs, :observer!, NoObserver())
-  outputlevel = get(kwargs, :outputlevel, 0)
-  sw = get(kwargs, :sweep, 1)
-  current_time = get(kwargs, :current_time, 0.0)
-  maxdim::Integer = get(kwargs, :maxdim, typemax(Int))
-  mindim::Integer = get(kwargs, :mindim, 1)
-  cutoff::Real = get(kwargs, :cutoff, 1E-16)
-  noise::Real = get(kwargs, :noise, 0.0)
-
   N = length(psi)
   set_nsite!(PH, nsite)
   if isforward(direction)
@@ -99,9 +102,9 @@ function tdvp_sweep(
     )
     if outputlevel >= 2
       if nsite == 1
-        @printf("Sweep %d, direction %s, bond (%d,) \n", sw, direction, b)
+        @printf("Sweep %d, direction %s, bond (%d,) \n", sweep, direction, b)
       elseif nsite == 2
-        @printf("Sweep %d, direction %s, bond (%d,%d) \n", sw, direction, b, b + 1)
+        @printf("Sweep %d, direction %s, bond (%d,%d) \n", sweep, direction, b, b + 1)
       end
       print("  Truncated using")
       @printf(" cutoff=%.1E", cutoff)
@@ -120,7 +123,7 @@ function tdvp_sweep(
       observer;
       psi,
       bond=b,
-      sweep=sw,
+      sweep,
       half_sweep=isforward(direction) ? 1 : 2,
       spec,
       outputlevel,

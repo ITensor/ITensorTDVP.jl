@@ -1,15 +1,25 @@
-function eigsolve_solver(; kwargs...)
-  function solver(H, t, psi0; kws...)
+function eigsolve_solver(;
+  solver_which_eigenvalue=:SR
+  ishermitian=true,
+  solver_tol=1e-14,
+  solver_krylovdim=3,
+  solver_maxiter=1,
+  solver_verbosity=0,
+)
+  function solver(H, t, psi0)
     howmany = 1
-    which = get(kwargs, :solver_which_eigenvalue, :SR)
-    solver_kwargs = (;
-      ishermitian=get(kwargs, :ishermitian, true),
-      tol=get(kwargs, :solver_tol, 1E-14),
-      krylovdim=get(kwargs, :solver_krylovdim, 3),
-      maxiter=get(kwargs, :solver_maxiter, 1),
-      verbosity=get(kwargs, :solver_verbosity, 0),
+    which = solver_which_eigenvalue
+    vals, vecs, info = eigsolve(
+      H,
+      psi0,
+      howmany,
+      which;
+      ishermitian=true,
+      tol=solver_tol,
+      krylovdim=solver_krylovdim,
+      maxiter=solver_maxiter,
+      verbosity=solver_verbosity,
     )
-    vals, vecs, info = eigsolve(H, psi0, howmany, which; solver_kwargs...)
     psi = vecs[1]
     return psi, info
   end

@@ -1,4 +1,3 @@
-
 """
 Compute a solution x to the linear system:
 
