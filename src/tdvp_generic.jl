@@ -86,6 +86,7 @@ function tdvp(
         reverse_step,
         sweep,
         observer!,
+        normalize,
         maxdim=maxdim[sweep],
         mindim=mindim[sweep],
         cutoff=cutoff[sweep],
