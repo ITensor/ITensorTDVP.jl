@@ -21,7 +21,15 @@ struct ApplyExpInfo
   converged::Int
 end
 
-function applyexp(H, tau::Number, x0; maxiter=30, tol=1e-12, outputlevel=0, normcutoff=1e-7)
+function applyexp(
+  H,
+  tau::Number,
+  x0;
+  maxiter=default_solver_maxiter(applyexp),
+  tol=default_solver_tol(applyexp),
+  outputlevel=default_solver_outputlevel(applyexp),
+  normcutoff=1e-7,
+)
   # Initialize Lanczos vectors
   v1 = copy(x0)
   nrm = norm(v1)
@@ -57,7 +65,7 @@ function applyexp(H, tau::Number, x0; maxiter=30, tol=1e-12, outputlevel=0, norm
     beta = norm(w)
 
     # check for Lanczos sequence exhaustion
-    if abs(beta) < beta_tol
+    if abs(beta) < normcutoff
       # Assemble the time evolved state
       tmat = bigTmat[1:tmat_size, 1:tmat_size]
       tmat_exp = exp(tau * tmat)

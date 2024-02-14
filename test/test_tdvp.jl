@@ -163,7 +163,7 @@ end
 
   Ut = exp(-im * tau * HM)
 
-  psi = productMPS(s, n -> isodd(n) ? "Up" : "Dn")
+  psi = MPS(s, n -> isodd(n) ? "Up" : "Dn")
   psi2 = deepcopy(psi)
   psix = prod(psi)
 
@@ -241,7 +241,7 @@ end
   end
   append!(gates, reverse(gates))
 
-  psi = productMPS(s, n -> isodd(n) ? "Up" : "Dn")
+  psi = MPS(s, n -> isodd(n) ? "Up" : "Dn")
   phi = deepcopy(psi)
   c = div(N, 2)
 
@@ -261,7 +261,7 @@ end
 
     nsite = (step <= 3 ? 2 : 1)
     phi = tdvp(
-      H, -tau * im, phi; nsweeps=1, cutoff, nsite, normalize=true, exponentiate_krylovdim=15
+      H, -tau * im, phi; nsweeps=1, cutoff, nsite, normalize=true, solver_krylovdim=15
     )
 
     Sz1[step] = expect(psi, "Sz"; sites=c:c)[1]
@@ -284,7 +284,7 @@ end
     end
   end
 
-  phi = productMPS(s, n -> isodd(n) ? "Up" : "Dn")
+  phi = MPS(s, n -> isodd(n) ? "Up" : "Dn")
 
   phi = tdvp(
     H,
@@ -323,7 +323,7 @@ end
   for (step, t) in enumerate(trange)
     nsite = (step <= 10 ? 2 : 1)
     psi = tdvp(
-      H, -tau, psi; cutoff, nsite, reverse_step, normalize=true, exponentiate_krylovdim=15
+      H, -tau, psi; cutoff, nsite, reverse_step, normalize=true, solver_krylovdim=15
     )
     #Different backend solver, default solver_backend = "exponentiate"
     psi2 = tdvp(
@@ -334,7 +334,7 @@ end
       nsite,
       reverse_step,
       normalize=true,
-      exponentiate_krylovdim=15,
+      solver_krylovdim=15,
       solver_backend="applyexp",
     )
   end
@@ -380,7 +380,7 @@ end
     end
   end
 
-  psi1 = productMPS(s, n -> isodd(n) ? "Up" : "Dn")
+  psi1 = MPS(s, n -> isodd(n) ? "Up" : "Dn")
   tdvp(
     H,
     -im * ttotal,
