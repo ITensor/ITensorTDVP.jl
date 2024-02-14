@@ -216,18 +216,14 @@ end
   cutoff = 1e-12
   tau = 0.1
   ttotal = 1.0
-
   s = siteinds("S=1/2", N; conserve_qns=true)
-
   os = OpSum()
   for j in 1:(N - 1)
     os += 0.5, "S+", j, "S-", j + 1
     os += 0.5, "S-", j, "S+", j + 1
     os += "Sz", j, "Sz", j + 1
   end
-
   H = MPO(os, s)
-
   gates = ITensor[]
   for j in 1:(N - 1)
     s1 = s[j]
@@ -240,7 +236,6 @@ end
     push!(gates, Gj)
   end
   append!(gates, reverse(gates))
-
   psi = MPS(s, n -> isodd(n) ? "Up" : "Dn")
   phi = deepcopy(psi)
   c = div(N, 2)
@@ -257,13 +252,10 @@ end
 
   for step in 1:Nsteps
     psi = apply(gates, psi; cutoff)
-    #normalize!(psi)
-
     nsite = (step <= 3 ? 2 : 1)
     phi = tdvp(
       H, -tau * im, phi; nsweeps=1, cutoff, nsite, normalize=true, solver_krylovdim=15
     )
-
     Sz1[step] = expect(psi, "Sz"; sites=c:c)[1]
     Sz2[step] = expect(phi, "Sz"; sites=c:c)[1]
     En1[step] = real(inner(psi', H, psi))
@@ -274,7 +266,6 @@ end
   # Evolve using TDVP
   # 
   struct TDVPObserver <: AbstractObserver end
-
   Sz2 = zeros(Nsteps)
   En2 = zeros(Nsteps)
   function ITensors.measure!(obs::TDVPObserver; sweep, bond, half_sweep, psi, kwargs...)
@@ -283,9 +274,7 @@ end
       En2[sweep] = real(inner(psi', H, psi))
     end
   end
-
   phi = MPS(s, n -> isodd(n) ? "Up" : "Dn")
-
   phi = tdvp(
     H,
     -im * ttotal,
@@ -295,7 +284,6 @@ end
     normalize=false,
     (observer!)=TDVPObserver(),
   )
-
   @test norm(Sz1 - Sz2) < 1e-3
   @test norm(En1 - En2) < 1e-3
 end

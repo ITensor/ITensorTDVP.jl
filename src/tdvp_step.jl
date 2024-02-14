@@ -1,15 +1,16 @@
 function tdvp_step(
   order::TDVPOrder, solver, PH, time_step::Number, psi::MPS; current_time=0, kwargs...
 )
-  orderings = ITensorTDVP.orderings(order)
-  sub_time_steps = eltype(time_step).(ITensorTDVP.sub_time_steps(order))
-  sub_time_steps *= time_step
+  order_orderings = orderings(order)
+  # order_sub_time_steps = eltype(time_step).(sub_time_steps(order))
+  order_sub_time_steps = sub_time_steps(order)
+  order_sub_time_steps *= time_step
   info = nothing
-  for substep in 1:length(sub_time_steps)
+  for substep in 1:length(order_sub_time_steps)
     psi, PH, info = tdvp_sweep(
-      orderings[substep], solver, PH, sub_time_steps[substep], psi; current_time, kwargs...
+      order_orderings[substep], solver, PH, order_sub_time_steps[substep], psi; current_time, kwargs...
     )
-    current_time += sub_time_steps[substep]
+    current_time += order_sub_time_steps[substep]
   end
   return psi, PH, info
 end
