@@ -5,10 +5,6 @@
 #
 
 function assemble_lanczos_vecs(lanczos_vectors, linear_comb, norm)
-  #if length(lanczos_vectors) != length(linear_comb)
-  #  @show length(lanczos_vectors)
-  #  @show length(linear_comb)
-  #end
   xt = norm * linear_comb[1] * lanczos_vectors[1]
   for i in 2:length(lanczos_vectors)
     xt += norm * linear_comb[i] * lanczos_vectors[i]

@@ -27,7 +27,6 @@ default_solver_verbosity() = 0
 
 # Customizable based on solver function
 default_solver_outputlevel(::Function) = 0
-default_solver_maxiter(::Function) = 1
 
 default_solver_tol(::Function) = error("Not implemented")
 default_solver_which_eigenvalue(::Function) = error("Not implemented")
@@ -38,8 +37,9 @@ default_solver_verbosity(::Function) = error("Not implemented")
 
 # dmrg/eigsolve
 default_solver_tol(::typeof(eigsolve)) = 1e-14
-default_solver_which_eigenvalue(::typeof(eigsolve)) = :SR
 default_solver_krylovdim(::typeof(eigsolve)) = 3
+default_solver_maxiter(::typeof(eigsolve)) = 1
+default_solver_which_eigenvalue(::typeof(eigsolve)) = :SR
 
 # tdvp/exponentiate
 default_solver_tol(::typeof(exponentiate)) = 1e-12

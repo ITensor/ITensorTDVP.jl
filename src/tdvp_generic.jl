@@ -58,7 +58,6 @@ function tdvp(
   maxdim, mindim, cutoff, noise = process_sweeps(; nsweeps, maxdim, mindim, cutoff, noise)
   tdvp_order = TDVPOrder(order, Base.Forward)
   psi = copy(psi0)
-
   # Keep track of the start of the current time step.
   # Helpful for tracking the total time, for example
   # when using time-dependent solvers.
@@ -75,7 +74,6 @@ function tdvp(
       end
       PH = disk(PH)
     end
-
     sweep_time = @elapsed begin
       psi, PH, info = tdvp_step(
         tdvp_order,
@@ -83,7 +81,6 @@ function tdvp(
         PH,
         time_step,
         psi;
-        ## kwargs...,
         nsite,
         current_time,
         reverse_step,
@@ -94,11 +91,8 @@ function tdvp(
         noise=noise[sweep],
       )
     end
-
     current_time += time_step
-
     update!(step_observer!; psi, sweep, outputlevel, current_time)
-
     if outputlevel >= 1
       print("After sweep ", sweep, ":")
       print(" maxlinkdim=", maxlinkdim(psi))
@@ -108,7 +102,6 @@ function tdvp(
       println()
       flush(stdout)
     end
-
     isdone = false
     if !isnothing(checkdone)
       isdone = checkdone(; psi, sweep, outputlevel) #, kwargs...)
