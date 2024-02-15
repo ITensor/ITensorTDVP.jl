@@ -27,6 +27,7 @@ using Test
 
   @test ψ1 ≈ tdvp(-0.1im, H, ψ0; nsweeps=1, cutoff, nsite=1)
   @test ψ1 ≈ tdvp(H, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1)
+
   #Different backend solvers, default solver_backend = "exponentiate"
   @test ψ1 ≈ tdvp(H, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1, solver_backend="applyexp")
 
@@ -40,9 +41,6 @@ using Test
 
   # Time evolve backwards:
   ψ2 = tdvp(H, +0.1im, ψ1; nsweeps=1, cutoff)
-
-  #Different backend solvers, default solver_backend = "exponentiate"
-  @test ψ2 ≈ tdvp(H, +0.1im, ψ1; nsweeps=1, cutoff, solver_backend="applyexp")
 
   @test norm(ψ2) ≈ 1.0
 
@@ -77,9 +75,6 @@ end
   @test ψ1 ≈ tdvp(-0.1im, Hs, ψ0; nsweeps=1, cutoff, nsite=1)
   @test ψ1 ≈ tdvp(Hs, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1)
 
-  #Different backend solvers, default solver_backend = "exponentiate"
-  @test ψ1 ≈ tdvp(Hs, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1, solver_backend="applyexp")
-
   @test norm(ψ1) ≈ 1.0
 
   ## Should lose fidelity:
@@ -90,9 +85,6 @@ end
 
   # Time evolve backwards:
   ψ2 = tdvp(Hs, +0.1im, ψ1; nsweeps=1, cutoff)
-
-  #Different backend solvers, default solver_backend = "exponentiate"
-  @test ψ2 ≈ tdvp(Hs, +0.1im, ψ1; nsweeps=1, cutoff, solver_backend="applyexp")
 
   @test norm(ψ2) ≈ 1.0
 
@@ -163,7 +155,7 @@ end
 
   Ut = exp(-im * tau * HM)
 
-  psi = productMPS(s, n -> isodd(n) ? "Up" : "Dn")
+  psi = MPS(s, n -> isodd(n) ? "Up" : "Dn")
   psi2 = deepcopy(psi)
   psix = prod(psi)
 
@@ -216,18 +208,14 @@ end
   cutoff = 1e-12
   tau = 0.1
   ttotal = 1.0
-
   s = siteinds("S=1/2", N; conserve_qns=true)
-
   os = OpSum()
   for j in 1:(N - 1)
     os += 0.5, "S+", j, "S-", j + 1
     os += 0.5, "S-", j, "S+", j + 1
     os += "Sz", j, "Sz", j + 1
   end
-
   H = MPO(os, s)
-
   gates = ITensor[]
   for j in 1:(N - 1)
     s1 = s[j]
@@ -240,8 +228,7 @@ end
     push!(gates, Gj)
   end
   append!(gates, reverse(gates))
-
-  psi = productMPS(s, n -> isodd(n) ? "Up" : "Dn")
+  psi = MPS(s, n -> isodd(n) ? "Up" : "Dn")
   phi = deepcopy(psi)
   c = div(N, 2)
 
@@ -257,13 +244,10 @@ end
 
   for step in 1:Nsteps
     psi = apply(gates, psi; cutoff)
-    #normalize!(psi)
-
     nsite = (step <= 3 ? 2 : 1)
     phi = tdvp(
-      H, -tau * im, phi; nsweeps=1, cutoff, nsite, normalize=true, exponentiate_krylovdim=15
+      H, -tau * im, phi; nsweeps=1, cutoff, nsite, normalize=true, solver_krylovdim=15
     )
-
     Sz1[step] = expect(psi, "Sz"; sites=c:c)[1]
     Sz2[step] = expect(phi, "Sz"; sites=c:c)[1]
     En1[step] = real(inner(psi', H, psi))
@@ -274,7 +258,6 @@ end
   # Evolve using TDVP
   # 
   struct TDVPObserver <: AbstractObserver end
-
   Sz2 = zeros(Nsteps)
   En2 = zeros(Nsteps)
   function ITensors.measure!(obs::TDVPObserver; sweep, bond, half_sweep, psi, kwargs...)
@@ -283,9 +266,7 @@ end
       En2[sweep] = real(inner(psi', H, psi))
     end
   end
-
-  phi = productMPS(s, n -> isodd(n) ? "Up" : "Dn")
-
+  phi = MPS(s, n -> isodd(n) ? "Up" : "Dn")
   phi = tdvp(
     H,
     -im * ttotal,
@@ -295,7 +276,6 @@ end
     normalize=false,
     (observer!)=TDVPObserver(),
   )
-
   @test norm(Sz1 - Sz2) < 1e-3
   @test norm(En1 - En2) < 1e-3
 end
@@ -323,19 +303,10 @@ end
   for (step, t) in enumerate(trange)
     nsite = (step <= 10 ? 2 : 1)
     psi = tdvp(
-      H, -tau, psi; cutoff, nsite, reverse_step, normalize=true, exponentiate_krylovdim=15
+      H, -tau, psi; cutoff, nsite, reverse_step, normalize=true, solver_krylovdim=15
     )
-    #Different backend solver, default solver_backend = "exponentiate"
     psi2 = tdvp(
-      H,
-      -tau,
-      psi2;
-      cutoff,
-      nsite,
-      reverse_step,
-      normalize=true,
-      exponentiate_krylovdim=15,
-      solver_backend="applyexp",
+      H, -tau, psi2; cutoff, nsite, reverse_step, normalize=true, solver_krylovdim=15
     )
   end
 
@@ -380,7 +351,7 @@ end
     end
   end
 
-  psi1 = productMPS(s, n -> isodd(n) ? "Up" : "Dn")
+  psi1 = MPS(s, n -> isodd(n) ? "Up" : "Dn")
   tdvp(
     H,
     -im * ttotal,

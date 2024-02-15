@@ -44,7 +44,6 @@ using Random
 
   @test ITensors.scalartype(x) == eltype
 
-  @show norm(x - x_c)
   @test norm(x - x_c) < 1e-2
 end
 

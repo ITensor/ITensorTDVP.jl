@@ -17,15 +17,9 @@ using ITensors:
   ProjMPS,
   set_nsite!
 
-# Compatibility of ITensor observer and Observers
+include("defaults.jl")
 include("update_observer.jl")
-
-# Utilities for making it easier
-# to define solvers (like ODE solvers)
-# for TDVP
 include("solver_utils.jl")
-
-include("applyexp.jl")
 include("tdvporder.jl")
 include("tdvpinfo.jl")
 include("tdvp_step.jl")

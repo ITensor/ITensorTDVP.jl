@@ -118,7 +118,6 @@ function proj_mps(P::ProjMPS2)
   # Apply the map
   m = ITensor(true)
   for it in itensor_map
-    #@show inds(it)
     m *= it
   end
   return m

@@ -1,50 +1,78 @@
-function exponentiate_solver(; kwargs...)
-  function solver(H, t, psi0; kws...)
-    solver_kwargs = (;
-      ishermitian=get(kwargs, :ishermitian, true),
-      issymmetric=get(kwargs, :issymmetric, true),
-      tol=get(kwargs, :solver_tol, 1E-12),
-      krylovdim=get(kwargs, :solver_krylovdim, 30),
-      maxiter=get(kwargs, :solver_maxiter, 100),
-      verbosity=get(kwargs, :solver_outputlevel, 0),
+using ITensors: @Algorithm_str, Algorithm
+
+# Select solver function
+solver_function(solver_backend::String) = solver_function(Algorithm(solver_backend))
+solver_function(::Algorithm"exponentiate") = exponentiate
+function solver_function(solver_backend::Algorithm)
+  return error(
+    "solver_backend=$(String(solver_backend)) not recognized (only \"exponentiate\" is supported)",
+  )
+end
+
+# Kept for backwards compatibility
+function solver_function(::Algorithm"applyexp")
+  println(
+    "Warning: the `solver_backend` option `\"applyexp\"` in `tdvp` has been removed. `\"exponentiate\"` will be used instead. To remove this warning, don't specify the `solver_backend` keyword argument.",
+  )
+  return solver_function(Algorithm"exponentiate"())
+end
+
+function tdvp_solver(
+  f::typeof(exponentiate);
+  ishermitian,
+  issymmetric,
+  solver_tol,
+  solver_krylovdim,
+  solver_maxiter,
+  solver_outputlevel,
+)
+  function solver(H, t, psi0; current_time, outputlevel)
+    psi, info = f(
+      H,
+      t,
+      psi0;
+      ishermitian,
+      issymmetric,
+      tol=solver_tol,
+      krylovdim=solver_krylovdim,
+      maxiter=solver_maxiter,
+      verbosity=solver_outputlevel,
       eager=true,
     )
-    psi, info = exponentiate(H, t, psi0; solver_kwargs...)
     return psi, info
   end
   return solver
 end
 
-function applyexp_solver(; kwargs...)
-  function solver(H, t, psi0; kws...)
-    tol_per_unit_time = get(kwargs, :solver_tol, 1E-8)
-    solver_kwargs = (;
-      maxiter=get(kwargs, :solver_krylovdim, 30),
-      outputlevel=get(kwargs, :solver_outputlevel, 0),
-    )
-    #applyexp tol is absolute, compute from tol_per_unit_time:
-    tol = abs(t) * tol_per_unit_time
-    psi, info = applyexp(H, t, psi0; tol, solver_kwargs..., kws...)
-    return psi, info
-  end
-  return solver
-end
-
-function tdvp_solver(; kwargs...)
-  solver_backend = get(kwargs, :solver_backend, "exponentiate")
-  if solver_backend == "applyexp"
-    return applyexp_solver(; kwargs...)
-  elseif solver_backend == "exponentiate"
-    return exponentiate_solver(; kwargs...)
-  else
-    error(
-      "solver_backend=$solver_backend not recognized (options are \"applyexp\" or \"exponentiate\")",
-    )
-  end
-end
-
-function tdvp(H, t::Number, psi0::MPS; kwargs...)
-  return tdvp(tdvp_solver(; kwargs...), H, t, psi0; kwargs...)
+function tdvp(
+  H,
+  t::Number,
+  psi0::MPS;
+  ishermitian=default_ishermitian(),
+  issymmetric=default_issymmetric(),
+  solver_backend=default_tdvp_solver_backend(),
+  solver_function=solver_function(solver_backend),
+  solver_tol=default_solver_tol(solver_function),
+  solver_krylovdim=default_solver_krylovdim(solver_function),
+  solver_maxiter=default_solver_maxiter(solver_function),
+  solver_outputlevel=default_solver_outputlevel(solver_function),
+  kwargs...,
+)
+  return tdvp(
+    tdvp_solver(
+      solver_function;
+      ishermitian,
+      issymmetric,
+      solver_tol,
+      solver_krylovdim,
+      solver_maxiter,
+      solver_outputlevel,
+    ),
+    H,
+    t,
+    psi0;
+    kwargs...,
+  )
 end
 
 function tdvp(t::Number, H, psi0::MPS; kwargs...)
