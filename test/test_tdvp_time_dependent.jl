@@ -11,16 +11,14 @@ include(joinpath(pkgdir(ITensorTDVP), "examples", "03_solvers.jl"))
 # Functions need to be defined in global scope (outside
 # of the @testset macro)
 
-ω₁ = 0.1
-ω₂ = 0.2
-
-ode_alg = Tsit5()
-ode_kwargs = (; reltol=1e-8, abstol=1e-8)
-
-ω⃗ = [ω₁, ω₂]
-f⃗ = [t -> cos(ω * t) for ω in ω⃗]
-
 function ode_solver(H⃗₀, time_step, ψ₀; kwargs...)
+  ω₁ = typeof(time_step)(0.1)
+  ω₂ = typeof(time_step)(0.2)
+  ode_alg = Tsit5()
+  tol = √eps(real(time_step))
+  ode_kwargs = (; reltol=tol, abstol=tol)
+  ω⃗ = [ω₁, ω₂]
+  f⃗ = [t -> cos(ω * t) for ω in ω⃗]
   return ode_solver(
     -im * TimeDependentSum(f⃗, H⃗₀),
     time_step,
@@ -31,9 +29,9 @@ function ode_solver(H⃗₀, time_step, ψ₀; kwargs...)
   )
 end
 
-krylov_kwargs = (; tol=1e-8, eager=true)
-
 function krylov_solver(H⃗₀, time_step, ψ₀; kwargs...)
+  tol = √eps(real(time_step))
+  krylov_kwargs = (; tol, eager=true)
   return krylov_solver(
     -im * TimeDependentSum(f⃗, H⃗₀), time_step, ψ₀; krylov_kwargs..., kwargs...
   )
@@ -45,14 +43,11 @@ end
   n = 4
   J₁ = elt(1)
   J₂ = elt(0.1)
-
   time_step = elt(0.1)
   time_stop = elt(1)
-
   nsite = 2
   maxdim = 100
   cutoff = √(eps(elt))
-
   s = siteinds("S=1/2", n)
   ℋ₁₀ = heisenberg(n; J=J₁, J2=elt(0))
   ℋ₂₀ = heisenberg(n; J=elt(0), J2=J₂)
