@@ -10,7 +10,12 @@ function solver_function(solver_backend::Algorithm)
 end
 
 # Kept for backwards compatibility
-solver_function(::Algorithm"applyexp") = solver_function(Algorithm"exponentiate"())
+function solver_function(::Algorithm"applyexp")
+  println(
+    "Warning: the `solver_backend` option `\"applyexp\"` in `tdvp` has been removed. `\"exponentiate\"` will be used instead. To remove this warning, don't specify the `solver_backend` keyword argument.",
+  )
+  return solver_function(Algorithm"exponentiate"())
+end
 
 function tdvp_solver(
   f::typeof(exponentiate);
