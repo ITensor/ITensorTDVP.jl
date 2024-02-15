@@ -306,14 +306,7 @@ end
       H, -tau, psi; cutoff, nsite, reverse_step, normalize=true, solver_krylovdim=15
     )
     psi2 = tdvp(
-      H,
-      -tau,
-      psi2;
-      cutoff,
-      nsite,
-      reverse_step,
-      normalize=true,
-      solver_krylovdim=15,
+      H, -tau, psi2; cutoff, nsite, reverse_step, normalize=true, solver_krylovdim=15
     )
   end
 
