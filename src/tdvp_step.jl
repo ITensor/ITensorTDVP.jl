@@ -8,7 +8,13 @@ function tdvp_step(
   info = nothing
   for substep in 1:length(order_sub_time_steps)
     psi, PH, info = tdvp_sweep(
-      order_orderings[substep], solver, PH, order_sub_time_steps[substep], psi; current_time, kwargs...
+      order_orderings[substep],
+      solver,
+      PH,
+      order_sub_time_steps[substep],
+      psi;
+      current_time,
+      kwargs...,
     )
     current_time += order_sub_time_steps[substep]
   end
