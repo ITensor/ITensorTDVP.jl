@@ -32,7 +32,8 @@ include("contract_mpo_mps.jl")
 include("projmps2.jl")
 include("projmpo_mps2.jl")
 include("linsolve.jl")
+include("basis_extend.jl")
 
-export tdvp, dmrg_x, to_vec, TimeDependentSum, linsolve
+export tdvp, dmrg_x, to_vec, TimeDependentSum, linsolve, basis_extend
 
 end
