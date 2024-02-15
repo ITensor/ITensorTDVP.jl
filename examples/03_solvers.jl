@@ -1,6 +1,7 @@
-using DifferentialEquations
-using ITensors
-using ITensorTDVP
+using ITensors: ITensor
+using ITensorTDVP: TimeDependentSum, to_vec
+using KrylovKit: exponentiate
+using OrdinaryDiffEq: ODEProblem, Tsit5, solve
 
 function ode_solver(
   H::TimeDependentSum,

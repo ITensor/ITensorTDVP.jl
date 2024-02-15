@@ -1,9 +1,7 @@
-using DifferentialEquations
-using ITensors
-using ITensorTDVP
-using KrylovKit
-using LinearAlgebra
-using Random
+using ITensors: MPO, MPS, @disable_warn_order, inner, randomMPS, siteinds
+using ITensorTDVP: tdvp
+using LinearAlgebra: norm
+using Random: Random
 
 Random.seed!(1234)
 
@@ -84,7 +82,7 @@ s = siteinds("S=1/2", n)
 H⃗₀ = [MPO(ℋ₀, s) for ℋ₀ in ℋ⃗₀]
 
 # Initial state, ψ₀ = ψ(0)
-# Initialize as complex since that is what DifferentialEquations.jl
+# Initialize as complex since that is what OrdinaryDiffEq.jl/DifferentialEquations.jl
 # expects.
 ψ₀ = complex.(randomMPS(s, j -> isodd(j) ? "↑" : "↓"; linkdims=start_linkdim))
 

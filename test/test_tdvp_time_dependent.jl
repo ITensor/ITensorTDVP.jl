@@ -1,9 +1,6 @@
-using DifferentialEquations
-using ITensors
-using ITensorTDVP
-using KrylovKit
-using LinearAlgebra
-using Test
+using ITensors: MPO, MPS, siteinds
+using ITensorTDVP: ITensorTDVP, tdvp
+using Test: @test, @testset
 
 include(joinpath(pkgdir(ITensorTDVP), "examples", "03_models.jl"))
 include(joinpath(pkgdir(ITensorTDVP), "examples", "03_solvers.jl"))
