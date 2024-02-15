@@ -8,42 +8,39 @@ using Test
 include(joinpath(pkgdir(ITensorTDVP), "examples", "03_models.jl"))
 include(joinpath(pkgdir(ITensorTDVP), "examples", "03_solvers.jl"))
 
-# Functions need to be defined in global scope (outside
-# of the @testset macro)
-
-function ode_solver(H⃗₀, time_step, ψ₀; kwargs...)
-  ω₁ = typeof(time_step)(0.1)
-  ω₂ = typeof(time_step)(0.2)
-  ω⃗ = [ω₁, ω₂]
-  f⃗ = [t -> cos(ω * t) for ω in ω⃗]
-  ode_alg = Tsit5()
-  tol = √eps(real(time_step))
-  ode_kwargs = (; reltol=tol, abstol=tol)
-  return ode_solver(
-    -im * TimeDependentSum(f⃗, H⃗₀),
-    time_step,
-    ψ₀;
-    solver_alg=ode_alg,
-    ode_kwargs...,
-    kwargs...,
-  )
-end
-
-function krylov_solver(H⃗₀, time_step, ψ₀; kwargs...)
-  ω₁ = typeof(time_step)(0.1)
-  ω₂ = typeof(time_step)(0.2)
-  ω⃗ = [ω₁, ω₂]
-  f⃗ = [t -> cos(ω * t) for ω in ω⃗]
-  tol = √eps(real(time_step))
-  krylov_kwargs = (; tol, eager=true)
-  return krylov_solver(
-    -im * TimeDependentSum(f⃗, H⃗₀), time_step, ψ₀; krylov_kwargs..., kwargs...
-  )
-end
-
 @testset "Time dependent Hamiltonian (eltype=$elt)" for elt in (
   Float32, Float64, Complex{Float32}, Complex{Float64}
 )
+  function ode_solver(H⃗₀, time_step, ψ₀; kwargs...)
+    ω₁ = typeof(time_step)(0.1)
+    ω₂ = typeof(time_step)(0.2)
+    ω⃗ = [ω₁, ω₂]
+    f⃗ = [t -> cos(ω * t) for ω in ω⃗]
+    ode_alg = Tsit5()
+    tol = √eps(real(time_step))
+    ode_kwargs = (; reltol=tol, abstol=tol)
+    return ode_solver(
+      -im * TimeDependentSum(f⃗, H⃗₀),
+      time_step,
+      ψ₀;
+      solver_alg=ode_alg,
+      ode_kwargs...,
+      kwargs...,
+    )
+  end
+
+  function krylov_solver(H⃗₀, time_step, ψ₀; kwargs...)
+    ω₁ = typeof(time_step)(0.1)
+    ω₂ = typeof(time_step)(0.2)
+    ω⃗ = [ω₁, ω₂]
+    f⃗ = [t -> cos(ω * t) for ω in ω⃗]
+    tol = √eps(real(time_step))
+    krylov_kwargs = (; tol, eager=true)
+    return krylov_solver(
+      -im * TimeDependentSum(f⃗, H⃗₀), time_step, ψ₀; krylov_kwargs..., kwargs...
+    )
+  end
+
   n = 4
   J₁ = elt(1)
   J₂ = elt(0.1)

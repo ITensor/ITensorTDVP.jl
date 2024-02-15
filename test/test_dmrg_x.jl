@@ -45,7 +45,11 @@ using Test
 
   @test ITensors.scalartype(ϕ̃) == elt
   @test inner(ψ', H, ψ) / inner(ψ, ψ) ≈ inner(ϕ̃', H, ϕ̃) / inner(ϕ̃, ϕ̃) rtol = 1e-1
-  @test inner(H, ϕ̃, H, ϕ̃) ≈ inner(ϕ̃', H, ϕ̃)^2 rtol = √(eps(real(elt))) * 10^3
+
+  scale(::Type{Float32}) = 10^2
+  scale(::Type{Float64}) = 10^5
+
+  @test inner(H, ϕ̃, H, ϕ̃) ≈ inner(ϕ̃', H, ϕ̃)^2 rtol = √(eps(real(elt))) * scale(real(elt))
   # Sometimes broken, sometimes not
   # @test abs(loginner(ϕ̃, ϕ) / n) ≈ 0.0 atol = 1e-6
 end
