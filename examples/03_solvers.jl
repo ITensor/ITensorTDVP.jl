@@ -6,7 +6,7 @@ function ode_solver(
   H::TimeDependentSum,
   time_step,
   ψ₀;
-  current_time=0.0,
+  current_time=zero(time_step),
   outputlevel=0,
   solver_alg=Tsit5(),
   kwargs...,
@@ -26,7 +26,7 @@ function ode_solver(
 end
 
 function krylov_solver(
-  H::TimeDependentSum, time_step, ψ₀; current_time=0.0, outputlevel=0, kwargs...
+  H::TimeDependentSum, time_step, ψ₀; current_time=zero(time_step), outputlevel=0, kwargs...
 )
   if outputlevel ≥ 3
     println("    In Krylov solver, current_time = $current_time, time_step = $time_step")
