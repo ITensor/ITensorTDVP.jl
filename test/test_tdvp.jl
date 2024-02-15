@@ -5,33 +5,33 @@ using Observers
 using Random
 using Test
 
-@testset "Basic TDVP" begin
+@testset "Basic TDVP (eltype=$elt)" for elt in (
+  Float32, Float64, Complex{Float32}, Complex{Float64}
+)
   N = 10
-  cutoff = 1e-12
-
+  cutoff = eps(real(elt)) * 10^4
   s = siteinds("S=1/2", N)
-
   os = OpSum()
   for j in 1:(N - 1)
     os += 0.5, "S+", j, "S-", j + 1
     os += 0.5, "S-", j, "S+", j + 1
     os += "Sz", j, "Sz", j + 1
   end
-
-  H = MPO(os, s)
-
-  ψ0 = randomMPS(s; linkdims=10)
+  H = MPO(elt, os, s)
+  ψ0 = randomMPS(elt, s; linkdims=10)
+  time_step = elt(0.1) * im
 
   # Time evolve forward:
-  ψ1 = tdvp(H, -0.1im, ψ0; nsweeps=1, cutoff, nsite=1)
+  ψ1 = tdvp(H, -time_step, ψ0; nsweeps=1, cutoff, nsite=1)
 
-  @test ψ1 ≈ tdvp(-0.1im, H, ψ0; nsweeps=1, cutoff, nsite=1)
-  @test ψ1 ≈ tdvp(H, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1)
+  @test ITensors.scalartype(ψ1) == complex(elt)
+  @test ψ1 ≈ tdvp(-time_step, H, ψ0; nsweeps=1, cutoff, nsite=1)
+  @test ψ1 ≈ tdvp(H, ψ0, -time_step; nsweeps=1, cutoff, nsite=1)
 
   #Different backend solvers, default solver_backend = "exponentiate"
-  @test ψ1 ≈ tdvp(H, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1, solver_backend="applyexp")
+  @test ψ1 ≈ tdvp(H, ψ0, -time_step; nsweeps=1, cutoff, nsite=1, solver_backend="applyexp")
 
-  @test norm(ψ1) ≈ 1.0
+  @test norm(ψ1) ≈ 1 rtol = eps(real(elt)) * 10^2
 
   ## Should lose fidelity:
   #@test abs(inner(ψ0,ψ1)) < 0.9
@@ -40,9 +40,10 @@ using Test
   @test real(inner(ψ1', H, ψ1)) ≈ inner(ψ0', H, ψ0)
 
   # Time evolve backwards:
-  ψ2 = tdvp(H, +0.1im, ψ1; nsweeps=1, cutoff)
+  ψ2 = tdvp(H, time_step, ψ1; nsweeps=1, cutoff)
 
-  @test norm(ψ2) ≈ 1.0
+  @test ITensors.scalartype(ψ2) == complex(elt)
+  @test norm(ψ2) ≈ 1 rtol = eps(real(elt)) * 10^4
 
   # Should rotate back to original state:
   @test abs(inner(ψ0, ψ2)) > 0.99

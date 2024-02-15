@@ -2,8 +2,7 @@ function tdvp_step(
   order::TDVPOrder, solver, PH, time_step::Number, psi::MPS; current_time=0, kwargs...
 )
   order_orderings = orderings(order)
-  # order_sub_time_steps = eltype(time_step).(sub_time_steps(order))
-  order_sub_time_steps = sub_time_steps(order)
+  order_sub_time_steps = eltype(time_step).(sub_time_steps(order))
   order_sub_time_steps *= time_step
   info = nothing
   for substep in 1:length(order_sub_time_steps)

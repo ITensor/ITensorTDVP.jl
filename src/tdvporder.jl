@@ -8,7 +8,7 @@ sub_time_steps(::TDVPOrder) = error("Not implemented")
 function orderings(::TDVPOrder{1,direction}) where {direction}
   return [direction, Base.ReverseOrdering(direction)]
 end
-sub_time_steps(elt::Type, ::TDVPOrder{1}) = [1, 0]
+sub_time_steps(::TDVPOrder{1}) = [1, 0]
 
 function orderings(::TDVPOrder{2,direction}) where {direction}
   return [direction, Base.ReverseOrdering(direction)]
