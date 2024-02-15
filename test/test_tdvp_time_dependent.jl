@@ -39,32 +39,34 @@ function krylov_solver(H⃗₀, time_step, ψ₀; kwargs...)
   )
 end
 
-@testset "Time dependent Hamiltonian" begin
+@testset "Time dependent Hamiltonian (eltype=$elt)" for elt in (
+  Float32, Float64, Complex{Float32}, Complex{Float64}
+)
   n = 4
-  J₁ = 1.0
-  J₂ = 0.1
+  J₁ = elt(1)
+  J₂ = elt(0.1)
 
-  time_step = 0.1
-  time_stop = 1.0
+  time_step = elt(0.1)
+  time_stop = elt(1)
 
   nsite = 2
   maxdim = 100
-  cutoff = 1e-8
+  cutoff = √(eps(elt))
 
   s = siteinds("S=1/2", n)
-  ℋ₁₀ = heisenberg(n; J=J₁, J2=0.0)
-  ℋ₂₀ = heisenberg(n; J=0.0, J2=J₂)
+  ℋ₁₀ = heisenberg(n; J=J₁, J2=elt(0))
+  ℋ₂₀ = heisenberg(n; J=elt(0), J2=J₂)
   ℋ⃗₀ = [ℋ₁₀, ℋ₂₀]
-  H⃗₀ = [MPO(ℋ₀, s) for ℋ₀ in ℋ⃗₀]
-
-  ψ₀ = complex.(MPS(s, j -> isodd(j) ? "↑" : "↓"))
-
+  H⃗₀ = [MPO(elt, ℋ₀, s) for ℋ₀ in ℋ⃗₀]
+  ψ₀ = complex.(MPS(elt, s, j -> isodd(j) ? "↑" : "↓"))
   ψₜ_ode = tdvp(ode_solver, H⃗₀, time_stop, ψ₀; time_step, maxdim, cutoff, nsite)
-
   ψₜ_krylov = tdvp(krylov_solver, H⃗₀, time_stop, ψ₀; time_step, cutoff, nsite)
-
   ψₜ_full, _ = ode_solver(prod.(H⃗₀), time_stop, prod(ψ₀))
 
+  @test ITensors.scalartype(ψ₀) == elt
+  @test ITensors.scalartype(ψₜ_ode) == elt
+  @test ITensors.scalartype(ψₜ_krylov) == elt
+  @test ITensors.scalartype(ψₜ_full) == elt
   @test norm(ψ₀) ≈ 1
   @test norm(ψₜ_ode) ≈ 1
   @test norm(ψₜ_krylov) ≈ 1
