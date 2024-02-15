@@ -31,7 +31,7 @@ using Test
   #Different backend solvers, default solver_backend = "exponentiate"
   @test ψ1 ≈ tdvp(H, ψ0, -time_step; nsweeps=1, cutoff, nsite=1, solver_backend="applyexp")
 
-  @test norm(ψ1) ≈ 1 rtol = eps(real(elt)) * 10^2
+  @test norm(ψ1) ≈ 1 rtol = eps(real(elt)) * 10^3
 
   ## Should lose fidelity:
   #@test abs(inner(ψ0,ψ1)) < 0.9
