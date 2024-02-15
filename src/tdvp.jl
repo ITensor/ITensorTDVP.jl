@@ -2,13 +2,15 @@ using ITensors: @Algorithm_str, Algorithm
 
 # Select solver function
 solver_function(solver_backend::String) = solver_function(Algorithm(solver_backend))
-solver_function(solver_backend::Algorithm"exponentiate") = exponentiate
-solver_function(solver_backend::Algorithm"applyexp") = exponentiate
+solver_function(::Algorithm"exponentiate") = exponentiate
 function solver_function(solver_backend::Algorithm)
   return error(
-    "solver_backend=$(String(solver_backend)) not recognized (options are \"applyexp\" or \"exponentiate\")",
+    "solver_backend=$(String(solver_backend)) not recognized (only \"exponentiate\" is supported)",
   )
 end
+
+# Kept for backwards compatibility
+solver_function(::Algorithm"applyexp") = solver_function(Algorithm"exponentiate"())
 
 function tdvp_solver(
   f::typeof(exponentiate);
@@ -36,27 +38,6 @@ function tdvp_solver(
   end
   return solver
 end
-
-## function tdvp_solver(
-##   f::typeof(applyexp);
-##   ishermitian,
-##   issymmetric,
-##   solver_tol,
-##   solver_krylovdim,
-##   solver_maxiter,
-##   solver_outputlevel,
-## )
-##   @assert ishermitian
-##   @assert issymmetric
-##   @assert isone(solver_maxiter)
-##   function solver(H, t, psi0; current_time, outputlevel)
-##     # `applyexp` `tol` is absolute, compute from `solver_tol`
-##     tol = abs(t) * solver_tol
-##     psi, info = f(H, t, psi0; tol, maxiter=solver_krylovdim, outputlevel=solver_outputlevel)
-##     return psi, info
-##   end
-##   return solver
-## end
 
 function tdvp(
   H,

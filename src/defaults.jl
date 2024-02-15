@@ -45,7 +45,3 @@ default_solver_which_eigenvalue(::typeof(eigsolve)) = :SR
 default_solver_tol(::typeof(exponentiate)) = 1e-12
 default_solver_krylovdim(::typeof(exponentiate)) = 30
 default_solver_maxiter(::typeof(exponentiate)) = 100
-
-## # tdvp/applyexp
-## default_solver_tol(::typeof(applyexp)) = 1e-8
-## default_solver_krylovdim(::typeof(applyexp)) = 30
