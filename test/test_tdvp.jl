@@ -27,6 +27,7 @@ using Test
 
   @test ψ1 ≈ tdvp(-0.1im, H, ψ0; nsweeps=1, cutoff, nsite=1)
   @test ψ1 ≈ tdvp(H, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1)
+
   #Different backend solvers, default solver_backend = "exponentiate"
   @test ψ1 ≈ tdvp(H, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1, solver_backend="applyexp")
 
@@ -40,9 +41,6 @@ using Test
 
   # Time evolve backwards:
   ψ2 = tdvp(H, +0.1im, ψ1; nsweeps=1, cutoff)
-
-  #Different backend solvers, default solver_backend = "exponentiate"
-  @test ψ2 ≈ tdvp(H, +0.1im, ψ1; nsweeps=1, cutoff, solver_backend="applyexp")
 
   @test norm(ψ2) ≈ 1.0
 
@@ -77,9 +75,6 @@ end
   @test ψ1 ≈ tdvp(-0.1im, Hs, ψ0; nsweeps=1, cutoff, nsite=1)
   @test ψ1 ≈ tdvp(Hs, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1)
 
-  #Different backend solvers, default solver_backend = "exponentiate"
-  @test ψ1 ≈ tdvp(Hs, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1, solver_backend="applyexp")
-
   @test norm(ψ1) ≈ 1.0
 
   ## Should lose fidelity:
@@ -90,9 +85,6 @@ end
 
   # Time evolve backwards:
   ψ2 = tdvp(Hs, +0.1im, ψ1; nsweeps=1, cutoff)
-
-  #Different backend solvers, default solver_backend = "exponentiate"
-  @test ψ2 ≈ tdvp(Hs, +0.1im, ψ1; nsweeps=1, cutoff, solver_backend="applyexp")
 
   @test norm(ψ2) ≈ 1.0
 
@@ -313,7 +305,6 @@ end
     psi = tdvp(
       H, -tau, psi; cutoff, nsite, reverse_step, normalize=true, solver_krylovdim=15
     )
-    #Different backend solver, default solver_backend = "exponentiate"
     psi2 = tdvp(
       H,
       -tau,
@@ -323,7 +314,6 @@ end
       reverse_step,
       normalize=true,
       solver_krylovdim=15,
-      solver_backend="applyexp",
     )
   end
 

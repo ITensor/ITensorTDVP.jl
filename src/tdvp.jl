@@ -51,15 +51,16 @@ function tdvp(
   ishermitian=default_ishermitian(),
   issymmetric=default_issymmetric(),
   solver_backend=default_tdvp_solver_backend(),
-  solver_tol=default_solver_tol(solver_function(solver_backend)),
-  solver_krylovdim=default_solver_krylovdim(solver_function(solver_backend)),
-  solver_maxiter=default_solver_maxiter(solver_function(solver_backend)),
-  solver_outputlevel=default_solver_outputlevel(solver_function(solver_backend)),
+  solver_function=solver_function(solver_backend),
+  solver_tol=default_solver_tol(solver_function),
+  solver_krylovdim=default_solver_krylovdim(solver_function),
+  solver_maxiter=default_solver_maxiter(solver_function),
+  solver_outputlevel=default_solver_outputlevel(solver_function),
   kwargs...,
 )
   return tdvp(
     tdvp_solver(
-      solver_function(solver_backend);
+      solver_function;
       ishermitian,
       issymmetric,
       solver_tol,
