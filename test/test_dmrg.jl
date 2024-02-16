@@ -2,7 +2,7 @@
 using ITensors: ITensors, MPO, OpSum, inner, randomMPS, siteinds
 using ITensorTDVP: ITensorTDVP
 using Test: @test, @testset
-@testset "DMRG (eltype=$elt, nsite=$nsite)" for elt in (
+@testset "DMRG (eltype=$elt, nsite=$nsite, conserve_qns=$conserve_qns)" for elt in (
     Float32, Float64, Complex{Float32}, Complex{Float64}
   ),
   nsite in [1, 2],

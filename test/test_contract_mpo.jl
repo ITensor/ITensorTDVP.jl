@@ -13,7 +13,7 @@ using ITensors:
   truncate!
 using ITensorTDVP: ITensorTDVP
 using Test: @test, @testset
-@testset "Contract MPO (eltype=$elt)" for elt in (
+@testset "Contract MPO (eltype=$elt, conserve_qns=$conserve_qns)" for elt in (
     Float32, Float64, Complex{Float32}, Complex{Float64}
   ),
   conserve_qns in [false, true]
@@ -52,11 +52,13 @@ using Test: @test, @testset
   truncate!(psi_guess; maxdim=2)
   Hpsi = apply(H, psi; alg="fit", nsweeps=4, init_mps=psi_guess)
   @test ITensors.scalartype(Hpsi) == elt
-  @test inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1e-5
+  @test inner(psit, Hpsi) ≈ inner(psit, H, psi) rtol = √eps(real(elt))
   # Test with nsite=1
-  Hpsi_guess = apply(H, psi; alg="naive", cutoff=1E-4)
+  Hpsi_guess = apply(H, psi; alg="naive", cutoff=1e-4)
   Hpsi = apply(H, psi; alg="fit", init_mps=Hpsi_guess, nsite=1, nsweeps=2)
   @test ITensors.scalartype(Hpsi) == elt
-  @test inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1e-4
+  scale(::Type{Float32}) = 10^2
+  scale(::Type{Float64}) = 10^6
+  @test inner(psit, Hpsi) ≈ inner(psit, H, psi) rtol = √eps(real(elt)) * scale(real(elt))
 end
 end
