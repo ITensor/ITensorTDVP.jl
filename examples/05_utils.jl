@@ -1,5 +1,5 @@
 using ITensors: MPS, maxlinkdim
-using ITensorTDVP: TDVPOrder, process_sweeps, tdvp_solver, tdvp_step, process_sweeps
+using ITensorTDVP: ITensorTDVP
 using Observers: observer, update!
 using Printf: @printf
 
@@ -20,12 +20,14 @@ function tdvp_nonuniform_timesteps(
   kwargs...,
 )
   nsweeps = length(time_steps)
-  maxdim, mindim, cutoff, noise = process_sweeps(; nsweeps, maxdim, mindim, cutoff, noise)
-  tdvp_order = TDVPOrder(order, Base.Forward)
+  maxdim, mindim, cutoff, noise = ITensorTDVP.process_sweeps(;
+    nsweeps, maxdim, mindim, cutoff, noise
+  )
+  tdvp_order = ITensorTDVP.TDVPOrder(order, Base.Forward)
   current_time = time_start
   for sw in 1:nsweeps
     sw_time = @elapsed begin
-      psi, PH, info = tdvp_step(
+      psi, PH, info = ITensorTDVP.sweep_update(
         tdvp_order,
         solver,
         PH,
@@ -42,9 +44,7 @@ function tdvp_nonuniform_timesteps(
       )
     end
     current_time += time_steps[sw]
-
     update!(step_observer!; psi, sweep=sw, outputlevel, current_time)
-
     if outputlevel ≥ 1
       print("After sweep ", sw, ":")
       print(" maxlinkdim=", maxlinkdim(psi))
@@ -70,7 +70,7 @@ function tdvp_nonuniform_timesteps(
   kwargs...,
 )
   return tdvp_nonuniform_timesteps(
-    tdvp_solver(
+    ITensorTDVP.tdvp_solver(
       exponentiate;
       ishermitian,
       issymmetric,

@@ -41,13 +41,6 @@ using Test: @test, @test_skip, @testset
     @test eltype(Hψ) == elt
     @test Hψ ≈ sum(i -> α * f⃗ₜ[i](t₀) * H⃗ᵣ[i](ψᵣ), eachindex(H⃗))
   end
-  @testset "Run example" begin
-    # TODO: Move to `test_examples.jl`.
-    # These tests take too long to compile, skip for now.
-    @test_skip include(
-      joinpath(pkgdir(ITensorTDVP), "examples", "03_tdvp_time_dependent.jl")
-    )
-  end
   @testset "Time dependent TDVP" begin
     # These tests take too long to compile, skip for now.
     @test_skip include("tdvp_time_dependent.jl")

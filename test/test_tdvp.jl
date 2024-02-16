@@ -14,6 +14,7 @@ using ITensors:
   op,
   prime,
   randomMPS,
+  scalar,
   siteinds
 using ITensorTDVP: tdvp
 using KrylovKit: exponentiate

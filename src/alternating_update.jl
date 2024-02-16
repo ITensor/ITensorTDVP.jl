@@ -1,20 +1,10 @@
-using ITensors:
-  AbstractObserver,
-  MPO,
-  MPS,
-  ProjMPOSum,
-  check_hascommoninds,
-  checkdone!,
-  disk,
-  linkind,
-  maxlinkdim,
-  permute
+using ITensors: AbstractObserver, MPS, checkdone!, disk, maxlinkdim
 
-function _tdvp_compute_nsweeps(t; time_step=default_time_step(t), nsweeps=default_nsweeps())
+function _compute_nsweeps(t; time_step=default_time_step(t), nsweeps=default_nsweeps())
   if isinf(t) && isnothing(nsweeps)
     nsweeps = 1
   elseif !isnothing(nsweeps) && time_step != t
-    error("Cannot specify both time_step and nsweeps in tdvp")
+    error("Cannot specify both time_step and nsweeps in alternating_update")
   elseif isfinite(time_step) && abs(time_step) > 0 && isnothing(nsweeps)
     nsweeps = convert(Int, ceil(abs(t / time_step)))
     if !(nsweeps * time_step ≈ t)
@@ -44,7 +34,7 @@ function process_sweeps(; nsweeps, maxdim, mindim, cutoff, noise)
   return (; maxdim, mindim, cutoff, noise)
 end
 
-function tdvp(
+function alternating_update(
   solver,
   PH,
   t::Number,
@@ -66,9 +56,9 @@ function tdvp(
   cutoff=default_cutoff(Float64),
   noise=default_noise(),
 )
-  nsweeps = _tdvp_compute_nsweeps(t; time_step, nsweeps)
+  nsweeps = _compute_nsweeps(t; time_step, nsweeps)
   maxdim, mindim, cutoff, noise = process_sweeps(; nsweeps, maxdim, mindim, cutoff, noise)
-  tdvp_order = TDVPOrder(order, Base.Forward)
+  forward_order = TDVPOrder(order, Base.Forward)
   psi = copy(psi0)
   # Keep track of the start of the current time step.
   # Helpful for tracking the total time, for example
@@ -87,8 +77,8 @@ function tdvp(
       PH = disk(PH)
     end
     sweep_time = @elapsed begin
-      psi, PH, info = tdvp_step(
-        tdvp_order,
+      psi, PH, info = sweep_update(
+        forward_order,
         solver,
         PH,
         time_step,
@@ -118,7 +108,7 @@ function tdvp(
     end
     isdone = false
     if !isnothing(checkdone)
-      isdone = checkdone(; psi, sweep, outputlevel) #, kwargs...)
+      isdone = checkdone(; psi, sweep, outputlevel)
     elseif observer! isa AbstractObserver
       isdone = checkdone!(observer!; psi, sweep, outputlevel)
     end
@@ -127,66 +117,29 @@ function tdvp(
   return psi
 end
 
-"""
-    tdvp(H::MPO,psi0::MPS,t::Number; kwargs...)
-    tdvp(H::MPO,psi0::MPS,t::Number; kwargs...)
+# Convenience wrapper to not have to specify time step.
+# Use a time step of `Inf` as a convention, since TDVP
+# with an infinite time step corresponds to DMRG.
+function alternating_update(solver, H, psi0::MPS; kwargs...)
+  return alternating_update(solver, H, ITensors.scalartype(psi0)(Inf), psi0; kwargs...)
+end
 
-Use the time dependent variational principle (TDVP) algorithm
-to compute `exp(t*H)*psi0` using an efficient algorithm based
-on alternating optimization of the MPS tensors and local Krylov
-exponentiation of H.
-                    
-Returns:
-* `psi::MPS` - time-evolved MPS
-
-Optional keyword arguments:
-* `outputlevel::Int = 1` - larger outputlevel values resulting in printing more information and 0 means no output
-* `observer` - object implementing the [Observer](@ref observer) interface which can perform measurements and stop early
-* `write_when_maxdim_exceeds::Int` - when the allowed maxdim exceeds this value, begin saving tensors to disk to free memory in large calculations
-"""
-function tdvp(solver, H::MPO, t::Number, psi0::MPS; kwargs...)
+function alternating_update(solver, H::MPO, t::Number, psi0::MPS; kwargs...)
   check_hascommoninds(siteinds, H, psi0)
   check_hascommoninds(siteinds, H, psi0')
   # Permute the indices to have a better memory layout
   # and minimize permutations
   H = permute(H, (linkind, siteinds, linkind))
   PH = ProjMPO(H)
-  return tdvp(solver, PH, t, psi0; kwargs...)
+  return alternating_update(solver, PH, t, psi0; kwargs...)
 end
 
-function tdvp(solver, t::Number, H, psi0::MPS; kwargs...)
-  return tdvp(solver, H, t, psi0; kwargs...)
-end
-
-function tdvp(solver, H, psi0::MPS, t::Number; kwargs...)
-  return tdvp(solver, H, t, psi0; kwargs...)
-end
-
-"""
-    tdvp(Hs::Vector{MPO},psi0::MPS,t::Number; kwargs...)
-    tdvp(Hs::Vector{MPO},psi0::MPS,t::Number, sweeps::Sweeps; kwargs...)
-
-Use the time dependent variational principle (TDVP) algorithm
-to compute `exp(t*H)*psi0` using an efficient algorithm based
-on alternating optimization of the MPS tensors and local Krylov
-exponentiation of H.
-                    
-This version of `tdvp` accepts a representation of H as a
-Vector of MPOs, Hs = [H1,H2,H3,...] such that H is defined
-as H = H1+H2+H3+...
-Note that this sum of MPOs is not actually computed; rather
-the set of MPOs [H1,H2,H3,..] is efficiently looped over at 
-each step of the algorithm when optimizing the MPS.
-
-Returns:
-* `psi::MPS` - time-evolved MPS
-"""
-function tdvp(solver, Hs::Vector{MPO}, t::Number, psi0::MPS; kwargs...)
+function alternating_update(solver, Hs::Vector{MPO}, t::Number, psi0::MPS; kwargs...)
   for H in Hs
     check_hascommoninds(siteinds, H, psi0)
     check_hascommoninds(siteinds, H, psi0')
   end
   Hs .= ITensors.permute.(Hs, Ref((linkind, siteinds, linkind)))
   PHs = ProjMPOSum(Hs)
-  return tdvp(solver, PHs, t, psi0; kwargs...)
+  return alternating_update(solver, PHs, t, psi0; kwargs...)
 end

@@ -38,9 +38,8 @@ function dmrg(
   solver_verbosity=default_solver_verbosity(),
   kwargs...,
 )
-  t = Inf # DMRG is TDVP with an infinite timestep and no reverse step
   reverse_step = false
-  psi = tdvp(
+  psi = alternating_update(
     dmrg_solver(
       eigsolve;
       solver_which_eigenvalue,
@@ -51,7 +50,6 @@ function dmrg(
       solver_verbosity,
     ),
     H,
-    t,
     psi0;
     reverse_step,
     kwargs...,

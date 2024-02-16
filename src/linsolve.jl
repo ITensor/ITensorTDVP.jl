@@ -37,8 +37,6 @@ function KrylovKit.linsolve(
     x, info = linsolve(P, b, x₀, a₀, a₁; solver_kwargs...)
     return x, nothing
   end
-
-  t = Inf
   P = ProjMPO_MPS2(A, b)
-  return tdvp(linsolve_solver, P, t, x₀; reverse_step=false, tdvp_kwargs...)
+  return alternating_update(linsolve_solver, P, x₀; reverse_step=false, tdvp_kwargs...)
 end
