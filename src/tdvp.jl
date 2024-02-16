@@ -2,12 +2,7 @@ using ITensors:
   Algorithm,
   MPO,
   MPS,
-  ProjMPOSum,
-  @Algorithm_str,
-  check_hascommoninds,
-  linkind,
-  permute,
-  siteinds
+  @Algorithm_str
 
 # Select solver function
 solver_function(solver_backend::String) = solver_function(Algorithm(solver_backend))
