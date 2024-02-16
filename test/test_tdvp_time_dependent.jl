@@ -42,8 +42,7 @@ using Test: @test, @test_skip, @testset
     @test Hψ ≈ sum(i -> α * f⃗ₜ[i](t₀) * H⃗ᵣ[i](ψᵣ), eachindex(H⃗))
   end
   @testset "Time dependent TDVP" begin
-    # These tests take too long to compile, skip for now.
-    @test_skip include("tdvp_time_dependent.jl")
+    include("tdvp_time_dependent.jl")
   end
 end
 end

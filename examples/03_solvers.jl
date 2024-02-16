@@ -26,6 +26,10 @@ function ode_solver(
   return to_itensor(uₜ), nothing
 end
 
+function ode_solver(f⃗, H⃗₀, time_step, ψ₀; kwargs...)
+  return ode_solver(-im * TimeDependentSum(f⃗, H⃗₀), time_step, ψ₀; kwargs...)
+end
+
 function krylov_solver(
   H::TimeDependentSum, time_step, ψ₀; current_time=zero(time_step), outputlevel=0, kwargs...
 )
@@ -34,4 +38,8 @@ function krylov_solver(
   end
   ψₜ, info = exponentiate(H(current_time), time_step, ψ₀; kwargs...)
   return ψₜ, info
+end
+
+function krylov_solver(f⃗, H⃗₀, time_step, ψ₀; kwargs...)
+  return krylov_solver(-im * TimeDependentSum(f⃗, H⃗₀), time_step, ψ₀; kwargs...)
 end

@@ -6,7 +6,7 @@ using Test: @testset
   examples_files = [
     "01_tdvp.jl",
     "02_dmrg-x.jl",
-    # "03_tdvp_time_dependent.jl",
+    "03_tdvp_time_dependent.jl",
     "04_tdvp_observers.jl",
     "05_tdvp_nonuniform_timesteps.jl",
   ]

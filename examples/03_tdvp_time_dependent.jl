@@ -21,7 +21,7 @@ function main()
   # Set to 2 to get information about each bond/site
   # evolution, and 3 to get information about the
   # solver.
-  outputlevel = 1
+  outputlevel = 3
 
   # Frequency of time dependent terms
   ω₁ = 0.1
@@ -92,19 +92,12 @@ function main()
   println("#"^100)
   println()
 
-  function ode_solver(H⃗₀, time_step, ψ₀; kwargs...)
-    return ode_solver(
-      -im * TimeDependentSum(f⃗, H⃗₀),
-      time_step,
-      ψ₀;
-      solver_alg=ode_alg,
-      ode_kwargs...,
-      kwargs...,
-    )
+  function ode_solver_f⃗(H⃗₀, time_step, ψ₀; kwargs...)
+    return ode_solver(f⃗, H⃗₀, time_step, ψ₀; solver_alg=ode_alg, ode_kwargs..., kwargs...)
   end
 
   ψₜ_ode = tdvp(
-    ode_solver, H⃗₀, time_stop, ψ₀; time_step, maxdim, cutoff, nsite, outputlevel
+    ode_solver_f⃗, H⃗₀, time_stop, ψ₀; time_step, maxdim, cutoff, nsite, outputlevel
   )
 
   println()
@@ -117,13 +110,13 @@ function main()
   println("#"^100)
   println()
 
-  function krylov_solver(H⃗₀, time_step, ψ₀; kwargs...)
-    return krylov_solver(
-      -im * TimeDependentSum(f⃗, H⃗₀), time_step, ψ₀; krylov_kwargs..., kwargs...
-    )
+  function krylov_solver_f⃗(H⃗₀, time_step, ψ₀; kwargs...)
+    return krylov_solver(f⃗, H⃗₀, time_step, ψ₀; krylov_kwargs..., kwargs...)
   end
 
-  ψₜ_krylov = tdvp(krylov_solver, H⃗₀, time_stop, ψ₀; time_step, cutoff, nsite, outputlevel)
+  ψₜ_krylov = tdvp(
+    krylov_solver_f⃗, H⃗₀, time_stop, ψ₀; time_step, cutoff, nsite, outputlevel
+  )
 
   println()
   println("Finished running TDVP with Krylov solver")
@@ -136,7 +129,7 @@ function main()
   println()
 
   @disable_warn_order begin
-    ψₜ_full, _ = ode_solver(prod.(H⃗₀), time_stop, prod(ψ₀); outputlevel)
+    ψₜ_full, _ = ode_solver(f⃗, prod.(H⃗₀), time_stop, prod(ψ₀); outputlevel)
   end
 
   println()
