@@ -1,13 +1,18 @@
-function tdvp_step(
+using ITensors:
+  MPS, isortho, orthocenter, orthogonalize!, position!, replacebond!, set_nsite!, uniqueinds
+using LinearAlgebra: norm, normalize!, svd
+using Observers: update!
+using Printf: @printf
+
+function sweep_update(
   order::TDVPOrder, solver, PH, time_step::Number, psi::MPS; current_time=0, kwargs...
 )
   order_orderings = orderings(order)
-  # order_sub_time_steps = eltype(time_step).(sub_time_steps(order))
-  order_sub_time_steps = sub_time_steps(order)
+  order_sub_time_steps = eltype(time_step).(sub_time_steps(order))
   order_sub_time_steps *= time_step
   info = nothing
   for substep in 1:length(order_sub_time_steps)
-    psi, PH, info = tdvp_sweep(
+    psi, PH, info = sub_sweep_update(
       order_orderings[substep],
       solver,
       PH,
@@ -42,7 +47,7 @@ function is_half_sweep_done(direction, b, n; ncenter)
          is_reverse_done(direction, b, n; ncenter)
 end
 
-function tdvp_sweep(
+function sub_sweep_update(
   direction::Base.Ordering,
   solver,
   PH,
@@ -66,7 +71,7 @@ function tdvp_sweep(
   psi = copy(psi)
   if length(psi) == 1
     error(
-      "`tdvp` currently does not support system sizes of 1. You can diagonalize the MPO tensor directly with tools like `LinearAlgebra.eigen`, `KrylovKit.exponentiate`, etc.",
+      "`tdvp`, `dmrg`, `linsolve`, etc. currently does not support system sizes of 1. You can diagonalize the MPO tensor directly with tools like `LinearAlgebra.eigen`, `KrylovKit.exponentiate`, etc.",
     )
   end
   N = length(psi)
@@ -87,7 +92,7 @@ function tdvp_sweep(
   maxtruncerr = 0.0
   info = nothing
   for b in sweep_bonds(direction, N; ncenter=nsite)
-    current_time, maxtruncerr, spec, info = tdvp_site_update!(
+    current_time, maxtruncerr, spec, info = region_update!(
       solver,
       PH,
       psi,
@@ -144,7 +149,7 @@ function tdvp_sweep(
   return psi, PH, TDVPInfo(maxtruncerr)
 end
 
-function tdvp_site_update!(
+function region_update!(
   solver,
   PH,
   psi,
@@ -164,7 +169,7 @@ function tdvp_site_update!(
   mindim,
   maxtruncerr,
 )
-  return tdvp_site_update!(
+  return region_update!(
     Val(nsite),
     Val(reverse_step),
     solver,
@@ -186,7 +191,7 @@ function tdvp_site_update!(
   )
 end
 
-function tdvp_site_update!(
+function region_update!(
   nsite_val::Val{1},
   reverse_step_val::Val{false},
   solver,
@@ -225,7 +230,7 @@ function tdvp_site_update!(
   return current_time, maxtruncerr, spec, info
 end
 
-function tdvp_site_update!(
+function region_update!(
   nsite_val::Val{1},
   reverse_step_val::Val{true},
   solver,
@@ -285,7 +290,7 @@ function tdvp_site_update!(
   return current_time, maxtruncerr, spec, info
 end
 
-function tdvp_site_update!(
+function region_update!(
   nsite_val::Val{2},
   reverse_step_val::Val{false},
   solver,
@@ -337,7 +342,7 @@ function tdvp_site_update!(
   return current_time, maxtruncerr, spec, info
 end
 
-function tdvp_site_update!(
+function region_update!(
   nsite_val::Val{2},
   reverse_step_val::Val{true},
   solver,
@@ -402,7 +407,7 @@ function tdvp_site_update!(
   return current_time, maxtruncerr, spec, info
 end
 
-function tdvp_site_update!(
+function region_update!(
   ::Val{nsite},
   ::Val{reverse_step},
   solver,
@@ -423,6 +428,6 @@ function tdvp_site_update!(
   maxtruncerr,
 ) where {nsite,reverse_step}
   return error(
-    "`tdvp` with `nsite=$nsite` and `reverse_step=$reverse_step` not implemented."
+    "`tdvp`, `dmrg`, `linsolve`, etc. with `nsite=$nsite` and `reverse_step=$reverse_step` not implemented.",
   )
 end

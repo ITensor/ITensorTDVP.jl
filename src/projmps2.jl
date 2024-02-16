@@ -1,6 +1,5 @@
-import ITensors:
-  AbstractProjMPO, makeL!, makeR!, set_nsite!, contract, OneITensor, site_range
-import Base: copy
+using ITensors:
+  AbstractProjMPO, ITensor, OneITensor, dag, dim, lproj, prime, rproj, site_range
 
 """
 Holds the following data where psi
@@ -26,16 +25,16 @@ end
 
 Base.length(P::ProjMPS2) = length(P.M)
 
-function copy(P::ProjMPS2)
+function Base.copy(P::ProjMPS2)
   return ProjMPS2(P.lpos, P.rpos, P.nsite, copy(P.M), copy(P.LR))
 end
 
-function set_nsite!(P::ProjMPS2, nsite)
+function ITensors.set_nsite!(P::ProjMPS2, nsite)
   P.nsite = nsite
   return P
 end
 
-function makeL!(P::ProjMPS2, psi::MPS, k::Int)
+function ITensors.makeL!(P::ProjMPS2, psi::MPS, k::Int)
   # Save the last `L` that is made to help with caching
   # for DiskProjMPO
   ll = P.lpos
@@ -59,7 +58,7 @@ function makeL!(P::ProjMPS2, psi::MPS, k::Int)
   return P
 end
 
-function makeR!(P::ProjMPS2, psi::MPS, k::Int)
+function ITensors.makeR!(P::ProjMPS2, psi::MPS, k::Int)
   # Save the last `R` that is made to help with caching
   # for DiskProjMPO
   rl = P.rpos
@@ -83,7 +82,7 @@ function makeR!(P::ProjMPS2, psi::MPS, k::Int)
   return P
 end
 
-function contract(P::ProjMPS2, v::ITensor)
+function ITensors.contract(P::ProjMPS2, v::ITensor)
   itensor_map = Union{ITensor,OneITensor}[lproj(P)]
   append!(itensor_map, [prime(t, "Link") for t in P.M[site_range(P)]])
   push!(itensor_map, rproj(P))

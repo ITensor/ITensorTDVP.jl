@@ -1,9 +1,7 @@
-using ITensors
-using ITensorTDVP
-using Observers
-using Printf
-
-using ITensorTDVP: tdvp_solver, tdvp_step, process_sweeps, TDVPOrder
+using ITensors: MPS, maxlinkdim
+using ITensorTDVP: ITensorTDVP
+using Observers: observer, update!
+using Printf: @printf
 
 function tdvp_nonuniform_timesteps(
   solver,
@@ -14,15 +12,22 @@ function tdvp_nonuniform_timesteps(
   time_start=0.0,
   order=2,
   (step_observer!)=observer(),
+  maxdim=ITensorTDVP.default_maxdim(),
+  mindim=ITensorTDVP.default_mindim(),
+  cutoff=ITensorTDVP.default_cutoff(),
+  noise=ITensorTDVP.default_noise(),
+  outputlevel=ITensorTDVP.default_outputlevel(),
   kwargs...,
 )
   nsweeps = length(time_steps)
-  maxdim, mindim, cutoff, noise = process_sweeps(; nsweeps, kwargs...)
-  tdvp_order = TDVPOrder(order, Base.Forward)
+  maxdim, mindim, cutoff, noise = ITensorTDVP.process_sweeps(;
+    nsweeps, maxdim, mindim, cutoff, noise
+  )
+  tdvp_order = ITensorTDVP.TDVPOrder(order, Base.Forward)
   current_time = time_start
   for sw in 1:nsweeps
     sw_time = @elapsed begin
-      psi, PH, info = tdvp_step(
+      psi, PH, info = ITensorTDVP.sweep_update(
         tdvp_order,
         solver,
         PH,
@@ -39,9 +44,7 @@ function tdvp_nonuniform_timesteps(
       )
     end
     current_time += time_steps[sw]
-
     update!(step_observer!; psi, sweep=sw, outputlevel, current_time)
-
     if outputlevel ≥ 1
       print("After sweep ", sw, ":")
       print(" maxlinkdim=", maxlinkdim(psi))
@@ -55,6 +58,29 @@ function tdvp_nonuniform_timesteps(
   return psi
 end
 
-function tdvp_nonuniform_timesteps(H, psi::MPS; kwargs...)
-  return tdvp_nonuniform_timesteps(tdvp_solver(; kwargs...), H, psi; kwargs...)
+function tdvp_nonuniform_timesteps(
+  H,
+  psi::MPS;
+  ishermitian=ITensorTDVP.default_ishermitian(),
+  issymmetric=ITensorTDVP.default_issymmetric(),
+  solver_tol=ITensorTDVP.default_solver_tol(exponentiate),
+  solver_krylovdim=ITensorTDVP.default_solver_krylovdim(exponentiate),
+  solver_maxiter=ITensorTDVP.default_solver_maxiter(exponentiate),
+  solver_outputlevel=ITensorTDVP.default_solver_outputlevel(exponentiate),
+  kwargs...,
+)
+  return tdvp_nonuniform_timesteps(
+    ITensorTDVP.tdvp_solver(
+      exponentiate;
+      ishermitian,
+      issymmetric,
+      solver_tol,
+      solver_krylovdim,
+      solver_maxiter,
+      solver_outputlevel,
+    ),
+    H,
+    psi;
+    kwargs...,
+  )
 end

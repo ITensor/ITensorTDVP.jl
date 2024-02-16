@@ -1,3 +1,16 @@
+using ITensors:
+  ITensors,
+  Index,
+  ITensor,
+  @Algorithm_str,
+  commoninds,
+  contract,
+  hasind,
+  linkinds,
+  replace_siteinds!,
+  sim,
+  siteinds
+
 function contractmpo_solver(; kwargs...)
   function solver(PH, t, psi; kws...)
     v = ITensor(true)
@@ -11,7 +24,7 @@ function contractmpo_solver(; kwargs...)
 end
 
 function ITensors.contract(
-  ::ITensors.Algorithm"fit", A::MPO, psi0::MPS; init_mps=psi0, nsweeps=1, kwargs...
+  ::Algorithm"fit", A::MPO, psi0::MPS; init_mps=psi0, nsweeps=1, kwargs...
 )::MPS
   n = length(A)
   n != length(psi0) &&
@@ -19,13 +32,10 @@ function ITensors.contract(
   if n == 1
     return MPS([A[1] * psi0[1]])
   end
-
   any(i -> isempty(i), siteinds(commoninds, A, psi0)) &&
     error("In `contract(A::MPO, x::MPS)`, `A` and `x` must share a set of site indices")
-
   # In case A and psi0 have the same link indices
   A = sim(linkinds, A)
-
   # Fix site and link inds of init_mps
   init_mps = deepcopy(init_mps)
   init_mps = sim(linkinds, init_mps)
@@ -40,13 +50,10 @@ function ITensors.contract(
     end
   end
   replace_siteinds!(init_mps, ti)
-
-  t = Inf
   reverse_step = false
   PH = ProjMPOApply(psi0, A)
-  psi = tdvp(
-    contractmpo_solver(; kwargs...), PH, t, init_mps; nsweeps, reverse_step, kwargs...
+  psi = alternating_update(
+    contractmpo_solver(; kwargs...), PH, init_mps; nsweeps, reverse_step, kwargs...
   )
-
   return psi
 end

@@ -1,5 +1,4 @@
-import ITensors: AbstractProjMPO, makeL!, makeR!, set_nsite!
-import Base: copy
+using ITensors: ITensors, AbstractProjMPO, ITensor, MPO, MPS
 
 """
 A ProjMPOApply represents the application of an
@@ -32,16 +31,16 @@ function ProjMPOApply(psi0::MPS, H::MPO)
   return ProjMPOApply(0, length(H) + 1, 2, psi0, H, Vector{ITensor}(undef, length(H)))
 end
 
-function copy(P::ProjMPOApply)
+function Base.copy(P::ProjMPOApply)
   return ProjMPOApply(P.lpos, P.rpos, P.nsite, copy(P.psi0), copy(P.H), copy(P.LR))
 end
 
-function set_nsite!(P::ProjMPOApply, nsite)
+function ITensors.set_nsite!(P::ProjMPOApply, nsite)
   P.nsite = nsite
   return P
 end
 
-function makeL!(P::ProjMPOApply, psi::MPS, k::Int)
+function ITensors.makeL!(P::ProjMPOApply, psi::MPS, k::Int)
   # Save the last `L` that is made to help with caching
   # for DiskProjMPO
   ll = P.lpos
@@ -65,7 +64,7 @@ function makeL!(P::ProjMPOApply, psi::MPS, k::Int)
   return P
 end
 
-function makeR!(P::ProjMPOApply, psi::MPS, k::Int)
+function ITensors.makeR!(P::ProjMPOApply, psi::MPS, k::Int)
   # Save the last `R` that is made to help with caching
   # for DiskProjMPO
   rl = P.rpos

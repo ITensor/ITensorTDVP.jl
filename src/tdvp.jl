@@ -1,4 +1,4 @@
-using ITensors: @Algorithm_str, Algorithm
+using ITensors: Algorithm, MPO, MPS, @Algorithm_str
 
 # Select solver function
 solver_function(solver_backend::String) = solver_function(Algorithm(solver_backend))
@@ -81,4 +81,56 @@ end
 
 function tdvp(H, psi0::MPS, t::Number; kwargs...)
   return tdvp(H, t, psi0; kwargs...)
+end
+
+"""
+    tdvp(H::MPO,psi0::MPS,t::Number; kwargs...)
+    tdvp(H::MPO,psi0::MPS,t::Number; kwargs...)
+
+Use the time dependent variational principle (TDVP) algorithm
+to compute `exp(t*H)*psi0` using an efficient algorithm based
+on alternating optimization of the MPS tensors and local Krylov
+exponentiation of H.
+
+Returns:
+* `psi::MPS` - time-evolved MPS
+
+Optional keyword arguments:
+* `outputlevel::Int = 1` - larger outputlevel values resulting in printing more information and 0 means no output
+* `observer` - object implementing the [Observer](@ref observer) interface which can perform measurements and stop early
+* `write_when_maxdim_exceeds::Int` - when the allowed maxdim exceeds this value, begin saving tensors to disk to free memory in large calculations
+"""
+function tdvp(solver, H::MPO, t::Number, psi0::MPS; kwargs...)
+  return alternating_update(solver, H, t, psi0; kwargs...)
+end
+
+function tdvp(solver, t::Number, H, psi0::MPS; kwargs...)
+  return tdvp(solver, H, t, psi0; kwargs...)
+end
+
+function tdvp(solver, H, psi0::MPS, t::Number; kwargs...)
+  return tdvp(solver, H, t, psi0; kwargs...)
+end
+
+"""
+    tdvp(Hs::Vector{MPO},psi0::MPS,t::Number; kwargs...)
+    tdvp(Hs::Vector{MPO},psi0::MPS,t::Number, sweeps::Sweeps; kwargs...)
+
+Use the time dependent variational principle (TDVP) algorithm
+to compute `exp(t*H)*psi0` using an efficient algorithm based
+on alternating optimization of the MPS tensors and local Krylov
+exponentiation of H.
+
+This version of `tdvp` accepts a representation of H as a
+Vector of MPOs, Hs = [H1,H2,H3,...] such that H is defined
+as H = H1+H2+H3+...
+Note that this sum of MPOs is not actually computed; rather
+the set of MPOs [H1,H2,H3,..] is efficiently looped over at
+each step of the algorithm when optimizing the MPS.
+
+Returns:
+* `psi::MPS` - time-evolved MPS
+"""
+function tdvp(solver, Hs::Vector{MPO}, t::Number, psi0::MPS; kwargs...)
+  return alternating_update(solver, Hs, t, psi0; kwargs...)
 end
