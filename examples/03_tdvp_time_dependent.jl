@@ -149,6 +149,7 @@ function main()
 
   @show 1 - abs(inner(prod(ψₜ_ode), ψₜ_full))
   @show 1 - abs(inner(prod(ψₜ_krylov), ψₜ_full))
+  return nothing
 end
 
 main()

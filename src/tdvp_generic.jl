@@ -7,6 +7,7 @@ using ITensors:
   checkdone!,
   disk,
   linkind,
+  maxlinkdim,
   permute
 
 function _tdvp_compute_nsweeps(t; time_step=default_time_step(t), nsweeps=default_nsweeps())
