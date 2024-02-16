@@ -1,3 +1,14 @@
+using ITensors:
+  AbstractObserver,
+  MPO,
+  MPS,
+  ProjMPOSum,
+  check_hascommoninds,
+  checkdone!,
+  disk,
+  linkind,
+  permute
+
 function _tdvp_compute_nsweeps(t; time_step=default_time_step(t), nsweeps=default_nsweeps())
   if isinf(t) && isnothing(nsweeps)
     nsweeps = 1
@@ -107,7 +118,7 @@ function tdvp(
     isdone = false
     if !isnothing(checkdone)
       isdone = checkdone(; psi, sweep, outputlevel) #, kwargs...)
-    elseif observer! isa ITensors.AbstractObserver
+    elseif observer! isa AbstractObserver
       isdone = checkdone!(observer!; psi, sweep, outputlevel)
     end
     isdone && break
@@ -137,7 +148,7 @@ function tdvp(solver, H::MPO, t::Number, psi0::MPS; kwargs...)
   check_hascommoninds(siteinds, H, psi0')
   # Permute the indices to have a better memory layout
   # and minimize permutations
-  H = ITensors.permute(H, (linkind, siteinds, linkind))
+  H = permute(H, (linkind, siteinds, linkind))
   PH = ProjMPO(H)
   return tdvp(solver, PH, t, psi0; kwargs...)
 end

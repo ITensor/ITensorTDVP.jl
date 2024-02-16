@@ -1,4 +1,7 @@
-function dmrg_x_solver(PH, t, psi0; kwargs...)
+using ITensors: MPS, array, contract, dag, uniqueind, onehot
+using LinearAlgebra: eigen
+
+function dmrg_x_solver(PH, t, psi0; current_time, outputlevel)
   H = contract(PH, ITensor(true))
   D, U = eigen(H; ishermitian=true)
   u = uniqueind(U, H)

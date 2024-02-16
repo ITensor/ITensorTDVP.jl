@@ -1,3 +1,5 @@
+using ITensors: ITensor, ProjMPOSum, apply, array, inds, itensor, permute
+
 # Utilities for making it easier
 # to define solvers (like ODE solvers)
 # for TDVP
@@ -14,10 +16,10 @@ https://github.com/JuliaDiff/FiniteDifferences.jl/blob/main/src/to_vec.jl
 to_vec(x) = error("Not implemented")
 
 function to_vec(x::ITensor)
-  function ITensor_from_vec(x_vec)
+  function to_itensor(x_vec)
     return itensor(x_vec, inds(x))
   end
-  return vec(array(x)), ITensor_from_vec
+  return vec(array(x)), to_itensor
 end
 
 # Represents a time-dependent sum of terms:

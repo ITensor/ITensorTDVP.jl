@@ -1,3 +1,16 @@
+using ITensors:
+  ITensors,
+  Index,
+  ITensor,
+  @Algorithm_str,
+  commoninds,
+  contract,
+  hasind,
+  linkinds,
+  replace_siteinds!,
+  sim,
+  siteinds
+
 function contractmpo_solver(; kwargs...)
   function solver(PH, t, psi; kws...)
     v = ITensor(true)
@@ -11,7 +24,7 @@ function contractmpo_solver(; kwargs...)
 end
 
 function ITensors.contract(
-  ::ITensors.Algorithm"fit", A::MPO, psi0::MPS; init_mps=psi0, nsweeps=1, kwargs...
+  ::Algorithm"fit", A::MPO, psi0::MPS; init_mps=psi0, nsweeps=1, kwargs...
 )::MPS
   n = length(A)
   n != length(psi0) &&

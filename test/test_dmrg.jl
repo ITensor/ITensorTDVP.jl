@@ -1,8 +1,7 @@
-using ITensors
-using ITensorTDVP
-using Random
-using Test
-
+@eval module $(gensym())
+using ITensors: ITensors, MPO, OpSum, inner, randomMPS, siteinds
+using ITensorTDVP: ITensorTDVP
+using Test: @test, @testset
 @testset "DMRG (eltype=$elt, nsite=$nsite)" for elt in (
     Float32, Float64, Complex{Float32}, Complex{Float64}
   ),
@@ -21,16 +20,12 @@ using Test
   psi = randomMPS(elt, s; linkdims=20)
   nsweeps = 10
   maxdim = [10, 20, 40, 100]
-  sweeps = Sweeps(nsweeps) # number of sweeps is 5
-  maxdim!(sweeps, 10, 20, 40, 100) # gradually increase states kept
-  cutoff!(sweeps, cutoff)
   psi = ITensorTDVP.dmrg(
     H, psi; nsweeps, maxdim, cutoff, nsite, solver_krylovdim=3, solver_maxiter=1
   )
-  e2, psi2 = dmrg(H, psi, sweeps; outputlevel=0)
+  e2, psi2 = ITensors.dmrg(H, psi; nsweeps, maxdim, cutoff, outputlevel=0)
   @test ITensors.scalartype(psi2) == elt
   @test e2 isa real(elt)
   @test inner(psi', H, psi) ≈ inner(psi2', H, psi2) rtol = √(eps(real(elt))) * 10
 end
-
-nothing
+end

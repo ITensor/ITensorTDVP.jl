@@ -1,3 +1,4 @@
+@eval module $(gensym())
 # These tests take too long to compile, skip for now.
 using ITensors: MPO, MPS, siteinds
 using ITensorTDVP: ITensorTDVP, tdvp
@@ -73,5 +74,4 @@ include(joinpath(pkgdir(ITensorTDVP), "examples", "03_solvers.jl"))
   @test ode_err < √(eps(real(elt))) * 10^4
   @test krylov_err < √(eps(real(elt))) * 10^5
 end
-
-nothing
+end

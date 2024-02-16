@@ -1,8 +1,8 @@
+@eval module $(gensym())
 using ITensors:
   Index, MPO, ProjMPO, ProjMPOSum, QN, randomITensor, randomMPS, position!, siteinds
 using ITensorTDVP: ITensorTDVP, TimeDependentSum, to_vec
 using Test: @test, @test_skip, @testset
-
 @testset "TDVP with ODE local solver" begin
   @testset "to_vec (eltype=$elt)" for elt in (
       Float32, Float64, Complex{Float32}, Complex{Float64}
@@ -42,6 +42,7 @@ using Test: @test, @test_skip, @testset
     @test Hψ ≈ sum(i -> α * f⃗ₜ[i](t₀) * H⃗ᵣ[i](ψᵣ), eachindex(H⃗))
   end
   @testset "Run example" begin
+    # TODO: Move to `test_examples.jl`.
     # These tests take too long to compile, skip for now.
     @test_skip include(
       joinpath(pkgdir(ITensorTDVP), "examples", "03_tdvp_time_dependent.jl")
@@ -52,5 +53,4 @@ using Test: @test, @test_skip, @testset
     @test_skip include("tdvp_time_dependent.jl")
   end
 end
-
-nothing
+end

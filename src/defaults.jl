@@ -1,3 +1,6 @@
+using ITensors: NoObserver
+using KrylovKit: eigsolve, exponentiate
+
 default_nsweeps() = nothing
 default_checkdone() = nothing
 default_write_when_maxdim_exceeds() = nothing

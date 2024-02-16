@@ -1,8 +1,7 @@
-using ITensors
-using ITensorTDVP
-using Random
-using Test
-
+@eval module $(gensym())
+using ITensors: ITensors, MPO, OpSum, apply, delta, inner, randomMPS, siteinds, truncate!
+using ITensorTDVP: ITensorTDVP
+using Test: @test, @testset
 @testset "Contract MPO (eltype=$elt)" for elt in (
   Float32, Float64, Complex{Float32}, Complex{Float64}
 )
@@ -55,5 +54,4 @@ using Test
   @test ITensors.scalartype(Hpsi) == elt
   @test inner(psit, Hpsi) ≈ inner(psit, H, psi) atol = 1e-4
 end
-
-nothing
+end

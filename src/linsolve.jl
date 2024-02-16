@@ -1,3 +1,6 @@
+using ITensors: MPO, MPS
+using KrylovKit: KrylovKit, linsolve
+
 """
 Compute a solution x to the linear system:
 
@@ -20,7 +23,7 @@ Keyword arguments:
     ```
     See `KrylovKit.jl` documentation for more details on available keyword arguments.
 """
-function linsolve(
+function KrylovKit.linsolve(
   A::MPO,
   b::MPS,
   x₀::MPS,
@@ -31,7 +34,7 @@ function linsolve(
 )
   function linsolve_solver(P::ProjMPO_MPS2, t, x₀; current_time, outputlevel)
     b = dag(only(proj_mps(P)))
-    x, info = KrylovKit.linsolve(P, b, x₀, a₀, a₁; solver_kwargs...)
+    x, info = linsolve(P, b, x₀, a₀, a₁; solver_kwargs...)
     return x, nothing
   end
 
