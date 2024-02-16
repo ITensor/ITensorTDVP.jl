@@ -5,11 +5,12 @@ using Test: @test, @testset
 @testset "DMRG (eltype=$elt, nsite=$nsite)" for elt in (
     Float32, Float64, Complex{Float32}, Complex{Float64}
   ),
-  nsite in [1, 2]
+  nsite in [1, 2],
+  conserve_qns in [false, true]
 
   N = 10
   cutoff = eps(real(elt)) * 10^4
-  s = siteinds("S=1/2", N)
+  s = siteinds("S=1/2", N; conserve_qns)
   os = OpSum()
   for j in 1:(N - 1)
     os += 0.5, "S+", j, "S-", j + 1
@@ -17,7 +18,7 @@ using Test: @test, @testset
     os += "Sz", j, "Sz", j + 1
   end
   H = MPO(elt, os, s)
-  psi = randomMPS(elt, s; linkdims=20)
+  psi = randomMPS(elt, s, j -> isodd(j) ? "↑" : "↓"; linkdims=20)
   nsweeps = 10
   maxdim = [10, 20, 40, 100]
   psi = ITensorTDVP.dmrg(
