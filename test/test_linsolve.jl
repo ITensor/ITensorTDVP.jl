@@ -40,7 +40,7 @@ using Random
   cutoff = 1e-5
   maxdim = 20
   solver_kwargs = (; tol=1e-4, maxiter=20, krylovdim=30, ishermitian=true)
-  x = @time linsolve(H, b, x0; nsweeps, cutoff, maxdim, solver_kwargs)
+  x = linsolve(H, b, x0; nsweeps, cutoff, maxdim, solver_kwargs)
 
   @test ITensors.scalartype(x) == eltype
 

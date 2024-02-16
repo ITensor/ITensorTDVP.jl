@@ -1,5 +1,5 @@
-using Test
-using ITensorTDVP
+using Test: @testset
+using ITensorTDVP: ITensorTDVP
 
 test_path = joinpath(pkgdir(ITensorTDVP), "test")
 test_files = filter(
@@ -8,7 +8,7 @@ test_files = filter(
 @testset "ITensorTDVP.jl" begin
   @testset "$filename" for filename in test_files
     println("Running $filename")
-    include(joinpath(test_path, filename))
+    @time include(joinpath(test_path, filename))
   end
 end
 
