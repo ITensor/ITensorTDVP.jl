@@ -1,5 +1,6 @@
-using ITensors:
-  MPS, isortho, orthocenter, orthogonalize!, position!, replacebond!, set_nsite!, uniqueinds
+using ITensors: uniqueinds
+using ITensors.ITensorMPS:
+  ITensorMPS, MPS, isortho, orthocenter, orthogonalize!, position!, replacebond!, set_nsite!
 using LinearAlgebra: norm, normalize!, svd
 using Observers: update!
 using Printf: @printf
@@ -270,9 +271,9 @@ function region_update!(
     psi[b] = U
     phi0 = S * V
     if isforward(direction)
-      ITensors.setleftlim!(psi, b)
+      ITensorMPS.setleftlim!(psi, b)
     elseif isreverse(direction)
-      ITensors.setrightlim!(psi, b)
+      ITensorMPS.setrightlim!(psi, b)
     end
     set_nsite!(PH, nsite - 1)
     position!(PH, psi, b1)
@@ -281,9 +282,9 @@ function region_update!(
     normalize && (phi0 ./= norm(phi0))
     psi[b + Δ] = phi0 * psi[b + Δ]
     if isforward(direction)
-      ITensors.setrightlim!(psi, b + Δ + 1)
+      ITensorMPS.setrightlim!(psi, b + Δ + 1)
     elseif isreverse(direction)
-      ITensors.setleftlim!(psi, b + Δ - 1)
+      ITensorMPS.setleftlim!(psi, b + Δ - 1)
     end
     set_nsite!(PH, nsite)
   end

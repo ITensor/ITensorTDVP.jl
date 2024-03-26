@@ -1,4 +1,5 @@
-using ITensors:
+using ITensors: permute
+using ITensors.ITensorMPS:
   AbstractObserver,
   MPO,
   MPS,
@@ -9,7 +10,6 @@ using ITensors:
   disk,
   linkind,
   maxlinkdim,
-  permute,
   siteinds
 
 function _compute_nsweeps(t; time_step=default_time_step(t), nsweeps=default_nsweeps())

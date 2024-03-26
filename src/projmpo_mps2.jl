@@ -1,4 +1,5 @@
-using ITensors: AbstractProjMPO, ProjMPO, contract, makeL!, makeR!, nsite, set_nsite!
+using ITensors: contract
+using ITensors.ITensorMPS: AbstractProjMPO, ProjMPO, makeL!, makeR!, nsite, set_nsite!
 
 mutable struct ProjMPO_MPS2 <: AbstractProjMPO
   PH::ProjMPO
@@ -15,9 +16,9 @@ end
 
 Base.copy(P::ProjMPO_MPS2) = ProjMPO_MPS2(copy(P.PH), copy(P.Ms))
 
-ITensors.nsite(P::ProjMPO_MPS2) = nsite(P.PH)
+ITensorMPS.nsite(P::ProjMPO_MPS2) = nsite(P.PH)
 
-function ITensors.set_nsite!(P::ProjMPO_MPS2, nsite)
+function ITensorMPS.set_nsite!(P::ProjMPO_MPS2, nsite)
   set_nsite!(P.PH, nsite)
   for m in P.Ms
     set_nsite!(m, nsite)
@@ -25,7 +26,7 @@ function ITensors.set_nsite!(P::ProjMPO_MPS2, nsite)
   return P
 end
 
-function ITensors.makeL!(P::ProjMPO_MPS2, psi::MPS, k::Int)
+function ITensorMPS.makeL!(P::ProjMPO_MPS2, psi::MPS, k::Int)
   makeL!(P.PH, psi, k)
   for m in P.Ms
     makeL!(m, psi, k)
@@ -33,7 +34,7 @@ function ITensors.makeL!(P::ProjMPO_MPS2, psi::MPS, k::Int)
   return P
 end
 
-function ITensors.makeR!(P::ProjMPO_MPS2, psi::MPS, k::Int)
+function ITensorMPS.makeR!(P::ProjMPO_MPS2, psi::MPS, k::Int)
   makeR!(P.PH, psi, k)
   for m in P.Ms
     makeR!(m, psi, k)
