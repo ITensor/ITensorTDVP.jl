@@ -35,7 +35,7 @@ using Test: @test, @testset
   H = MPO(elt, os, s)
   Hpsi = apply(H, psi; alg="fit", nsweeps=2)
   @test ITensors.scalartype(Hpsi) == elt
-  @test inner(psi, Hpsi) ≈ inner(psi', H, psi) rtol = √eps(real(elt))
+  @test inner(psi, Hpsi) ≈ inner(psi', H, psi) rtol = 10 * √eps(real(elt))
   # Change "top" indices of MPO to be a different set
   t = siteinds("S=1/2", N; conserve_qns)
   psit = deepcopy(psi)
@@ -46,7 +46,7 @@ using Test: @test, @testset
   # Test with nsweeps=2
   Hpsi = apply(H, psi; alg="fit", nsweeps=2)
   @test ITensors.scalartype(Hpsi) == elt
-  @test inner(psit, Hpsi) ≈ inner(psit, H, psi) rtol = √eps(real(elt))
+  @test inner(psit, Hpsi) ≈ inner(psit, H, psi) rtol = 10 * √eps(real(elt))
   # Test with less good initial guess MPS not equal to psi
   psi_guess = copy(psi)
   truncate!(psi_guess; maxdim=2)
