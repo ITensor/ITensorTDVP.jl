@@ -1,4 +1,4 @@
-using ITensors: ITensors, ITensor
+using ITensors: ITensor
 using ITensors.ITensorMPS: ITensorMPS, AbstractProjMPO, MPO, MPS
 
 """
