@@ -1,4 +1,4 @@
-using ITensors: ITensor, dag, dim, prime
+using ITensors: ITensors, ITensor, dag, dim, prime
 using ITensors.ITensorMPS: ITensorMPS, AbstractProjMPO, OneITensor, lproj, rproj, site_range
 
 """
@@ -82,7 +82,7 @@ function ITensorMPS.makeR!(P::ProjMPS2, psi::MPS, k::Int)
   return P
 end
 
-function ITensorMPS.contract(P::ProjMPS2, v::ITensor)
+function ITensors.contract(P::ProjMPS2, v::ITensor)
   itensor_map = Union{ITensor,OneITensor}[lproj(P)]
   append!(itensor_map, [prime(t, "Link") for t in P.M[site_range(P)]])
   push!(itensor_map, rproj(P))
