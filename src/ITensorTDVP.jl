@@ -1,9 +1,7 @@
 module ITensorTDVP
 
-using ITensors
+using ITensors: ITensorMPS
 using KrylovKit: exponentiate, eigsolve, KrylovKit
-using Printf
-using TimerOutputs
 using Observers
 
 #using ITensors:
