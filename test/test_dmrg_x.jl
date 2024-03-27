@@ -1,8 +1,10 @@
 @eval module $(gensym())
-using ITensors: ITensors, MPO, MPS, OpSum, ProjMPO, inner, siteinds
+using ITensors: ITensors, inner, OpSum, siteinds
+using ITensors.ITensorMPS: MPO, MPS, ProjMPO
 using ITensorTDVP: dmrg_x
 using Random: Random
 using Test: @test, @testset
+
 @testset "DMRG-X (eltype=$elt, conserve_qns=$conserve_qns)" for elt in (
     Float32, Float64, Complex{Float32}, Complex{Float64}
   ),

@@ -1,5 +1,4 @@
-using ITensors: MPS, maxlinkdim
-using ITensorTDVP: ITensorTDVP
+using ITensors.ITensorMPS: ITensorMPS, MPS, maxlinkdim
 using Observers: observer, update!
 using Printf: @printf
 
@@ -12,22 +11,22 @@ function tdvp_nonuniform_timesteps(
   time_start=0.0,
   order=2,
   (step_observer!)=observer(),
-  maxdim=ITensorTDVP.default_maxdim(),
-  mindim=ITensorTDVP.default_mindim(),
-  cutoff=ITensorTDVP.default_cutoff(),
-  noise=ITensorTDVP.default_noise(),
-  outputlevel=ITensorTDVP.default_outputlevel(),
+  maxdim=ITensorMPS.default_maxdim(),
+  mindim=ITensorMPS.default_mindim(),
+  cutoff=ITensorMPS.default_cutoff(),
+  noise=ITensorMPS.default_noise(),
+  outputlevel=ITensorMPS.default_outputlevel(),
   kwargs...,
 )
   nsweeps = length(time_steps)
-  maxdim, mindim, cutoff, noise = ITensorTDVP.process_sweeps(;
+  maxdim, mindim, cutoff, noise = ITensorMPS.process_sweeps(;
     nsweeps, maxdim, mindim, cutoff, noise
   )
-  tdvp_order = ITensorTDVP.TDVPOrder(order, Base.Forward)
+  tdvp_order = ITensorMPS.TDVPOrder(order, Base.Forward)
   current_time = time_start
   for sw in 1:nsweeps
     sw_time = @elapsed begin
-      psi, PH, info = ITensorTDVP.sweep_update(
+      psi, PH, info = ITensorMPS.sweep_update(
         tdvp_order,
         solver,
         PH,
@@ -61,16 +60,16 @@ end
 function tdvp_nonuniform_timesteps(
   H,
   psi::MPS;
-  ishermitian=ITensorTDVP.default_ishermitian(),
-  issymmetric=ITensorTDVP.default_issymmetric(),
-  solver_tol=ITensorTDVP.default_solver_tol(exponentiate),
-  solver_krylovdim=ITensorTDVP.default_solver_krylovdim(exponentiate),
-  solver_maxiter=ITensorTDVP.default_solver_maxiter(exponentiate),
-  solver_outputlevel=ITensorTDVP.default_solver_outputlevel(exponentiate),
+  ishermitian=ITensorMPS.default_ishermitian(),
+  issymmetric=ITensorMPS.default_issymmetric(),
+  solver_tol=ITensorMPS.default_solver_tol(exponentiate),
+  solver_krylovdim=ITensorMPS.default_solver_krylovdim(exponentiate),
+  solver_maxiter=ITensorMPS.default_solver_maxiter(exponentiate),
+  solver_outputlevel=ITensorMPS.default_solver_outputlevel(exponentiate),
   kwargs...,
 )
   return tdvp_nonuniform_timesteps(
-    ITensorTDVP.tdvp_solver(
+    ITensorMPS.tdvp_solver(
       exponentiate;
       ishermitian,
       issymmetric,
