@@ -1,5 +1,6 @@
 @eval module $(gensym())
-using ITensors: ITensorMPS, ITensors, MPO, OpSum, inner, randomMPS, siteinds
+using ITensors: ITensors, inner
+using ITensors.ITensorMPS: ITensorMPS, OpSum, MPO, randomMPS, siteinds
 using ITensorTDVP: ITensorTDVP
 using Test: @test, @testset
 @testset "DMRG (eltype=$elt, nsite=$nsite, conserve_qns=$conserve_qns)" for elt in (
