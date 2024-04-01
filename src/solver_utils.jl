@@ -1,4 +1,4 @@
-using ITensors: ITensor, apply, array, inds, itensor, permute
+using ITensors: ITensor, apply, array, inds, itensor, permute, ProjMPOSum
 
 # Utilities for making it easier
 # to define solvers (like ODE solvers)
