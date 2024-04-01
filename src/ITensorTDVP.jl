@@ -6,4 +6,7 @@ using Reexport: @reexport
 using ITensors.ITensorMPS: ITensorMPS
 dmrg(args...; kwargs...) = ITensorMPS.alternating_update_dmrg(args...; kwargs...)
 
+include("solver_utils.jl")
+export TimeDependentSum, to_vec
+
 end
