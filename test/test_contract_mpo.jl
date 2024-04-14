@@ -58,7 +58,7 @@ using Test: @test, @testset
   Hpsi = apply(H, psi; alg="fit", init_mps=Hpsi_guess, nsite=1, nsweeps=2)
   @test ITensors.scalartype(Hpsi) == elt
   scale(::Type{Float32}) = 10^2
-  scale(::Type{Float64}) = 10^6
+  scale(::Type{Float64}) = 5 * 10^5
   @test inner(psit, Hpsi) ≈ inner(psit, H, psi) rtol = √eps(real(elt)) * scale(real(elt))
 end
 end
