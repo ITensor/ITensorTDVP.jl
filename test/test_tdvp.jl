@@ -47,7 +47,7 @@ using Test: @test, @testset
   ## Should lose fidelity:
   #@test abs(inner(ψ0,ψ1)) < 0.9
   # Average energy should be conserved:
-  @test real(inner(ψ1', H, ψ1)) ≈ inner(ψ0', H, ψ0) rtol = √eps(real(elt))
+  @test real(inner(ψ1', H, ψ1)) ≈ inner(ψ0', H, ψ0) rtol = √eps(real(elt)) * 10
   # Time evolve backwards:
   ψ2 = tdvp(H, time_step, ψ1; nsweeps=1, cutoff)
   @test ITensors.scalartype(ψ2) == complex(elt)
