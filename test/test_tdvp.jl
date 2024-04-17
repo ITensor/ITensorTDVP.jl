@@ -21,9 +21,8 @@ using KrylovKit: exponentiate
 using LinearAlgebra: norm
 using Observers: observer
 using Test: @test, @testset
-@testset "Basic TDVP (eltype=$elt)" for elt in (
-  Float32, Float64, Complex{Float32}, Complex{Float64}
-)
+const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
+@testset "Basic TDVP (eltype=$elt)" for elt in elts
   N = 10
   cutoff = eps(real(elt)) * 10^4
   s = siteinds("S=1/2", N)
@@ -43,7 +42,7 @@ using Test: @test, @testset
   @test ψ1 ≈ tdvp(H, ψ0, -time_step; nsweeps=1, cutoff, nsite=1)
   #Different backend solvers, default solver_backend = "exponentiate"
   @test ψ1 ≈ tdvp(H, ψ0, -time_step; nsweeps=1, cutoff, nsite=1, solver_backend="applyexp")
-  @test norm(ψ1) ≈ 1 rtol = eps(real(elt)) * 10^3
+  @test norm(ψ1) ≈ 1 rtol = √eps(real(elt)) * 10
   ## Should lose fidelity:
   #@test abs(inner(ψ0,ψ1)) < 0.9
   # Average energy should be conserved:
@@ -51,12 +50,12 @@ using Test: @test, @testset
   # Time evolve backwards:
   ψ2 = tdvp(H, time_step, ψ1; nsweeps=1, cutoff)
   @test ITensors.scalartype(ψ2) == complex(elt)
-  @test norm(ψ2) ≈ 1 rtol = eps(real(elt)) * 10^4
+  @test norm(ψ2) ≈ 1 rtol = √eps(real(elt)) * 10
   # Should rotate back to original state:
   @test abs(inner(ψ0, ψ2)) > 0.99
 end
 
-@testset "TDVP: Sum of Hamiltonians" begin
+@testset "TDVP: Sum of Hamiltonians (eltype=$elt)" for elt in elts
   N = 10
   cutoff = 1e-10
 
@@ -71,21 +70,24 @@ end
   for j in 1:(N - 1)
     os2 += "Sz", j, "Sz", j + 1
   end
-  H1 = MPO(os1, s)
-  H2 = MPO(os2, s)
+  H1 = MPO(elt, os1, s)
+  H2 = MPO(elt, os2, s)
   Hs = [H1, H2]
-  ψ0 = randomMPS(s; linkdims=10)
-  ψ1 = tdvp(Hs, -0.1im, ψ0; nsweeps=1, cutoff, nsite=1)
-  @test ψ1 ≈ tdvp(-0.1im, Hs, ψ0; nsweeps=1, cutoff, nsite=1)
-  @test ψ1 ≈ tdvp(Hs, ψ0, -0.1im; nsweeps=1, cutoff, nsite=1)
-  @test norm(ψ1) ≈ 1.0
+  ψ0 = randomMPS(elt, s; linkdims=10)
+  ψ1 = tdvp(Hs, -elt(0.1) * im, ψ0; nsweeps=1, cutoff, nsite=1)
+  @test ITensors.scalartype(ψ1) === complex(elt)
+  @test ψ1 ≈ tdvp(-elt(0.1) * im, Hs, ψ0; nsweeps=1, cutoff, nsite=1)
+  @test ψ1 ≈ tdvp(Hs, ψ0, -elt(0.1) * im; nsweeps=1, cutoff, nsite=1)
+  @test norm(ψ1) ≈ 1 rtol = √eps(real(elt))
   ## Should lose fidelity:
   #@test abs(inner(ψ0,ψ1)) < 0.9
   # Average energy should be conserved:
-  @test real(sum(H -> inner(ψ1', H, ψ1), Hs)) ≈ sum(H -> inner(ψ0', H, ψ0), Hs)
+  @test real(sum(H -> inner(ψ1', H, ψ1), Hs)) ≈ sum(H -> inner(ψ0', H, ψ0), Hs) rtol =
+    √eps(real(elt))
   # Time evolve backwards:
-  ψ2 = tdvp(Hs, +0.1im, ψ1; nsweeps=1, cutoff)
-  @test norm(ψ2) ≈ 1.0
+  ψ2 = tdvp(Hs, elt(0.1) * im, ψ1; nsweeps=1, cutoff)
+  @test ITensors.scalartype(ψ2) === complex(elt)
+  @test norm(ψ2) ≈ 1 rtol = √eps(real(elt))
   # Should rotate back to original state:
   @test abs(inner(ψ0, ψ2)) > 0.99
 end
@@ -109,14 +111,14 @@ end
     return psi, info
   end
   ψ1 = tdvp(solver, H, -0.1im, ψ0; cutoff, nsite=1)
-  @test norm(ψ1) ≈ 1.0
+  @test norm(ψ1) ≈ 1
   ## Should lose fidelity:
   #@test abs(inner(ψ0,ψ1)) < 0.9
   # Average energy should be conserved:
   @test real(inner(ψ1', H, ψ1)) ≈ inner(ψ0', H, ψ0)
   # Time evolve backwards:
   ψ2 = tdvp(H, +0.1im, ψ1; cutoff)
-  @test norm(ψ2) ≈ 1.0
+  @test norm(ψ2) ≈ 1
   # Should rotate back to original state:
   @test abs(inner(ψ0, ψ2)) > 0.99
 end
