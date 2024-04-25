@@ -1,7 +1,6 @@
 @eval module $(gensym())
 using ITensors: ITensors, MPO, OpSum, apply, randomMPS, siteinds
-using ITensorTDVP: ITensorTDVP, dmrg
-using KrylovKit: linsolve
+using ITensorTDVP: ITensorTDVP, dmrg, linsolve
 using LinearAlgebra: norm
 using Test: @test, @testset
 using Random: Random
