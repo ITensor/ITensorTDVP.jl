@@ -1,7 +1,8 @@
 @eval module $(gensym())
 using ITensors: ITensors, MPO, OpSum, apply, randomMPS, siteinds
-using ITensorTDVP: ITensorTDVP, dmrg, linsolve
+using ITensorTDVP: ITensorTDVP, dmrg
 using LinearAlgebra: norm
+using KrylovKit: linsolve
 using Test: @test, @testset
 using Random: Random
 @testset "linsolve (eltype=$elt, conserve_qns=$conserve_qns)" for elt in (
