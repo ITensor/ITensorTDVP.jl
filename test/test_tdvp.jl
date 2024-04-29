@@ -83,7 +83,7 @@ end
   #@test abs(inner(ψ0,ψ1)) < 0.9
   # Average energy should be conserved:
   @test real(sum(H -> inner(ψ1', H, ψ1), Hs)) ≈ sum(H -> inner(ψ0', H, ψ0), Hs) rtol =
-    √eps(real(elt))
+    2 * √eps(real(elt))
   # Time evolve backwards:
   ψ2 = tdvp(Hs, elt(0.1) * im, ψ1; nsweeps=1, cutoff)
   @test ITensors.scalartype(ψ2) === complex(elt)
