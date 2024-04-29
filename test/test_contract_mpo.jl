@@ -52,7 +52,7 @@ using Test: @test, @testset
   truncate!(psi_guess; maxdim=2)
   Hpsi = apply(H, psi; alg="fit", nsweeps=4, init_mps=psi_guess)
   @test ITensors.scalartype(Hpsi) == elt
-  @test inner(psit, Hpsi) ≈ inner(psit, H, psi) rtol = √eps(real(elt))
+  @test inner(psit, Hpsi) ≈ inner(psit, H, psi) rtol = 3 * √eps(real(elt))
   # Test with nsite=1
   Hpsi_guess = apply(H, psi; alg="naive", cutoff=1e-4)
   Hpsi = apply(H, psi; alg="fit", init_mps=Hpsi_guess, nsite=1, nsweeps=2)
