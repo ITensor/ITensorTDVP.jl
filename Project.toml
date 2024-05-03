@@ -14,7 +14,7 @@ TimerOutputs = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"
 Observers = "338f10d5-c7f1-4033-a7d1-f9dec39bcaa0"
 
 [extensions]
-ITensorsObserversExt = "Observers"
+ITensorTDVPObserversExt = "Observers"
 
 [compat]
 ITensors = "0.3.58, 0.4, 0.5"
