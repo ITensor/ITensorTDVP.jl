@@ -23,7 +23,7 @@ pkg> add ITensorTDVP
 
 #### Breaking changes
 
-- The `applyexp` Krylov exponentiation solver backend has been removed, and `solver_backend="applyexp"` option for `tdvp` now just calls `exponentiate` from KrylovKit.jl. They were in many ways the same but `exponentiate` has more advanced features like restarts. Using `solver_backend="applyexp"` now prints a warning to that effect. To remove the warning, don't specify the `solver_backend` keyword argument. Alternatively, you can set it to `"exponentiate"`, though specifying it is now superfluous since there is now only one `solver_backend` available and the `solver_backend` keyword argument may be removed in future minor releases.
+- ITensorTDVP.jl v0.2.0-v0.2.4: The `applyexp` Krylov exponentiation solver backend was removed, and `solver_backend="applyexp"` option for `tdvp` now just calls `exponentiate` from KrylovKit.jl. `applyexp` is in many ways the same as `exponentiate` bit `exponentiate` has more advanced features like restarts. In these versions, `solver_backend="applyexp"` prints a warning to that effect. As of ITensorTDVP.jl v0.2.5, we have brought back the `applyexp` backend because we received reports that it performed better in certain cases. We plan to investigate that issue and make sure `exponentiate` works as well as `applyexp` in those cases so that we can go back to just having a single `exponentiate` backend.
 
 #### Bug fixes
 

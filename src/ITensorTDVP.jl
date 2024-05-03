@@ -1,6 +1,7 @@
 module ITensorTDVP
 export TimeDependentSum, dmrg_x, linsolve, tdvp, to_vec
 
+include("applyexp.jl")
 include("defaults.jl")
 include("update_observer.jl")
 include("solver_utils.jl")
