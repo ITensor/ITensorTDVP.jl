@@ -1,6 +1,8 @@
-using ITensors: AbstractObserver, measure!
-using Observers: Observers
+function update_observer!(observer; kwargs...)
+  return error("Not implemented")
+end
 
-function Observers.update!(observer::AbstractObserver; kwargs...)
-  return measure!(observer; kwargs...)
+using ITensors.ITensorMPS: ITensorMPS
+function update_observer!(observer::ITensorMPS.AbstractObserver; kwargs...)
+  return ITensorMPS.measure!(observer; kwargs...)
 end
