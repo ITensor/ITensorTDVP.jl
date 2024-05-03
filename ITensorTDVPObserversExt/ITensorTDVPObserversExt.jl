@@ -1,7 +1,7 @@
-module ITensorsObserversExt
+module ITensorTDVPObserversExt
 using Observers: Observers
 using Observers.DataFrames: AbstractDataFrame
-using ITensors.ITensorTDVP: ITensorTDVP
+using ITensorTDVP: ITensorTDVP
 
 function ITensorTDVP.update_observer!(observer::AbstractDataFrame; kwargs...)
   return Observers.update!(observer; kwargs...)
