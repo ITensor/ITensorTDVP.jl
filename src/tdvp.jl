@@ -1,24 +1,18 @@
 using ITensors: Algorithm, MPO, MPS, @Algorithm_str
+using KrylovKit: exponentiate
 
 # Select solver function
 solver_function(solver_backend::String) = solver_function(Algorithm(solver_backend))
 solver_function(::Algorithm"exponentiate") = exponentiate
+solver_function(::Algorithm"applyexp") = applyexp
 function solver_function(solver_backend::Algorithm)
   return error(
     "solver_backend=$(String(solver_backend)) not recognized (only \"exponentiate\" is supported)",
   )
 end
 
-# Kept for backwards compatibility
-function solver_function(::Algorithm"applyexp")
-  println(
-    "Warning: the `solver_backend` option `\"applyexp\"` in `tdvp` has been removed. `\"exponentiate\"` will be used instead. To remove this warning, don't specify the `solver_backend` keyword argument.",
-  )
-  return solver_function(Algorithm"exponentiate"())
-end
-
 function tdvp_solver(
-  f::typeof(exponentiate);
+  f::Function;
   ishermitian,
   issymmetric,
   solver_tol,
