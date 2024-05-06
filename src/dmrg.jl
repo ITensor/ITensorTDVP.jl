@@ -21,8 +21,7 @@ function dmrg_solver(
       maxiter=solver_maxiter,
       verbosity=solver_verbosity,
     )
-    psi = vecs[1]
-    return psi, info
+    return vecs[1], (; info, eigval=vals[1])
   end
   return solver
 end
@@ -36,9 +35,13 @@ function dmrg(
   solver_krylovdim=default_solver_krylovdim(eigsolve),
   solver_maxiter=default_solver_maxiter(eigsolve),
   solver_verbosity=default_solver_verbosity(),
+  (observer!)=default_observer!(),
   kwargs...,
 )
   reverse_step = false
+  info_ref! = Ref{Any}()
+  info_observer! = values_observer(; info=info_ref!)
+  observer! = compose_observers(observer!, info_observer!)
   psi = alternating_update(
     dmrg_solver(
       eigsolve;
@@ -52,7 +55,8 @@ function dmrg(
     H,
     psi0;
     reverse_step,
+    observer!,
     kwargs...,
   )
-  return psi
+  return info_ref![].eigval, psi
 end
