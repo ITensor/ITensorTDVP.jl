@@ -19,6 +19,21 @@ pkg> add ITensorTDVP
 
 ## News
 
+### ITensorTDVP.jl v0.3 Release Notes
+
+#### Breaking changes
+
+- `ITensorTDVP.dmrg` and `ITensorTDVP.dmrg_x` now output a tuple containing the eigenvalue and eigenvector, while before they just output the eigenvector. You should update code like this:
+```julia
+psi = dmrg_x(H, psi0; nsweeps=10, maxdim=100, cutoff=1e-6)
+psi = ITensorTDVP.dmrg(H, psi0; nsweeps=10, maxdim=100, cutoff=1e-6)
+```
+to:
+```julia
+energy, psi = dmrg_x(H, psi0; nsweeps=10, maxdim=100, cutoff=1e-6)
+energy, psi = ITensorTDVP.dmrg(H, psi0; nsweeps=10, maxdim=100, cutoff=1e-6)
+```
+
 ### ITensorTDVP.jl v0.2 Release Notes
 
 #### Breaking changes

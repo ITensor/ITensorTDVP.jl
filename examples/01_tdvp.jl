@@ -36,11 +36,11 @@ function main()
 
   e2, ϕ2 = ITensors.dmrg(H, ψ; nsweeps=10, maxdim=20, cutoff=1e-10)
 
-  @show inner(ϕ2', H, ϕ2) / inner(ϕ2, ϕ2)
+  @show inner(ϕ2', H, ϕ2) / inner(ϕ2, ϕ2), e2
 
-  ϕ3 = ITensorTDVP.dmrg(H, ψ; nsweeps=10, maxdim=20, cutoff=1e-10, outputlevel=1)
+  e3, ϕ3 = ITensorTDVP.dmrg(H, ψ; nsweeps=10, maxdim=20, cutoff=1e-10, outputlevel=1)
 
-  @show inner(ϕ3', H, ϕ3) / inner(ϕ3, ϕ3)
+  @show inner(ϕ3', H, ϕ3) / inner(ϕ3, ϕ3), e3
   return nothing
 end
 

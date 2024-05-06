@@ -22,7 +22,7 @@ using Random: Random
   state = [isodd(n) ? "Up" : "Dn" for n in 1:N]
   Random.seed!(1234)
   x_c = randomMPS(elt, s, state; linkdims=2)
-  x_c = dmrg(H, x_c; nsweeps=10, cutoff=1e-6, maxdim=20, outputlevel=0)
+  e, x_c = dmrg(H, x_c; nsweeps=10, cutoff=1e-6, maxdim=20, outputlevel=0)
   @test ITensors.scalartype(x_c) == elt
   # Compute `b = H * x_c`
   b = apply(H, x_c; cutoff=1e-8)
