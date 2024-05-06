@@ -30,8 +30,8 @@ psi = ITensorTDVP.dmrg(H, psi0; nsweeps=10, maxdim=100, cutoff=1e-6)
 ```
 to:
 ```julia
-e, psi = dmrg_x(H, psi0; nsweeps=10, maxdim=100, cutoff=1e-6)
-e, psi = ITensorTDVP.dmrg(H, psi0; nsweeps=10, maxdim=100, cutoff=1e-6)
+energy, psi = dmrg_x(H, psi0; nsweeps=10, maxdim=100, cutoff=1e-6)
+energy, psi = ITensorTDVP.dmrg(H, psi0; nsweeps=10, maxdim=100, cutoff=1e-6)
 ```
 
 ### ITensorTDVP.jl v0.2 Release Notes
