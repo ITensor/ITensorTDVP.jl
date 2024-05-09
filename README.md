@@ -1,3 +1,7 @@
+| :warning: WARNING          |
+|:---------------------------|
+| The [ITensorTDVP.jl](https://github.com/ITensor/ITensorTDVP.jl) package will be deprecated in favor of the [ITensorMPS.jl](https://github.com/ITensor/ITensorMPS.jl) package. We plan to move all of the code from this package into ITensorMPS.jl. For now, to help with backwards compatability, ITensorMPS.jl simply re-exports the functionality of ITensorTDVP.jl. To prepare for the change, please change `using ITensorTDVP` to `using ITensorMPS` in your code. |
+
 # ITensorTDVP
 
 [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://mtfishman.github.io/ITensorTDVP.jl/stable)

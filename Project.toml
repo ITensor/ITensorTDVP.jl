@@ -1,7 +1,7 @@
 name = "ITensorTDVP"
 uuid = "25707e16-a4db-4a07-99d9-4d67b7af0342"
 authors = ["Matthew Fishman <mfishman@flatironinstitute.org> and contributors"]
-version = "0.3.0"
+version = "0.3.1"
 
 [deps]
 ITensors = "9136182c-28ba-11e9-034c-db9fb085ebd5"
@@ -18,7 +18,7 @@ Observers = "338f10d5-c7f1-4033-a7d1-f9dec39bcaa0"
 ITensorTDVPObserversExt = "Observers"
 
 [compat]
-ITensors = "0.3.58, 0.4, 0.5"
+ITensors = "0.3.58, 0.4, 0.5, 0.6"
 KrylovKit = "0.6, 0.7"
 Observers = "0.2"
 PackageExtensionCompat = "1"
