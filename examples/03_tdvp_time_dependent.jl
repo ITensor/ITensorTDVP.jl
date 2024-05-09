@@ -1,5 +1,5 @@
-using ITensors: MPO, MPS, @disable_warn_order, inner, randomMPS, siteinds
-using ITensorTDVP: tdvp
+using ITensors: @disable_warn_order
+using ITensorMPS: MPO, MPS, inner, randomMPS, siteinds, tdvp
 using LinearAlgebra: norm
 using Random: Random
 

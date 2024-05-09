@@ -1,4 +1,4 @@
-using ITensors: OpSum
+using ITensorMPS: OpSum
 
 function heisenberg(n; J=1.0, J2=0.0)
   ℋ = OpSum()
