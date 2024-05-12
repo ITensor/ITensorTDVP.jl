@@ -10,7 +10,7 @@ function dmrg_solver(
   function solver(operator, init; current_time, time_step, outputlevel)
     howmany = 1
     which = solver_which_eigenvalue
-    vals, vecs, info = f(
+    eigvals, eigvecs, info = f(
       operator,
       init,
       howmany,
@@ -21,7 +21,7 @@ function dmrg_solver(
       maxiter=solver_maxiter,
       verbosity=solver_verbosity,
     )
-    return vecs[1], (; info, eigval=vals[1])
+    return eigvecs[1], (; info, eigval=eigvals[1])
   end
   return solver
 end

@@ -3,7 +3,7 @@ using ITensors: ITensors, MPO, OpSum, apply, randomMPS, siteinds
 using ITensorTDVP: ITensorTDVP, dmrg
 using KrylovKit: linsolve
 using LinearAlgebra: norm
-using Test: @test, @testset
+using Test: @test, @test_throws, @testset
 using Random: Random
 @testset "linsolve (eltype=$elt, conserve_qns=$conserve_qns)" for elt in (
     Float32, Float64, Complex{Float32}, Complex{Float64}
@@ -34,6 +34,7 @@ using Random: Random
   cutoff = 1e-5
   maxdim = 20
   solver_kwargs = (; tol=1e-4, maxiter=20, krylovdim=30, ishermitian=true)
+  @test_throws ErrorException linsolve(H, b, x0; cutoff, maxdim, solver_kwargs)
   x = linsolve(H, b, x0; nsweeps, cutoff, maxdim, solver_kwargs)
   @test ITensors.scalartype(x) == elt
   @test norm(x - x_c) < 1e-2

@@ -2,7 +2,7 @@ using ITensors: ITensor
 using ITensors.ITensorMPS: ITensorMPS, AbstractProjMPO, MPO, MPS
 
 """
-A ProjMPOApply represents the application of an
+A ReducedContractProblem represents the application of an
 MPO `operator` onto an MPS `input_state` but "projected" by
 the basis of a different MPS `state` (which
 could be an approximation to operator|state>).
@@ -19,58 +19,54 @@ one- and two-site algorithms.
      o--o--o-      -o--o--o--o--o--o |input_state>
 ```
 """
-mutable struct ProjMPOApply <: AbstractProjMPO
+mutable struct ReducedContractProblem <: AbstractProjMPO
   lpos::Int
   rpos::Int
   nsite::Int
   input_state::MPS
   operator::MPO
-  LR::Vector{ITensor}
+  environments::Vector{ITensor}
 end
 
-function ProjMPOApply(input_state::MPS, operator::MPO)
+function ReducedContractProblem(input_state::MPS, operator::MPO)
   lpos = 0
   rpos = length(operator) + 1
   nsite = 2
-  LR = Vector{ITensor}(undef, length(operator))
-  return ProjMPOApply(
-    lpos,
-    rpos,
-    nsite,
-    input_state,
-    operator,
-    LR,
-  )
+  environments = Vector{ITensor}(undef, length(operator))
+  return ReducedContractProblem(lpos, rpos, nsite, input_state, operator, environments)
 end
 
-function Base.getproperty(reduced_operator::ProjMPOApply, sym::Symbol)
+function Base.getproperty(reduced_operator::ReducedContractProblem, sym::Symbol)
+  # This is for compatibility with `AbstractProjMPO`.
+  # TODO: Don't use `reduced_operator.H`, `reduced_operator.LR`, etc.
+  # in `AbstractProjMPO`.
   if sym === :H
-    # This is for compatibility with `AbstractProjMPO`.
-    # TODO: Don't use `reduced_operator.H` in `AbstractProjMPO`.
     return getfield(reduced_operator, :operator)
+  elseif sym == :LR
+    return getfield(reduced_operator, :environments)
   end
   return getfield(reduced_operator, sym)
 end
 
-function Base.copy(reduced_operator::ProjMPOApply)
-  return ProjMPOApply(
+function Base.copy(reduced_operator::ReducedContractProblem)
+  return ReducedContractProblem(
     reduced_operator.lpos,
     reduced_operator.rpos,
     reduced_operator.nsite,
     copy(reduced_operator.input_state),
     copy(reduced_operator.operator),
-    copy(reduced_operator.LR),
+    copy(reduced_operator.environments),
   )
 end
 
-Base.length(reduced_operator::ProjMPOApply) = length(reduced_operator.operator)
+Base.length(reduced_operator::ReducedContractProblem) = length(reduced_operator.operator)
 
-function ITensorMPS.set_nsite!(reduced_operator::ProjMPOApply, nsite)
+function ITensorMPS.set_nsite!(reduced_operator::ReducedContractProblem, nsite)
   reduced_operator.nsite = nsite
   return reduced_operator
 end
 
-function ITensorMPS.makeL!(reduced_operator::ProjMPOApply, state::MPS, k::Int)
+function ITensorMPS.makeL!(reduced_operator::ReducedContractProblem, state::MPS, k::Int)
   # Save the last `L` that is made to help with caching
   # for DiskProjMPO
   ll = reduced_operator.lpos
@@ -90,7 +86,7 @@ function ITensorMPS.makeL!(reduced_operator::ProjMPOApply, state::MPS, k::Int)
       reduced_operator.input_state[ll + 1] *
       reduced_operator.operator[ll + 1] *
       dag(state[ll + 1])
-    reduced_operator.LR[ll + 1] = L
+    reduced_operator.environments[ll + 1] = L
     ll += 1
   end
   # Needed when moving lproj backward.
@@ -98,7 +94,7 @@ function ITensorMPS.makeL!(reduced_operator::ProjMPOApply, state::MPS, k::Int)
   return reduced_operator
 end
 
-function ITensorMPS.makeR!(reduced_operator::ProjMPOApply, state::MPS, k::Int)
+function ITensorMPS.makeR!(reduced_operator::ReducedContractProblem, state::MPS, k::Int)
   # Save the last `R` that is made to help with caching
   # for DiskProjMPO
   rl = reduced_operator.rpos
@@ -119,7 +115,7 @@ function ITensorMPS.makeR!(reduced_operator::ProjMPOApply, state::MPS, k::Int)
       reduced_operator.input_state[rl - 1] *
       reduced_operator.operator[rl - 1] *
       dag(state[rl - 1])
-    reduced_operator.LR[rl - 1] = R
+    reduced_operator.environments[rl - 1] = R
     rl -= 1
   end
   reduced_operator.rpos = k

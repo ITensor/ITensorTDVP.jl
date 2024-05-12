@@ -20,10 +20,10 @@ function tdvp_solver(
   solver_maxiter,
   solver_outputlevel,
 )
-  function solver(operator, t, init; current_time, outputlevel)
+  function solver(operator, init; current_time, time_step, outputlevel)
     return f(
       operator,
-      t,
+      time_step,
       init;
       ishermitian,
       issymmetric,
@@ -83,7 +83,7 @@ function tdvp(
   init::MPS;
   reverse_step=true,
   time_step=nothing,
-  time_start=0,
+  time_start=zero(t),
   nsweeps=nothing,
   nsteps=nsweeps,
   ishermitian=default_ishermitian(),
@@ -96,9 +96,7 @@ function tdvp(
   solver_outputlevel=default_solver_outputlevel(solver_function),
   kwargs...,
 )
-  @show t, time_step, nsteps
   time_step, nsteps = time_step_and_nsteps(t, time_step, nsteps)
-  @show time_step, nsweeps
   return alternating_update(
     tdvp_solver(
       solver_function;
@@ -113,6 +111,7 @@ function tdvp(
     init;
     reverse_step,
     nsweeps=nsteps,
+    time_start,
     time_step,
     kwargs...,
   )

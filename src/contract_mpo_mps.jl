@@ -58,7 +58,7 @@ function ITensors.contract(
     end
   end
   replace_siteinds!(init, ti)
-  reduced_operator = ProjMPOApply(input_state, operator)
+  reduced_operator = ReducedContractProblem(input_state, operator)
   psi = alternating_update(
     contractmpo_solver(; kwargs...), reduced_operator, init; kwargs...
   )

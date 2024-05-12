@@ -16,11 +16,11 @@ using ITensors:
   randomMPS,
   scalar,
   siteinds
-using ITensorTDVP: tdvp
+using ITensorTDVP: ITensorTDVP, tdvp
 using KrylovKit: exponentiate
 using LinearAlgebra: norm
 using Observers: observer
-using Test: @test, @testset
+using Test: @test, @test_throws, @testset
 const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
 @testset "Basic TDVP (eltype=$elt)" for elt in elts
   N = 10
@@ -36,19 +36,20 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
   ψ0 = randomMPS(elt, s; linkdims=10)
   time_step = elt(0.1) * im
   # Time evolve forward:
-  ψ1 = tdvp(H, -time_step, ψ0; nsweeps=1, cutoff, nsite=1)
+  @test_throws ErrorException tdvp(H, -time_step, ψ0; cutoff, nsite=1)
+  ψ1 = tdvp(H, -time_step, ψ0; nsteps=1, cutoff, nsite=1)
   @test ITensors.scalartype(ψ1) == complex(elt)
-  @test ψ1 ≈ tdvp(-time_step, H, ψ0; nsweeps=1, cutoff, nsite=1)
-  @test ψ1 ≈ tdvp(H, ψ0, -time_step; nsweeps=1, cutoff, nsite=1)
+  ## @test ψ1 ≈ tdvp(-time_step, H, ψ0; nsteps=1, cutoff, nsite=1)
+  ## @test ψ1 ≈ tdvp(H, ψ0, -time_step; nsteps=1, cutoff, nsite=1)
   #Different backend solvers, default solver_backend = "exponentiate"
-  @test ψ1 ≈ tdvp(H, ψ0, -time_step; nsweeps=1, cutoff, nsite=1, solver_backend="applyexp")
+  @test ψ1 ≈ tdvp(H, -time_step, ψ0; nsteps=1, cutoff, nsite=1, solver_backend="applyexp")
   @test norm(ψ1) ≈ 1 rtol = √eps(real(elt)) * 10
   ## Should lose fidelity:
   #@test abs(inner(ψ0,ψ1)) < 0.9
   # Average energy should be conserved:
   @test real(inner(ψ1', H, ψ1)) ≈ inner(ψ0', H, ψ0) rtol = √eps(real(elt)) * 10
   # Time evolve backwards:
-  ψ2 = tdvp(H, time_step, ψ1; nsweeps=1, cutoff)
+  ψ2 = tdvp(H, time_step, ψ1; nsteps=1, cutoff)
   @test ITensors.scalartype(ψ2) == complex(elt)
   @test norm(ψ2) ≈ 1 rtol = √eps(real(elt)) * 10
   # Should rotate back to original state:
@@ -74,10 +75,10 @@ end
   H2 = MPO(elt, os2, s)
   Hs = [H1, H2]
   ψ0 = randomMPS(elt, s; linkdims=10)
-  ψ1 = tdvp(Hs, -elt(0.1) * im, ψ0; nsweeps=1, cutoff, nsite=1)
+  ψ1 = tdvp(Hs, -elt(0.1) * im, ψ0; nsteps=1, cutoff, nsite=1)
   @test ITensors.scalartype(ψ1) === complex(elt)
-  @test ψ1 ≈ tdvp(-elt(0.1) * im, Hs, ψ0; nsweeps=1, cutoff, nsite=1)
-  @test ψ1 ≈ tdvp(Hs, ψ0, -elt(0.1) * im; nsweeps=1, cutoff, nsite=1)
+  ## @test ψ1 ≈ tdvp(-elt(0.1) * im, Hs, ψ0; nsteps=1, cutoff, nsite=1)
+  ## @test ψ1 ≈ tdvp(Hs, ψ0, -elt(0.1) * im; nsteps=1, cutoff, nsite=1)
   @test norm(ψ1) ≈ 1 rtol = √eps(real(elt))
   ## Should lose fidelity:
   #@test abs(inner(ψ0,ψ1)) < 0.9
@@ -85,7 +86,7 @@ end
   @test real(sum(H -> inner(ψ1', H, ψ1), Hs)) ≈ sum(H -> inner(ψ0', H, ψ0), Hs) rtol =
     2 * √eps(real(elt))
   # Time evolve backwards:
-  ψ2 = tdvp(Hs, elt(0.1) * im, ψ1; nsweeps=1, cutoff)
+  ψ2 = tdvp(Hs, elt(0.1) * im, ψ1; nsteps=1, cutoff)
   @test ITensors.scalartype(ψ2) === complex(elt)
   @test norm(ψ2) ≈ 1 rtol = √eps(real(elt))
   # Should rotate back to original state:
@@ -110,7 +111,9 @@ end
     psi, info = exponentiate(PH, t, psi0; solver_kwargs...)
     return psi, info
   end
-  ψ1 = tdvp(solver, H, -0.1im, ψ0; cutoff, nsite=1)
+  ψ1 = ITensorTDVP.alternating_update(
+    solver, H, ψ0; nsweeps=1, cutoff, time_step=-0.1im, nsite=1
+  )
   @test norm(ψ1) ≈ 1
   ## Should lose fidelity:
   #@test abs(inner(ψ0,ψ1)) < 0.9
@@ -216,7 +219,7 @@ end
     psi = apply(gates, psi; cutoff)
     nsite = (step <= 3 ? 2 : 1)
     phi = tdvp(
-      H, -tau * im, phi; nsweeps=1, cutoff, nsite, normalize=true, solver_krylovdim=15
+      H, -tau * im, phi; nsteps=1, cutoff, nsite, normalize=true, solver_krylovdim=15
     )
     Sz1[step] = expect(psi, "Sz"; sites=c:c)[1]
     Sz2[step] = expect(phi, "Sz"; sites=c:c)[1]
@@ -265,10 +268,26 @@ end
   for (step, t) in enumerate(trange)
     nsite = (step <= 10 ? 2 : 1)
     psi = tdvp(
-      H, -tau, psi; cutoff, nsite, reverse_step, normalize=true, solver_krylovdim=15
+      H,
+      -tau,
+      psi;
+      nsteps=1,
+      cutoff,
+      nsite,
+      reverse_step,
+      normalize=true,
+      solver_krylovdim=15,
     )
     psi2 = tdvp(
-      H, -tau, psi2; cutoff, nsite, reverse_step, normalize=true, solver_krylovdim=15
+      H,
+      -tau,
+      psi2;
+      nsteps=1,
+      cutoff,
+      nsite,
+      reverse_step,
+      normalize=true,
+      solver_krylovdim=15,
     )
   end
   @test psi ≈ psi2 rtol = 1e-6

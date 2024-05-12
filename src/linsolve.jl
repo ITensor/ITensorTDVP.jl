@@ -24,13 +24,21 @@ Keyword arguments:
     See `KrylovKit.jl` documentation for more details on available keyword arguments.
 """
 function KrylovKit.linsolve(
-  A::MPO, b::MPS, x₀::MPS, a₀::Number=false, a₁::Number=true; solver_kwargs=(;), kwargs...
+  operator::MPO,
+  constant_term::MPS,
+  init::MPS,
+  a₀::Number=false,
+  a₁::Number=true;
+  solver_kwargs=(;),
+  kwargs...,
 )
-  function linsolve_solver(P::ProjMPO_MPS2, t, x₀; current_time, outputlevel)
-    b = dag(only(proj_mps(P)))
-    x, info = linsolve(P, b, x₀, a₀, a₁; solver_kwargs...)
+  function linsolve_solver(
+    reduced_problem::ReducedLinearProblem, init; current_time, time_step, outputlevel
+  )
+    constant_term = dag(only(reduced_constant_terms(reduced_problem)))
+    x, info = linsolve(reduced_problem, constant_term, init, a₀, a₁; solver_kwargs...)
     return x, nothing
   end
-  P = ProjMPO_MPS2(A, b)
-  return alternating_update(linsolve_solver, P, x₀; kwargs...)
+  reduced_problem = ReducedLinearProblem(operator, constant_term)
+  return alternating_update(linsolve_solver, reduced_problem, init; kwargs...)
 end

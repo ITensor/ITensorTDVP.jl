@@ -12,7 +12,7 @@ using ITensors:
   siteinds,
   truncate!
 using ITensorTDVP: ITensorTDVP
-using Test: @test, @testset
+using Test: @test, @test_throws, @testset
 @testset "Contract MPO (eltype=$elt, conserve_qns=$conserve_qns)" for elt in (
     Float32, Float64, Complex{Float32}, Complex{Float64}
   ),
@@ -34,6 +34,7 @@ using Test: @test, @testset
   end
   H = MPO(elt, os, s)
   Hpsi = apply(H, psi; alg="fit", nsweeps=2)
+  @test_throws ErrorException apply(H, psi; alg="fit")
   @test ITensors.scalartype(Hpsi) == elt
   @test inner(psi, Hpsi) ≈ inner(psi', H, psi) rtol = 10 * √eps(real(elt))
   # Change "top" indices of MPO to be a different set

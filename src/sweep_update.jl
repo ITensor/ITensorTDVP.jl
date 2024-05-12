@@ -276,7 +276,7 @@ function region_update!(
   position!(reduce_operator, state, b)
   reduced_state = state[b]
   reduced_state, info = solver(
-    reduce_operator, time_step, reduced_state; current_time, outputlevel
+    reduce_operator, reduced_state; current_time, time_step, outputlevel
   )
   current_time += time_step
   normalize && (reduced_state /= norm(reduced_state))
@@ -298,7 +298,7 @@ function region_update!(
     set_nsite!(reduce_operator, nsite - 1)
     position!(reduce_operator, state, b1)
     bond_reduced_state, info = solver(
-      reduce_operator, -time_step, bond_reduced_state; current_time, outputlevel
+      reduce_operator, bond_reduced_state; current_time, time_step=-time_step, outputlevel
     )
     current_time -= time_step
     normalize && (bond_reduced_state ./= norm(bond_reduced_state))

@@ -73,7 +73,9 @@ function alternating_update(
   cutoff=default_cutoff(ITensors.scalartype(init)),
   noise=default_noise(),
 )
-  ## nsweeps = _compute_nsweeps(t; time_step, nsweeps)
+  if isnothing(nsweeps)
+    return error("Must specify `nsweeps`.")
+  end
   maxdim, mindim, cutoff, noise = process_sweeps(; nsweeps, maxdim, mindim, cutoff, noise)
   forward_order = TDVPOrder(order, Base.Forward)
   state = copy(init)
