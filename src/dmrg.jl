@@ -7,12 +7,12 @@ function dmrg_solver(
   solver_maxiter,
   solver_verbosity,
 )
-  function solver(H, t, psi0; current_time, outputlevel)
+  function solver(operator, init; current_time, time_step, outputlevel)
     howmany = 1
     which = solver_which_eigenvalue
     vals, vecs, info = f(
-      H,
-      psi0,
+      operator,
+      init,
       howmany,
       which;
       ishermitian=default_ishermitian(),
@@ -27,8 +27,8 @@ function dmrg_solver(
 end
 
 function dmrg(
-  H,
-  psi0::MPS;
+  operator,
+  init::MPS;
   ishermitian=default_ishermitian(),
   solver_which_eigenvalue=default_solver_which_eigenvalue(eigsolve),
   solver_tol=default_solver_tol(eigsolve),
@@ -38,11 +38,10 @@ function dmrg(
   (observer!)=default_observer!(),
   kwargs...,
 )
-  reverse_step = false
   info_ref! = Ref{Any}()
   info_observer! = values_observer(; info=info_ref!)
   observer! = compose_observers(observer!, info_observer!)
-  psi = alternating_update(
+  state = alternating_update(
     dmrg_solver(
       eigsolve;
       solver_which_eigenvalue,
@@ -52,11 +51,10 @@ function dmrg(
       solver_maxiter,
       solver_verbosity,
     ),
-    H,
-    psi0;
-    reverse_step,
+    operator,
+    init;
     observer!,
     kwargs...,
   )
-  return info_ref![].eigval, psi
+  return info_ref![].eigval, state
 end

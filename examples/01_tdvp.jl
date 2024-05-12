@@ -21,9 +21,9 @@ function main()
 
   ϕ = tdvp(
     H,
-    -1.0,
+    -20.0,
     ψ;
-    nsweeps=20,
+    time_step=-1.0,
     reverse_step=false,
     normalize=true,
     maxdim=30,

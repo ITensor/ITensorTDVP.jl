@@ -31,9 +31,7 @@ using Test: @test, @testset
   H = MPO(elt, heisenberg(n; h), s)
   initstate = rand(["↑", "↓"], n)
   ψ = MPS(elt, s, initstate)
-  dmrg_x_kwargs = (
-    nsweeps=20, reverse_step=false, normalize=true, maxdim=20, cutoff=1e-10, outputlevel=0
-  )
+  dmrg_x_kwargs = (nsweeps=20, normalize=true, maxdim=20, cutoff=1e-10, outputlevel=0)
   e, ϕ = dmrg_x(ProjMPO(H), ψ; nsite=2, dmrg_x_kwargs...)
   @test ITensors.scalartype(ϕ) == elt
   @test inner(ϕ', H, ϕ) / inner(ϕ, ϕ) ≈ e

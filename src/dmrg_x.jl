@@ -12,12 +12,10 @@ function dmrg_x_solver(PH, t, psi0; current_time, outputlevel)
   return U_max, (; eigval=D_max)
 end
 
-function dmrg_x(
-  PH, psi0::MPS; reverse_step=false, (observer!)=default_observer!(), kwargs...
-)
+function dmrg_x(PH, psi0::MPS; (observer!)=default_observer!(), kwargs...)
   info_ref = Ref{Any}()
   info_observer! = values_observer(; info=info_ref)
   observer! = compose_observers(observer!, info_observer!)
-  psi = alternating_update(dmrg_x_solver, PH, psi0; reverse_step, observer!, kwargs...)
+  psi = alternating_update(dmrg_x_solver, PH, psi0; observer!, kwargs...)
   return info_ref[].eigval, psi
 end

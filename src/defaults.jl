@@ -1,16 +1,16 @@
-using ITensors: NoObserver
+## using ITensors: NoObserver
 using KrylovKit: eigsolve, exponentiate
 
 default_nsweeps() = nothing
-default_checkdone() = nothing
+default_checkdone() = Returns(false)
 default_write_when_maxdim_exceeds() = nothing
 default_nsite() = 2
-default_reverse_step() = true
-default_time_start() = 0
-default_time_step(t) = t
+default_reverse_step() = false
+default_time_start() = nothing
+default_time_step() = nothing
 default_order() = 2
-default_observer!() = NoObserver()
-default_step_observer!() = NoObserver()
+default_observer!() = EmptyObserver()
+default_step_observer!() = EmptyObserver()
 default_outputlevel() = 0
 default_normalize() = false
 default_sweep() = 1

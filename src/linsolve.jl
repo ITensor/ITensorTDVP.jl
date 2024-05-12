@@ -24,13 +24,7 @@ Keyword arguments:
     See `KrylovKit.jl` documentation for more details on available keyword arguments.
 """
 function KrylovKit.linsolve(
-  A::MPO,
-  b::MPS,
-  x₀::MPS,
-  a₀::Number=false,
-  a₁::Number=true;
-  solver_kwargs=(;),
-  tdvp_kwargs...,
+  A::MPO, b::MPS, x₀::MPS, a₀::Number=false, a₁::Number=true; solver_kwargs=(;), kwargs...
 )
   function linsolve_solver(P::ProjMPO_MPS2, t, x₀; current_time, outputlevel)
     b = dag(only(proj_mps(P)))
@@ -38,5 +32,5 @@ function KrylovKit.linsolve(
     return x, nothing
   end
   P = ProjMPO_MPS2(A, b)
-  return alternating_update(linsolve_solver, P, x₀; reverse_step=false, tdvp_kwargs...)
+  return alternating_update(linsolve_solver, P, x₀; kwargs...)
 end
