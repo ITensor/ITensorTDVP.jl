@@ -122,7 +122,9 @@ function alternating_update(
       print("After sweep ", sweep, ":")
       print(" maxlinkdim=", maxlinkdim(state))
       @printf(" maxerr=%.2E", info.maxtruncerr)
-      print(" current_time=", round(current_time; digits=3))
+      if !isnothing(current_time)
+        print(" current_time=", round(current_time; digits=3))
+      end
       print(" time=", round(sweep_elapsed_time; digits=3))
       println()
       flush(stdout)
