@@ -1,15 +1,5 @@
-using ITensors:
-  ITensors,
-  Index,
-  ITensor,
-  @Algorithm_str,
-  commoninds,
-  contract,
-  hasind,
-  linkinds,
-  replace_siteinds!,
-  sim,
-  siteinds
+using ITensors: ITensors, Index, ITensor, @Algorithm_str, commoninds, contract, hasind, sim
+using ITensors.ITensorMPS: linkinds, replace_siteinds, siteinds
 
 function contract_operator_state_updater(operator, init; internal_kwargs)
   # TODO: Use `contract(operator)`.
@@ -21,41 +11,30 @@ function contract_operator_state_updater(operator, init; internal_kwargs)
   return state, (;)
 end
 
-# `init_mps` is for backwards compatibility.
+function default_contract_init(operator::MPO, input_state::MPS)
+  input_state = deepcopy(input_state)
+  s = only.(siteinds(uniqueinds, operator, input_state))
+  # TODO: Fix issue with `replace_siteinds`, seems to be modifying in-place.
+  return replace_siteinds(deepcopy(input_state), s)
+end
+
 function ITensors.contract(
   ::Algorithm"fit",
   operator::MPO,
   input_state::MPS;
-  init=input_state,
-  init_mps=init,
+  init=default_contract_init(operator, input_state),
   kwargs...,
 )
-  n = length(operator)
-  n != length(input_state) && throw(
-    DimensionMismatch("lengths of MPO ($n) and MPS ($(length(input_state))) do not match")
-  )
-  if n == 1
-    return MPS([operator[1] * input_state[1]])
+  # Fix siteinds of `init` if needed.
+  # This is needed to work around an issue that `ITensors.ITensorMPS.apply`
+  # can't be customized right now, and just uses the same `init`
+  # as that of `contract`.
+  # TODO: Allow customization of `apply` and remove this.
+  s = only.(siteinds(uniqueinds, operator, input_state))
+  if !all(p -> p[1] == [2], zip(s, siteinds(init)))
+    # TODO: Fix issue with `replace_siteinds`, seems to be modifying in-place.
+    init = replace_siteinds(deepcopy(init), s)
   end
-  any(i -> isempty(i), siteinds(commoninds, operator, input_state)) && error(
-    "In `contract(operator::MPO, x::MPS)`, `operator` and `x` must share a set of site indices",
-  )
-  # In case operator and input_state have the same link indices
-  operator = sim(linkinds, operator)
-  # Fix site and link inds of init
-  init = deepcopy(init)
-  init = sim(linkinds, init)
-  siteinds_operator = siteinds(operator)
-  ti = Vector{Index}(undef, n)
-  for j in 1:n
-    for i in siteinds_operator[j]
-      if !hasind(input_state[j], i)
-        ti[j] = i
-        break
-      end
-    end
-  end
-  replace_siteinds!(init, ti)
   reduced_operator = ReducedContractProblem(input_state, operator)
   return alternating_update(
     reduced_operator, init; updater=contract_operator_state_updater, kwargs...

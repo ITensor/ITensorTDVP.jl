@@ -1,16 +1,6 @@
 @eval module $(gensym())
-using ITensors:
-  ITensors,
-  MPO,
-  OpSum,
-  apply,
-  dag,
-  delta,
-  denseblocks,
-  inner,
-  randomMPS,
-  siteinds,
-  truncate!
+using ITensors: ITensors, dag, delta, denseblocks
+using ITensors: MPO, OpSum, apply, contract, inner, randomMPS, siteinds, truncate!
 using ITensorTDVP: ITensorTDVP
 using Test: @test, @test_throws, @testset
 @testset "Contract MPO (eltype=$elt, conserve_qns=$conserve_qns)" for elt in (
@@ -33,33 +23,42 @@ using Test: @test, @test_throws, @testset
     os += "Sz", j, "Sz", j + 2
   end
   H = MPO(elt, os, s)
-  Hpsi = apply(H, psi; alg="fit", nsweeps=2)
-  @test_throws ErrorException apply(H, psi; alg="fit")
-  @test ITensors.scalartype(Hpsi) == elt
-  @test inner(psi, Hpsi) ≈ inner(psi', H, psi) rtol = 10 * √eps(real(elt))
-  # Change "top" indices of MPO to be a different set
-  t = siteinds("S=1/2", N; conserve_qns)
-  psit = deepcopy(psi)
-  for j in 1:N
-    H[j] *= delta(elt, dag(s[j])', t[j])
-    psit[j] *= delta(elt, dag(s[j]), t[j])
+  @testset "apply (standard indices, nsite=2)" begin
+    Hpsi = apply(H, psi; alg="fit", nsweeps=2)
+    @test_throws ErrorException apply(H, psi; alg="fit")
+    @test ITensors.scalartype(Hpsi) == elt
+    @test inner(psi, Hpsi) ≈ inner(psi', H, psi) rtol = 10 * √eps(real(elt))
   end
-  # Test with nsweeps=2
-  Hpsi = apply(H, psi; alg="fit", nsweeps=2)
-  @test ITensors.scalartype(Hpsi) == elt
-  @test inner(psit, Hpsi) ≈ inner(psit, H, psi) rtol = 10 * √eps(real(elt))
-  # Test with less good initial guess MPS not equal to psi
-  psi_guess = copy(psi)
-  truncate!(psi_guess; maxdim=2)
-  Hpsi = apply(H, psi; alg="fit", nsweeps=4, init=psi_guess)
-  @test ITensors.scalartype(Hpsi) == elt
-  @test inner(psit, Hpsi) ≈ inner(psit, H, psi) rtol = 20 * √eps(real(elt))
-  # Test with nsite=1
-  Hpsi_guess = apply(H, psi; alg="naive", cutoff=1e-4)
-  Hpsi = apply(H, psi; alg="fit", init=Hpsi_guess, nsite=1, nsweeps=2)
-  @test ITensors.scalartype(Hpsi) == elt
-  scale(::Type{Float32}) = 10^2
-  scale(::Type{Float64}) = 10^6
-  @test inner(psit, Hpsi) ≈ inner(psit, H, psi) rtol = √eps(real(elt)) * scale(real(elt))
+  @testset "contract (non-standard indices)" begin
+    # Change "top" indices of MPO to be a different set
+    t = siteinds("S=1/2", N; conserve_qns)
+    Ht = deepcopy(H)
+    psit = deepcopy(psi)
+    for j in 1:N
+      Ht[j] *= delta(elt, dag(s[j])', t[j])
+      psit[j] *= delta(elt, dag(s[j]), t[j])
+    end
+
+    # Test with nsweeps=2
+    Hpsit = contract(Ht, psi; alg="fit", nsweeps=2)
+    @test ITensors.scalartype(Hpsit) == elt
+    @test inner(psit, Hpsit) ≈ inner(psit, Ht, psi) rtol = 10 * √eps(real(elt))
+
+    # Test with less good initial guess MPS not equal to psi
+    psit_guess = copy(psit)
+    truncate!(psit_guess; maxdim=2)
+    Hpsit = contract(Ht, psi; alg="fit", nsweeps=4, init=psit_guess)
+    @test ITensors.scalartype(Hpsit) == elt
+    @test inner(psit, Hpsit) ≈ inner(psit, Ht, psi) rtol = 20 * √eps(real(elt))
+  end
+  @testset "apply (standard indices, nsite=1)" begin
+    # Test with nsite=1
+    Hpsi_guess = apply(H, psi; alg="naive", cutoff=1e-4)
+    Hpsi = apply(H, psi; alg="fit", init=Hpsi_guess, nsite=1, nsweeps=2)
+    @test ITensors.scalartype(Hpsi) == elt
+    scale(::Type{Float32}) = 10^2
+    scale(::Type{Float64}) = 10^6
+    @test inner(psi, Hpsi) ≈ inner(psi', H, psi) rtol = √eps(real(elt)) * scale(real(elt))
+  end
 end
 end
