@@ -5,9 +5,7 @@ using KrylovKit: eigsolve
 function eigsolve_updater(
   operator,
   init;
-  current_time,
-  time_step,
-  outputlevel,
+  internal_kwargs,
   which_eigval=:SR,
   ishermitian=true,
   tol=10^2 * eps(real(ITensors.scalartype(init))),

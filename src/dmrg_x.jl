@@ -2,7 +2,7 @@ using ITensors: array, contract, dag, uniqueind, onehot
 using ITensors.ITensorMPS: MPS
 using LinearAlgebra: eigen
 
-function eigen_updater(operator, state; current_time, time_step, outputlevel)
+function eigen_updater(operator, state; internal_kwargs)
   contracted_operator = contract(operator, ITensor(true))
   d, u = eigen(contracted_operator; ishermitian=true)
   u_ind = uniqueind(u, contracted_operator)
@@ -13,12 +13,12 @@ function eigen_updater(operator, state; current_time, time_step, outputlevel)
   return u_max, (; eigval=d_max)
 end
 
-function dmrg_x(operator, state::MPS; updater=eigen_updater, (observer!)=default_observer(), kwargs...)
+function dmrg_x(
+  operator, state::MPS; updater=eigen_updater, (observer!)=default_observer(), kwargs...
+)
   info_ref = Ref{Any}()
   info_observer = values_observer(; info=info_ref)
   observer = compose_observers(observer!, info_observer)
-  psi = alternating_update(
-    operator, state; updater, (observer!)=observer, kwargs...
-  )
-  return info_ref[].eigval, psi
+  eigvec = alternating_update(operator, state; updater, (observer!)=observer, kwargs...)
+  return info_ref[].eigval, eigvec
 end

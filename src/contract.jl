@@ -11,16 +11,14 @@ using ITensors:
   sim,
   siteinds
 
-function contractmpo_updater(; kwargs...)
-  function updater(reduced_operator, psi; kws...)
-    reduced_state = ITensor(true)
-    for j in (reduced_operator.lpos + 1):(reduced_operator.rpos - 1)
-      reduced_state *= reduced_operator.input_state[j]
-    end
-    reduced_state = contract(reduced_operator, reduced_state)
-    return reduced_state, nothing
+function contract_operator_state_updater(operator, init; internal_kwargs)
+  # TODO: Use `contract(operator)`.
+  state = ITensor(true)
+  for j in (operator.lpos + 1):(operator.rpos - 1)
+    state *= operator.input_state[j]
   end
-  return updater
+  state = contract(operator, state)
+  return state, (;)
 end
 
 # `init_mps` is for backwards compatibility.
@@ -31,7 +29,7 @@ function ITensors.contract(
   init=input_state,
   init_mps=init,
   kwargs...,
-)::MPS
+)
   n = length(operator)
   n != length(input_state) && throw(
     DimensionMismatch("lengths of MPO ($n) and MPS ($(length(input_state))) do not match")
@@ -59,8 +57,7 @@ function ITensors.contract(
   end
   replace_siteinds!(init, ti)
   reduced_operator = ReducedContractProblem(input_state, operator)
-  psi = alternating_update(
-    reduced_operator, init; updater=contractmpo_updater(; kwargs...), kwargs...
+  return alternating_update(
+    reduced_operator, init; updater=contract_operator_state_updater, kwargs...
   )
-  return psi
 end

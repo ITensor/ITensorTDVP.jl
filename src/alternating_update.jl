@@ -23,7 +23,7 @@ function process_sweeps(; nsweeps, maxdim, mindim, cutoff, noise)
 end
 
 function alternating_update(
-  reduced_operator,
+  operator,
   init::MPS;
   updater,
   updater_kwargs=(;),
@@ -44,6 +44,7 @@ function alternating_update(
   cutoff=default_cutoff(ITensors.scalartype(init)),
   noise=default_noise(),
 )
+  reduced_operator = ITensorTDVP.reduced_operator(operator)
   if isnothing(nsweeps)
     return error("Must specify `nsweeps`.")
   end
@@ -107,22 +108,5 @@ function alternating_update(
   return state
 end
 
-function alternating_update(operator::MPO, init::MPS; kwargs...)
-  check_hascommoninds(siteinds, operator, init)
-  check_hascommoninds(siteinds, operator, init')
-  # Permute the indices to have a better memory layout
-  # and minimize permutations
-  operator = permute(operator, (linkind, siteinds, linkind))
-  reduced_operator = ProjMPO(operator)
-  return alternating_update(reduced_operator, init; kwargs...)
-end
-
-function alternating_update(operators::Vector{MPO}, init::MPS; kwargs...)
-  for operator in operators
-    check_hascommoninds(siteinds, operator, init)
-    check_hascommoninds(siteinds, operator, init')
-  end
-  operators .= ITensors.permute.(operators, Ref((linkind, siteinds, linkind)))
-  reduced_operator = ProjMPOSum(operators)
-  return alternating_update(reduced_operator, init; kwargs...)
-end
+reduced_operator(operators::Vector{MPO}) = ProjMPOSum(operators)
+reduced_operator(operator::MPO) = ProjMPO(operator)

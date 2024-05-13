@@ -1,21 +1,9 @@
 @eval module $(gensym())
-using ITensors:
-  Index, MPO, ProjMPO, ProjMPOSum, QN, randomITensor, randomMPS, position!, siteinds
-using ITensorTDVP: ITensorTDVP, TimeDependentSum, to_vec
+using ITensors: ITensors, Index, QN, randomITensor
+using ITensors.ITensorMPS: MPO, ProjMPO, ProjMPOSum, randomMPS, position!, siteinds
+using ITensorTDVP: ITensorTDVP, TimeDependentSum
 using Test: @test, @test_skip, @testset
 @testset "TDVP with ODE local updater" begin
-  @testset "to_vec (eltype=$elt)" for elt in (
-      Float32, Float64, Complex{Float32}, Complex{Float64}
-    ),
-    space in (2, [QN(0) => 1, QN(1) => 1])
-
-    i, j = Index.((space, space))
-    a = randomITensor(elt, i, j)
-    v, to_itensor = to_vec(a)
-    @test v isa Vector{elt}
-    @test vec(Array(a, i, j)) == v
-    @test to_itensor(v) == a
-  end
   @testset "TimeDependentSum (eltype=$elt)" for elt in (
       Float32, Float64, Complex{Float32}, Complex{Float64}
     ),
@@ -24,16 +12,16 @@ using Test: @test, @test_skip, @testset
     n = 4
     s = siteinds("S=1/2", 4; conserve_qns)
     H = MPO(elt, s, "I")
-    H⃗ = [H, H]
+    H⃗ = (H, H)
     region = 2:3
     ψ = randomMPS(elt, s, j -> isodd(j) ? "↑" : "↓"; linkdims=2)
     H⃗ᵣ = ProjMPO.(H⃗)
     map(Hᵣ -> position!(Hᵣ, ψ, first(region)), H⃗ᵣ)
-    ∑Hᵣ = ProjMPOSum(H⃗)
+    ∑Hᵣ = ProjMPOSum(collect(H⃗))
     position!(∑Hᵣ, ψ, first(region))
-    f⃗ₜ = [t -> sin(elt(0.1) * t), t -> cos(elt(0.2) * t)]
+    f⃗ₜ = (t -> sin(elt(0.1) * t), t -> cos(elt(0.2) * t))
     α = elt(0.5)
-    ∑Hₜ = α * TimeDependentSum(f⃗ₜ, ∑Hᵣ)
+    ∑Hₜ = α * TimeDependentSum(f⃗ₜ, ITensors.terms(∑Hᵣ))
     t₀ = elt(0.5)
     ∑Hₜ₀ = ∑Hₜ(t₀)
     ψᵣ = reduce(*, map(v -> ψ[v], region))

@@ -235,8 +235,9 @@ function region_update!(
   set_nsite!(reduce_operator, nsite)
   position!(reduce_operator, state, b)
   reduced_state = state[b]
+  internal_kwargs = (; current_time, time_step, outputlevel)
   reduced_state, info = updater(
-    reduce_operator, reduced_state; current_time, time_step, outputlevel, updater_kwargs...
+    reduce_operator, reduced_state; internal_kwargs, updater_kwargs...
   )
   if !isnothing(time_step)
     current_time += time_step
@@ -279,8 +280,9 @@ function region_update!(
   set_nsite!(reduce_operator, nsite)
   position!(reduce_operator, state, b)
   reduced_state = state[b]
+  internal_kwargs = (; current_time, time_step, outputlevel)
   reduced_state, info = updater(
-    reduce_operator, reduced_state; current_time, time_step, outputlevel, updater_kwargs...
+    reduce_operator, reduced_state; internal_kwargs, updater_kwargs...
   )
   current_time += time_step
   normalize && (reduced_state /= norm(reduced_state))
@@ -301,13 +303,9 @@ function region_update!(
     end
     set_nsite!(reduce_operator, nsite - 1)
     position!(reduce_operator, state, b1)
+    internal_kwargs = (; current_time, time_step=-time_step, outputlevel)
     bond_reduced_state, info = updater(
-      reduce_operator,
-      bond_reduced_state;
-      current_time,
-      time_step=-time_step,
-      outputlevel,
-      updater_kwargs...,
+      reduce_operator, bond_reduced_state; internal_kwargs, updater_kwargs...
     )
     current_time -= time_step
     normalize && (bond_reduced_state ./= norm(bond_reduced_state))
@@ -349,8 +347,9 @@ function region_update!(
   set_nsite!(reduce_operator, nsite)
   position!(reduce_operator, state, b)
   reduced_state = state[b] * state[b + 1]
+  internal_kwargs = (; current_time, time_step, outputlevel)
   reduced_state, info = updater(
-    reduce_operator, reduced_state; current_time, time_step, outputlevel, updater_kwargs...
+    reduce_operator, reduced_state; internal_kwargs, updater_kwargs...
   )
   if !isnothing(time_step)
     current_time += time_step
@@ -406,8 +405,9 @@ function region_update!(
   set_nsite!(reduce_operator, nsite)
   position!(reduce_operator, state, b)
   reduced_state = state[b] * state[b + 1]
+  internal_kwargs = (; current_time, time_step, outputlevel)
   reduced_state, info = updater(
-    reduce_operator, reduced_state; current_time, time_step, outputlevel, updater_kwargs...
+    reduce_operator, reduced_state; internal_kwargs, updater_kwargs...
   )
   current_time += time_step
   normalize && (reduced_state /= norm(reduced_state))
@@ -438,13 +438,9 @@ function region_update!(
     bond_reduced_state = state[b1]
     set_nsite!(reduce_operator, nsite - 1)
     position!(reduce_operator, state, b1)
+    internal_kwargs = (; current_time, time_step=-time_step, outputlevel)
     bond_reduced_state, info = updater(
-      reduce_operator,
-      bond_reduced_state;
-      current_time,
-      time_step=-time_step,
-      outputlevel,
-      updater_kwargs...,
+      reduce_operator, bond_reduced_state; internal_kwargs, updater_kwargs...
     )
     current_time -= time_step
     normalize && (bond_reduced_state /= norm(bond_reduced_state))

@@ -1,4 +1,4 @@
-using ITensors: @disable_warn_order
+using ITensors: @disable_warn_order, contract
 using ITensorMPS: MPO, MPS, inner, randomMPS, siteinds, tdvp
 using LinearAlgebra: norm
 using Random: Random
@@ -50,34 +50,24 @@ function main()
 
   tol = 1e-15
 
-  # ODE updater parameters
-  ode_alg = Tsit5()
-  ode_kwargs = (; reltol=tol, abstol=tol)
-
-  # Krylov updater parameters
-  krylov_kwargs = (; tol=tol, eager=true)
-
   @show n
   @show ω₁, ω₂
   @show J₁, J₂
   @show maxdim, cutoff, nsite
   @show start_linkdim
   @show time_step, time_stop
-  @show ode_alg
-  @show ode_kwargs
-  @show krylov_kwargs
 
-  ω⃗ = [ω₁, ω₂]
-  f⃗ = [t -> cos(ω * t) for ω in ω⃗]
+  ω⃗ = (ω₁, ω₂)
+  f⃗ = map(ω -> (t -> cos(ω * t)), ω⃗)
 
   # H₀ = H(0) = H₁(0) + H₂(0) + …
   ℋ₁₀ = heisenberg(n; J=J₁, J2=0.0)
   ℋ₂₀ = heisenberg(n; J=0.0, J2=J₂)
-  ℋ⃗₀ = [ℋ₁₀, ℋ₂₀]
+  ℋ⃗₀ = (ℋ₁₀, ℋ₂₀)
 
   s = siteinds("S=1/2", n)
 
-  H⃗₀ = [MPO(ℋ₀, s) for ℋ₀ in ℋ⃗₀]
+  H⃗₀ = map(ℋ₀ -> MPO(ℋ₀, s), ℋ⃗₀)
 
   # Initial state, ψ₀ = ψ(0)
   # Initialize as complex since that is what OrdinaryDiffEq.jl/DifferentialEquations.jl
@@ -92,17 +82,12 @@ function main()
   println("#"^100)
   println()
 
-  function ode_updater_f⃗(H⃗₀, ψ₀; time_step, kwargs...)
-    return ode_updater(
-      f⃗, H⃗₀, ψ₀; updater_alg=ode_alg, time_step, ode_kwargs..., kwargs...
-    )
-  end
-
   ψₜ_ode = tdvp(
-    H⃗₀,
+    -im * TimeDependentSum(f⃗, H⃗₀),
     time_stop,
     ψ₀;
-    updater=ode_updater_f⃗,
+    updater=ode_updater,
+    updater_kwargs=(; reltol=tol, abstol=tol),
     time_step,
     maxdim,
     cutoff,
@@ -120,12 +105,16 @@ function main()
   println("#"^100)
   println()
 
-  function krylov_updater_f⃗(H⃗₀, time_step, ψ₀; kwargs...)
-    return krylov_updater(f⃗, H⃗₀, time_step, ψ₀; krylov_kwargs..., kwargs...)
-  end
-
   ψₜ_krylov = tdvp(
-    H⃗₀, time_stop, ψ₀; updater=krylov_updater_f⃗, time_step, cutoff, nsite, outputlevel
+    -im * TimeDependentSum(f⃗, H⃗₀),
+    time_stop,
+    ψ₀;
+    updater=krylov_updater,
+    updater_kwargs=(; tol, eager=true),
+    time_step,
+    cutoff,
+    nsite,
+    outputlevel,
   )
 
   println()
@@ -139,7 +128,13 @@ function main()
   println()
 
   @disable_warn_order begin
-    ψₜ_full, _ = ode_updater(f⃗, prod.(H⃗₀), time_stop, prod(ψ₀); outputlevel)
+    ψₜ_full, _ = ode_updater(
+      -im * TimeDependentSum(f⃗, contract.(H⃗₀)),
+      contract(ψ₀);
+      internal_kwargs=(; time_step=time_stop, outputlevel),
+      reltol=tol,
+      abstol=tol,
+    )
   end
 
   println()
@@ -150,8 +145,8 @@ function main()
   @show norm(ψₜ_krylov)
   @show norm(ψₜ_full)
 
-  @show 1 - abs(inner(prod(ψₜ_ode), ψₜ_full))
-  @show 1 - abs(inner(prod(ψₜ_krylov), ψₜ_full))
+  @show 1 - abs(inner(contract(ψₜ_ode), ψₜ_full))
+  @show 1 - abs(inner(contract(ψₜ_krylov), ψₜ_full))
   return nothing
 end
 

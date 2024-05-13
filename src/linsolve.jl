@@ -1,10 +1,15 @@
-using ITensors.ITensorMPS: MPO, MPS
+using ITensors.ITensorMPS: MPS
 using KrylovKit: KrylovKit, linsolve
 
-function linsolve_updater(
-  problem, init; current_time, time_step, outputlevel, coefficients, updater_kwargs...
-)
-  x, info = linsolve(operator(problem), constant_term(problem), init, coefficients[1], coefficients[2]; updater_kwargs...)
+function linsolve_updater(problem, init; internal_kwargs, coefficients, kwargs...)
+  x, info = linsolve(
+    operator(problem),
+    constant_term(problem),
+    init,
+    coefficients[1],
+    coefficients[2];
+    kwargs...,
+  )
   return x, (; info)
 end
 
