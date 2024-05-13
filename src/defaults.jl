@@ -1,3 +1,5 @@
+using Compat: Returns
+
 default_nsweeps() = nothing
 default_checkdone() = Returns(false)
 default_write_when_maxdim_exceeds() = nothing
