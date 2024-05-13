@@ -1,14 +1,7 @@
 using ITensors: ITensor, array, inds, itensor
-using ITensorMPS: TimeDependentSum
+using ITensorTDVP: TimeDependentSum, to_vec
 using KrylovKit: exponentiate
 using OrdinaryDiffEq: ODEProblem, Tsit5, solve
-
-function to_vec(x::ITensor)
-  function to_itensor(x_vec)
-    return itensor(x_vec, inds(x))
-  end
-  return vec(array(x)), to_itensor
-end
 
 function ode_updater(operator, init; internal_kwargs, alg=Tsit5(), kwargs...)
   (; current_time, time_step) = (; current_time=zero(Bool), internal_kwargs...)

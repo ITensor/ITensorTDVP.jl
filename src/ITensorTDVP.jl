@@ -1,5 +1,7 @@
 module ITensorTDVP
 export TimeDependentSum, dmrg_x, linsolve, tdvp, to_vec
+include("ITensorsExtensions.jl")
+using .ITensorsExtensions: to_vec
 include("applyexp.jl")
 include("defaults.jl")
 include("update_observer.jl")
@@ -15,7 +17,6 @@ include("contract.jl")
 include("reducedconstantterm.jl")
 include("reducedlinearproblem.jl")
 include("linsolve.jl")
-include("deprecated.jl")
 using PackageExtensionCompat: @require_extensions
 function __init__()
   @require_extensions

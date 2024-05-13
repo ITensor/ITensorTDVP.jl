@@ -1,5 +1,6 @@
 using ITensors: @disable_warn_order, contract
-using ITensorMPS: MPO, MPS, inner, randomMPS, siteinds, tdvp
+using ITensors: MPO, MPS, inner, randomMPS, siteinds
+using ITensorTDVP: tdvp
 using LinearAlgebra: norm
 using Random: Random
 

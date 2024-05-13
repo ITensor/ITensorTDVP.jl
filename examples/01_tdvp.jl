@@ -1,4 +1,5 @@
-using ITensorMPS: MPO, OpSum, dmrg, inner, randomMPS, siteinds, tdvp
+using ITensors: MPO, OpSum, dmrg, inner, randomMPS, siteinds
+using ITensorTDVP: tdvp
 
 function main()
   n = 10

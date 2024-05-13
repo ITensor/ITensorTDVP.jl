@@ -1,4 +1,4 @@
-using ITensorMPS: MPO, MPS, OpSum, dmrg_x, inner, siteinds
+using ITensors: MPO, MPS, OpSum, dmrg_x, inner, siteinds
 using Random: Random
 
 function main()
