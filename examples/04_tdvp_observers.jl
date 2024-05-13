@@ -35,29 +35,29 @@ function main()
     return nothing
   end
 
-  function measure_sz(; psi, bond, half_sweep)
+  function measure_sz(; state, bond, half_sweep)
     if bond == 1 && half_sweep == 2
-      return expect(psi, "Sz"; sites=N ÷ 2)
+      return expect(state, "Sz"; sites=N ÷ 2)
     end
     return nothing
   end
 
-  function return_state(; psi, bond, half_sweep)
+  function return_state(; state, bond, half_sweep)
     if bond == 1 && half_sweep == 2
-      return psi
+      return state
     end
     return nothing
   end
 
   obs = observer(
-    "steps" => step, "times" => current_time, "psis" => return_state, "Sz" => measure_sz
+    "steps" => step, "times" => current_time, "states" => return_state, "Sz" => measure_sz
   )
 
-  psi = MPS(s, n -> isodd(n) ? "Up" : "Dn")
-  psi_f = tdvp(
+  state = MPS(s, n -> isodd(n) ? "Up" : "Dn")
+  state_f = tdvp(
     H,
     -im * ttotal,
-    psi;
+    state;
     time_step=-im * tau,
     cutoff,
     outputlevel=1,
@@ -67,7 +67,7 @@ function main()
 
   steps = obs.steps
   times = obs.times
-  psis = obs.psis
+  states = obs.states
   Sz = obs.Sz
 
   println("\nResults")
@@ -75,8 +75,8 @@ function main()
   for n in 1:length(steps)
     print("step = ", steps[n])
     print(", time = ", round(times[n]; digits=3))
-    print(", |⟨ψⁿ|ψⁱ⟩| = ", round(abs(inner(psis[n], psi)); digits=3))
-    print(", |⟨ψⁿ|ψᶠ⟩| = ", round(abs(inner(psis[n], psi_f)); digits=3))
+    print(", |⟨ψⁿ|ψⁱ⟩| = ", round(abs(inner(states[n], state)); digits=3))
+    print(", |⟨ψⁿ|ψᶠ⟩| = ", round(abs(inner(states[n], state_f)); digits=3))
     print(", ⟨Sᶻ⟩ = ", round(Sz[n]; digits=3))
     println()
   end
