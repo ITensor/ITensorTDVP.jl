@@ -108,5 +108,7 @@ function alternating_update(
   return state
 end
 
+# Assume it is already in a reduced basis.
+reduced_operator(operator) = operator
 reduced_operator(operators::Vector{MPO}) = ProjMPOSum(operators)
 reduced_operator(operator::MPO) = ProjMPO(operator)
