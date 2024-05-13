@@ -1,4 +1,5 @@
-using ITensors: MPO, MPS, OpSum, expect, inner, siteinds, tdvp
+using ITensors: MPO, MPS, OpSum, expect, inner, siteinds
+using ITensorTDVP: tdvp
 using Observers: observer
 
 function main()
