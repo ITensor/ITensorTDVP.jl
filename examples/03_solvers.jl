@@ -10,17 +10,17 @@ function to_vec(x::ITensor)
   return vec(array(x)), to_itensor
 end
 
-function ode_solver(
+function ode_updater(
   H::TimeDependentSum,
-  time_step,
   ψ₀;
+  time_step,
   current_time=zero(time_step),
   outputlevel=0,
-  solver_alg=Tsit5(),
+  updater_alg=Tsit5(),
   kwargs...,
 )
   if outputlevel ≥ 3
-    println("    In ODE solver, current_time = $current_time, time_step = $time_step")
+    println("    In ODE updater, current_time = $current_time, time_step = $time_step")
   end
 
   time_span = (current_time, current_time + time_step)
@@ -28,25 +28,25 @@ function ode_solver(
   f(ψ::ITensor, p, t) = H(t)(ψ)
   f(u::Vector, p, t) = to_vec(f(to_itensor(u), p, t))[1]
   prob = ODEProblem(f, u₀, time_span)
-  sol = solve(prob, solver_alg; kwargs...)
+  sol = solve(prob, updater_alg; kwargs...)
   uₜ = sol.u[end]
   return to_itensor(uₜ), nothing
 end
 
-function ode_solver(f⃗, H⃗₀, time_step, ψ₀; kwargs...)
-  return ode_solver(-im * TimeDependentSum(f⃗, H⃗₀), time_step, ψ₀; kwargs...)
+function ode_updater(f⃗, H⃗₀, ψ₀; time_step, kwargs...)
+  return ode_updater(-im * TimeDependentSum(f⃗, H⃗₀), ψ₀; time_step, kwargs...)
 end
 
-function krylov_solver(
-  H::TimeDependentSum, time_step, ψ₀; current_time=zero(time_step), outputlevel=0, kwargs...
+function krylov_updater(
+  H::TimeDependentSum, ψ₀; time_step, current_time=zero(time_step), outputlevel=0, kwargs...
 )
   if outputlevel ≥ 3
-    println("    In Krylov solver, current_time = $current_time, time_step = $time_step")
+    println("    In Krylov updater, current_time = $current_time, time_step = $time_step")
   end
   ψₜ, info = exponentiate(H(current_time), time_step, ψ₀; kwargs...)
   return ψₜ, info
 end
 
-function krylov_solver(f⃗, H⃗₀, time_step, ψ₀; kwargs...)
-  return krylov_solver(-im * TimeDependentSum(f⃗, H⃗₀), time_step, ψ₀; kwargs...)
+function krylov_updater(f⃗, H⃗₀, ψ₀; time_step, kwargs...)
+  return krylov_updater(-im * TimeDependentSum(f⃗, H⃗₀), ψ₀; time_step, kwargs...)
 end

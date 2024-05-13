@@ -6,7 +6,6 @@ using Printf: @printf
 
 function sweep_update(
   order::TDVPOrder,
-  solver,
   reduce_operator,
   state::MPS;
   current_time=nothing,
@@ -27,7 +26,6 @@ function sweep_update(
     end
     state, reduce_operator, info = sub_sweep_update(
       order_orderings[substep],
-      solver,
       reduce_operator,
       state;
       current_time,
@@ -64,9 +62,10 @@ end
 
 function sub_sweep_update(
   direction::Base.Ordering,
-  solver,
   reduce_operator,
   state::MPS;
+  updater,
+  updater_kwargs,
   which_decomp=nothing,
   svd_alg=nothing,
   sweep=default_sweep(),
@@ -75,7 +74,7 @@ function sub_sweep_update(
   nsite=default_nsite(),
   reverse_step=default_reverse_step(),
   normalize=default_normalize(),
-  (observer!)=default_observer!(),
+  (observer!)=default_observer(),
   outputlevel=default_outputlevel(),
   maxdim=default_maxdim(),
   mindim=default_mindim(),
@@ -108,10 +107,11 @@ function sub_sweep_update(
   info = nothing
   for b in sweep_bonds(direction, N; ncenter=nsite)
     current_time, maxtruncerr, spec, info = region_update!(
-      solver,
       reduce_operator,
       state,
       b;
+      updater,
+      updater_kwargs,
       nsite,
       reverse_step,
       current_time,
@@ -161,14 +161,15 @@ function sub_sweep_update(
   end
   # Just to be sure:
   normalize && normalize!(state)
-  return state, reduce_operator, TDVPInfo(maxtruncerr)
+  return state, reduce_operator, (; maxtruncerr)
 end
 
 function region_update!(
-  solver,
   reduce_operator,
   state,
   b;
+  updater,
+  updater_kwargs,
   nsite,
   reverse_step,
   current_time,
@@ -187,10 +188,11 @@ function region_update!(
   return region_update!(
     Val(nsite),
     Val(reverse_step),
-    solver,
     reduce_operator,
     state,
     b;
+    updater,
+    updater_kwargs,
     current_time,
     outputlevel,
     time_step,
@@ -209,10 +211,11 @@ end
 function region_update!(
   nsite_val::Val{1},
   reverse_step_val::Val{false},
-  solver,
   reduce_operator,
   state,
   b;
+  updater,
+  updater_kwargs,
   current_time,
   outputlevel,
   time_step,
@@ -232,8 +235,8 @@ function region_update!(
   set_nsite!(reduce_operator, nsite)
   position!(reduce_operator, state, b)
   reduced_state = state[b]
-  reduced_state, info = solver(
-    reduce_operator, reduced_state; current_time, time_step, outputlevel
+  reduced_state, info = updater(
+    reduce_operator, reduced_state; current_time, time_step, outputlevel, updater_kwargs...
   )
   if !isnothing(time_step)
     current_time += time_step
@@ -252,10 +255,11 @@ end
 function region_update!(
   nsite_val::Val{1},
   reverse_step_val::Val{true},
-  solver,
   reduce_operator,
   state,
   b;
+  updater,
+  updater_kwargs,
   current_time,
   outputlevel,
   time_step,
@@ -275,8 +279,8 @@ function region_update!(
   set_nsite!(reduce_operator, nsite)
   position!(reduce_operator, state, b)
   reduced_state = state[b]
-  reduced_state, info = solver(
-    reduce_operator, reduced_state; current_time, time_step, outputlevel
+  reduced_state, info = updater(
+    reduce_operator, reduced_state; current_time, time_step, outputlevel, updater_kwargs...
   )
   current_time += time_step
   normalize && (reduced_state /= norm(reduced_state))
@@ -297,8 +301,13 @@ function region_update!(
     end
     set_nsite!(reduce_operator, nsite - 1)
     position!(reduce_operator, state, b1)
-    bond_reduced_state, info = solver(
-      reduce_operator, bond_reduced_state; current_time, time_step=-time_step, outputlevel
+    bond_reduced_state, info = updater(
+      reduce_operator,
+      bond_reduced_state;
+      current_time,
+      time_step=-time_step,
+      outputlevel,
+      updater_kwargs...,
     )
     current_time -= time_step
     normalize && (bond_reduced_state ./= norm(bond_reduced_state))
@@ -316,10 +325,11 @@ end
 function region_update!(
   nsite_val::Val{2},
   reverse_step_val::Val{false},
-  solver,
   reduce_operator,
   state,
   b;
+  updater,
+  updater_kwargs,
   current_time,
   time_step,
   outputlevel,
@@ -339,8 +349,8 @@ function region_update!(
   set_nsite!(reduce_operator, nsite)
   position!(reduce_operator, state, b)
   reduced_state = state[b] * state[b + 1]
-  reduced_state, info = solver(
-    reduce_operator, reduced_state; current_time, time_step, outputlevel
+  reduced_state, info = updater(
+    reduce_operator, reduced_state; current_time, time_step, outputlevel, updater_kwargs...
   )
   if !isnothing(time_step)
     current_time += time_step
@@ -372,10 +382,11 @@ end
 function region_update!(
   nsite_val::Val{2},
   reverse_step_val::Val{true},
-  solver,
   reduce_operator,
   state,
   b;
+  updater,
+  updater_kwargs,
   current_time,
   time_step,
   outputlevel,
@@ -395,8 +406,8 @@ function region_update!(
   set_nsite!(reduce_operator, nsite)
   position!(reduce_operator, state, b)
   reduced_state = state[b] * state[b + 1]
-  reduced_state, info = solver(
-    reduce_operator, reduced_state; current_time, time_step, outputlevel
+  reduced_state, info = updater(
+    reduce_operator, reduced_state; current_time, time_step, outputlevel, updater_kwargs...
   )
   current_time += time_step
   normalize && (reduced_state /= norm(reduced_state))
@@ -427,8 +438,13 @@ function region_update!(
     bond_reduced_state = state[b1]
     set_nsite!(reduce_operator, nsite - 1)
     position!(reduce_operator, state, b1)
-    bond_reduced_state, info = solver(
-      reduce_operator, bond_reduced_state; current_time, time_step=-time_step, outputlevel
+    bond_reduced_state, info = updater(
+      reduce_operator,
+      bond_reduced_state;
+      current_time,
+      time_step=-time_step,
+      outputlevel,
+      updater_kwargs...,
     )
     current_time -= time_step
     normalize && (bond_reduced_state /= norm(bond_reduced_state))
@@ -441,10 +457,11 @@ end
 function region_update!(
   ::Val{nsite},
   ::Val{reverse_step},
-  solver,
   reduce_operator,
   state,
   b;
+  updater,
+  updater_kwargs,
   current_time,
   outputlevel,
   time_step,

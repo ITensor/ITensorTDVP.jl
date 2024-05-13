@@ -6,7 +6,7 @@ using LinearAlgebra: norm
 using Test: @test, @testset
 
 include(joinpath(pkgdir(ITensorTDVP), "examples", "03_models.jl"))
-include(joinpath(pkgdir(ITensorTDVP), "examples", "03_solvers.jl"))
+include(joinpath(pkgdir(ITensorTDVP), "examples", "03_updaters.jl"))
 
 @testset "Time dependent Hamiltonian (eltype=$elt, conserve_qns=$conserve_qns)" for elt in
                                                                                     (
@@ -18,20 +18,20 @@ include(joinpath(pkgdir(ITensorTDVP), "examples", "03_solvers.jl"))
   ω₁ = 0.1
   ω₂ = 0.2
 
-  function ode_solver_f⃗(H⃗₀, time_step, ψ₀; kwargs...)
+  function ode_updater_f⃗(H⃗₀, time_step, ψ₀; kwargs...)
     ω⃗ = typeof(time_step)[ω₁, ω₂]
     f⃗ = [t -> cos(ω * t) for ω in ω⃗]
     tol = √eps(real(time_step))
-    return ode_solver(
-      f⃗, H⃗₀, time_step, ψ₀; solver_alg=Tsit5(), reltol=tol, abstol=tol, kwargs...
+    return ode_updater(
+      f⃗, H⃗₀, time_step, ψ₀; updater_alg=Tsit5(), reltol=tol, abstol=tol, kwargs...
     )
   end
 
-  function krylov_solver_f⃗(H⃗₀, time_step, ψ₀; kwargs...)
+  function krylov_updater_f⃗(H⃗₀, time_step, ψ₀; kwargs...)
     ω⃗ = typeof(time_step)[ω₁, ω₂]
     f⃗ = [t -> cos(ω * t) for ω in ω⃗]
     tol = √eps(real(time_step))
-    return krylov_solver(f⃗, H⃗₀, time_step, ψ₀; tol, eager=true, kwargs...)
+    return krylov_updater(f⃗, H⃗₀, time_step, ψ₀; tol, eager=true, kwargs...)
   end
 
   n = 4
@@ -48,9 +48,9 @@ include(joinpath(pkgdir(ITensorTDVP), "examples", "03_solvers.jl"))
   ℋ⃗₀ = [ℋ₁₀, ℋ₂₀]
   H⃗₀ = [MPO(elt, ℋ₀, s) for ℋ₀ in ℋ⃗₀]
   ψ₀ = complex.(MPS(elt, s, j -> isodd(j) ? "↑" : "↓"))
-  ψₜ_ode = tdvp(ode_solver_f⃗, H⃗₀, time_stop, ψ₀; time_step, maxdim, cutoff, nsite)
-  ψₜ_krylov = tdvp(krylov_solver_f⃗, H⃗₀, time_stop, ψ₀; time_step, cutoff, nsite)
-  ψₜ_full, _ = ode_solver_f⃗(prod.(H⃗₀), time_stop, prod(ψ₀))
+  ψₜ_ode = tdvp(ode_updater_f⃗, H⃗₀, time_stop, ψ₀; time_step, maxdim, cutoff, nsite)
+  ψₜ_krylov = tdvp(krylov_updater_f⃗, H⃗₀, time_stop, ψ₀; time_step, cutoff, nsite)
+  ψₜ_full, _ = ode_updater_f⃗(prod.(H⃗₀), time_stop, prod(ψ₀))
 
   @test ITensors.scalartype(ψ₀) == complex(elt)
   @test ITensors.scalartype(ψₜ_ode) == complex(elt)

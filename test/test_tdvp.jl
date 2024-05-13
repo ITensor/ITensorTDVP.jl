@@ -41,8 +41,8 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
   @test ITensors.scalartype(ψ1) == complex(elt)
   ## @test ψ1 ≈ tdvp(-time_step, H, ψ0; nsteps=1, cutoff, nsite=1)
   ## @test ψ1 ≈ tdvp(H, ψ0, -time_step; nsteps=1, cutoff, nsite=1)
-  #Different backend solvers, default solver_backend = "exponentiate"
-  @test ψ1 ≈ tdvp(H, -time_step, ψ0; nsteps=1, cutoff, nsite=1, solver_backend="applyexp")
+  #Different backend updaters, default updater_backend = "exponentiate"
+  @test ψ1 ≈ tdvp(H, -time_step, ψ0; nsteps=1, cutoff, nsite=1, updater_backend="applyexp")
   @test norm(ψ1) ≈ 1 rtol = √eps(real(elt)) * 10
   ## Should lose fidelity:
   #@test abs(inner(ψ0,ψ1)) < 0.9
@@ -92,7 +92,7 @@ end
   # Should rotate back to original state:
   @test abs(inner(ψ0, ψ2)) > 0.99
 end
-@testset "Custom solver in TDVP" begin
+@testset "Custom updater in TDVP" begin
   N = 10
   cutoff = 1e-12
   s = siteinds("S=1/2", N)
@@ -104,15 +104,15 @@ end
   end
   H = MPO(os, s)
   ψ0 = randomMPS(s; linkdims=10)
-  function solver(PH, t, psi0; kwargs...)
-    solver_kwargs = (;
+  function updater(PH, t, psi0; kwargs...)
+    updater_kwargs = (;
       ishermitian=true, tol=1e-12, krylovdim=30, maxiter=100, verbosity=0, eager=true
     )
-    psi, info = exponentiate(PH, t, psi0; solver_kwargs...)
+    psi, info = exponentiate(PH, t, psi0; updater_kwargs...)
     return psi, info
   end
   ψ1 = ITensorTDVP.alternating_update(
-    solver, H, ψ0; nsweeps=1, cutoff, time_step=-0.1im, nsite=1
+    updater, H, ψ0; nsweeps=1, cutoff, time_step=-0.1im, nsite=1
   )
   @test norm(ψ1) ≈ 1
   ## Should lose fidelity:
@@ -159,9 +159,9 @@ end
       psi;
       cutoff,
       normalize=false,
-      solver_tol=1e-12,
-      solver_maxiter=500,
-      solver_krylovdim=25,
+      updater_tol=1e-12,
+      updater_maxiter=500,
+      updater_krylovdim=25,
     )
     push!(Sz_tdvp, real(expect(psi, "Sz"; sites=c:c)[1]))
     psi2 = tdvp(
@@ -170,9 +170,9 @@ end
       psi2;
       cutoff,
       normalize=false,
-      solver_tol=1e-12,
-      solver_maxiter=500,
-      solver_krylovdim=25,
+      updater_tol=1e-12,
+      updater_maxiter=500,
+      updater_krylovdim=25,
     )
     push!(Sz_tdvp2, real(expect(psi2, "Sz"; sites=c:c)[1]))
     push!(Sz_exact, real(scalar(dag(prime(psix, s[c])) * Szc * psix)))
@@ -219,7 +219,7 @@ end
     psi = apply(gates, psi; cutoff)
     nsite = (step <= 3 ? 2 : 1)
     phi = tdvp(
-      H, -tau * im, phi; nsteps=1, cutoff, nsite, normalize=true, solver_krylovdim=15
+      H, -tau * im, phi; nsteps=1, cutoff, nsite, normalize=true, updater_krylovdim=15
     )
     Sz1[step] = expect(psi, "Sz"; sites=c:c)[1]
     Sz2[step] = expect(phi, "Sz"; sites=c:c)[1]
@@ -276,7 +276,7 @@ end
       nsite,
       reverse_step,
       normalize=true,
-      solver_krylovdim=15,
+      updater_krylovdim=15,
     )
     psi2 = tdvp(
       H,
@@ -287,7 +287,7 @@ end
       nsite,
       reverse_step,
       normalize=true,
-      solver_krylovdim=15,
+      updater_krylovdim=15,
     )
   end
   @test psi ≈ psi2 rtol = 1e-6
@@ -350,7 +350,7 @@ end
   obs = observer("Sz" => measure_sz, "En" => measure_en, "info" => identity_info)
   step_measure_sz(; psi) = expect(psi, "Sz"; sites=c)
   step_measure_en(; psi) = real(inner(psi', H, psi))
-  step_obs = observer("Sz" => step_measure_sz, "En" => step_measure_en)
+  sweep_obs = observer("Sz" => step_measure_sz, "En" => step_measure_en)
   psi2 = MPS(s, n -> isodd(n) ? "Up" : "Dn")
   tdvp(
     H,
@@ -360,13 +360,13 @@ end
     cutoff,
     normalize=false,
     (observer!)=obs,
-    (step_observer!)=step_obs,
+    (sweep_observer!)=sweep_obs,
   )
   Sz2 = filter(!isnothing, obs.Sz)
   En2 = filter(!isnothing, obs.En)
   infos = obs.info
-  Sz2_step = step_obs.Sz
-  En2_step = step_obs.En
+  Sz2_step = sweep_obs.Sz
+  En2_step = sweep_obs.En
   @test Sz1 ≈ Sz2
   @test En1 ≈ En2
   @test Sz1 ≈ Sz2_step

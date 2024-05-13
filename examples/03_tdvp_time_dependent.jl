@@ -4,7 +4,7 @@ using LinearAlgebra: norm
 using Random: Random
 
 include("03_models.jl")
-include("03_solvers.jl")
+include("03_updaters.jl")
 
 function main()
   Random.seed!(1234)
@@ -20,7 +20,7 @@ function main()
   # How much information to output from TDVP
   # Set to 2 to get information about each bond/site
   # evolution, and 3 to get information about the
-  # solver.
+  # updater.
   outputlevel = 3
 
   # Frequency of time dependent terms
@@ -50,11 +50,11 @@ function main()
 
   tol = 1e-15
 
-  # ODE solver parameters
+  # ODE updater parameters
   ode_alg = Tsit5()
   ode_kwargs = (; reltol=tol, abstol=tol)
 
-  # Krylov solver parameters
+  # Krylov updater parameters
   krylov_kwargs = (; tol=tol, eager=true)
 
   @show n
@@ -88,52 +88,62 @@ function main()
 
   println()
   println("#"^100)
-  println("Running TDVP with ODE solver")
+  println("Running TDVP with ODE updater")
   println("#"^100)
   println()
 
-  function ode_solver_f⃗(H⃗₀, time_step, ψ₀; kwargs...)
-    return ode_solver(f⃗, H⃗₀, time_step, ψ₀; solver_alg=ode_alg, ode_kwargs..., kwargs...)
+  function ode_updater_f⃗(H⃗₀, ψ₀; time_step, kwargs...)
+    return ode_updater(
+      f⃗, H⃗₀, ψ₀; updater_alg=ode_alg, time_step, ode_kwargs..., kwargs...
+    )
   end
 
   ψₜ_ode = tdvp(
-    ode_solver_f⃗, H⃗₀, time_stop, ψ₀; time_step, maxdim, cutoff, nsite, outputlevel
+    H⃗₀,
+    time_stop,
+    ψ₀;
+    updater=ode_updater_f⃗,
+    time_step,
+    maxdim,
+    cutoff,
+    nsite,
+    outputlevel,
   )
 
   println()
-  println("Finished running TDVP with ODE solver")
+  println("Finished running TDVP with ODE updater")
   println()
 
   println()
   println("#"^100)
-  println("Running TDVP with Krylov solver")
+  println("Running TDVP with Krylov updater")
   println("#"^100)
   println()
 
-  function krylov_solver_f⃗(H⃗₀, time_step, ψ₀; kwargs...)
-    return krylov_solver(f⃗, H⃗₀, time_step, ψ₀; krylov_kwargs..., kwargs...)
+  function krylov_updater_f⃗(H⃗₀, time_step, ψ₀; kwargs...)
+    return krylov_updater(f⃗, H⃗₀, time_step, ψ₀; krylov_kwargs..., kwargs...)
   end
 
   ψₜ_krylov = tdvp(
-    krylov_solver_f⃗, H⃗₀, time_stop, ψ₀; time_step, cutoff, nsite, outputlevel
+    H⃗₀, time_stop, ψ₀; updater=krylov_updater_f⃗, time_step, cutoff, nsite, outputlevel
   )
 
   println()
-  println("Finished running TDVP with Krylov solver")
+  println("Finished running TDVP with Krylov updater")
   println()
 
   println()
   println("#"^100)
-  println("Running full state evolution with ODE solver")
+  println("Running full state evolution with ODE updater")
   println("#"^100)
   println()
 
   @disable_warn_order begin
-    ψₜ_full, _ = ode_solver(f⃗, prod.(H⃗₀), time_stop, prod(ψ₀); outputlevel)
+    ψₜ_full, _ = ode_updater(f⃗, prod.(H⃗₀), time_stop, prod(ψ₀); outputlevel)
   end
 
   println()
-  println("Finished full state evolution with ODE solver")
+  println("Finished full state evolution with ODE updater")
   println()
 
   @show norm(ψₜ_ode)

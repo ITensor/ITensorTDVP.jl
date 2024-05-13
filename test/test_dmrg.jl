@@ -23,7 +23,7 @@ using Test: @test, @test_throws, @testset
   maxdim = [10, 20, 40, 100]
   @test_throws ErrorException ITensorTDVP.dmrg(H, psi; maxdim, cutoff, nsite)
   e, psi = ITensorTDVP.dmrg(
-    H, psi; nsweeps, maxdim, cutoff, nsite, solver_krylovdim=3, solver_maxiter=1
+    H, psi; nsweeps, maxdim, cutoff, nsite, updater_kwargs=(; krylovdim=3, maxiter=1)
   )
   @test inner(psi', H, psi) ≈ e
   e2, psi2 = ITensors.dmrg(H, psi; nsweeps, maxdim, cutoff, outputlevel=0)

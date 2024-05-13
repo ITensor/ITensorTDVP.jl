@@ -3,7 +3,7 @@ using ITensors:
   Index, MPO, ProjMPO, ProjMPOSum, QN, randomITensor, randomMPS, position!, siteinds
 using ITensorTDVP: ITensorTDVP, TimeDependentSum, to_vec
 using Test: @test, @test_skip, @testset
-@testset "TDVP with ODE local solver" begin
+@testset "TDVP with ODE local updater" begin
   @testset "to_vec (eltype=$elt)" for elt in (
       Float32, Float64, Complex{Float32}, Complex{Float64}
     ),

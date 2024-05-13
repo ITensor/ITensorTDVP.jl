@@ -1,36 +1,6 @@
 using ITensors: ITensors, permute
 using ITensors.ITensorMPS:
-  ## AbstractObserver,
-  MPO,
-  MPS,
-  ProjMPO,
-  ProjMPOSum,
-  check_hascommoninds,
-  ## checkdone!,
-  disk,
-  linkind,
-  maxlinkdim,
-  siteinds
-
-## function _compute_nsweeps(t; time_step=default_time_step(t), nsweeps=default_nsweeps())
-## 
-##   @show t, time_step, nsweeps
-## 
-##   if isinf(t) && isnothing(nsweeps)
-##     nsweeps = 1
-##   elseif !isnothing(nsweeps) && time_step != t
-##     error("Cannot specify both time_step and nsweeps in alternating_update")
-##   elseif isfinite(time_step) && abs(time_step) > 0 && isnothing(nsweeps)
-##     nsweeps = convert(Int, ceil(abs(t / time_step)))
-##     if !(nsweeps * time_step ≈ t)
-##       error("Time step $time_step not commensurate with total time t=$t")
-##     end
-##   end
-## 
-##   @show nsweeps
-## 
-##   return nsweeps
-## end
+  MPO, MPS, ProjMPO, ProjMPOSum, check_hascommoninds, disk, linkind, maxlinkdim, siteinds
 
 function _extend_sweeps_param(param, nsweeps)
   if param isa Number
@@ -53,9 +23,10 @@ function process_sweeps(; nsweeps, maxdim, mindim, cutoff, noise)
 end
 
 function alternating_update(
-  solver,
   reduced_operator,
   init::MPS;
+  updater,
+  updater_kwargs=(;),
   nsweeps=default_nsweeps(),
   checkdone=default_checkdone(),
   write_when_maxdim_exceeds=default_write_when_maxdim_exceeds(),
@@ -64,8 +35,8 @@ function alternating_update(
   time_start=default_time_start(),
   time_step=default_time_step(),
   order=default_order(),
-  (observer!)=default_observer!(),
-  (step_observer!)=default_step_observer!(),
+  (observer!)=default_observer(),
+  (sweep_observer!)=default_sweep_observer(),
   outputlevel=default_outputlevel(),
   normalize=default_normalize(),
   maxdim=default_maxdim(),
@@ -81,9 +52,9 @@ function alternating_update(
   state = copy(init)
   # Keep track of the start of the current time step.
   # Helpful for tracking the total time, for example
-  # when using time-dependent solvers.
+  # when using time-dependent updaters.
   # This will be passed as a keyword argument to the
-  # `solver`.
+  # `updater`.
   current_time = time_start
   info = nothing
   for sweep in 1:nsweeps
@@ -98,9 +69,10 @@ function alternating_update(
     sweep_elapsed_time = @elapsed begin
       state, reduced_operator, info = sweep_update(
         forward_order,
-        solver,
         reduced_operator,
         state;
+        updater,
+        updater_kwargs,
         nsite,
         current_time,
         time_step,
@@ -117,7 +89,7 @@ function alternating_update(
     if !isnothing(time_step)
       current_time += time_step
     end
-    update_observer!(step_observer!; state, sweep, outputlevel, current_time)
+    update_observer!(sweep_observer!; state, sweep, outputlevel, current_time)
     if outputlevel >= 1
       print("After sweep ", sweep, ":")
       print(" maxlinkdim=", maxlinkdim(state))
@@ -130,40 +102,27 @@ function alternating_update(
       flush(stdout)
     end
     isdone = checkdone(; state, sweep, outputlevel)
-    ## isdone = false
-    ## if !isnothing(checkdone)
-    ##  isdone = checkdone(; state, sweep, outputlevel)
-    ## elseif observer! isa AbstractObserver
-    ##   isdone = checkdone!(observer!; state, sweep, outputlevel)
-    ## end
     isdone && break
   end
   return state
 end
 
-# Convenience wrapper to not have to specify time step.
-# Use a time step of `Inf` as a convention, since TDVP
-# with an infinite time step corresponds to DMRG.
-## function alternating_update(solver, operator, init::MPS; kwargs...)
-##   return alternating_update(solver, operator, ITensors.scalartype(init)(Inf), init; kwargs...)
-## end
-
-function alternating_update(solver, operator::MPO, init::MPS; kwargs...)
+function alternating_update(operator::MPO, init::MPS; kwargs...)
   check_hascommoninds(siteinds, operator, init)
   check_hascommoninds(siteinds, operator, init')
   # Permute the indices to have a better memory layout
   # and minimize permutations
   operator = permute(operator, (linkind, siteinds, linkind))
   reduced_operator = ProjMPO(operator)
-  return alternating_update(solver, reduced_operator, init; kwargs...)
+  return alternating_update(reduced_operator, init; kwargs...)
 end
 
-function alternating_update(solver, operators::Vector{MPO}, init::MPS; kwargs...)
+function alternating_update(operators::Vector{MPO}, init::MPS; kwargs...)
   for operator in operators
     check_hascommoninds(siteinds, operator, init)
     check_hascommoninds(siteinds, operator, init')
   end
   operators .= ITensors.permute.(operators, Ref((linkind, siteinds, linkind)))
   reduced_operator = ProjMPOSum(operators)
-  return alternating_update(solver, reduced_operator, init; kwargs...)
+  return alternating_update(reduced_operator, init; kwargs...)
 end

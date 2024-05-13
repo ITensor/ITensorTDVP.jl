@@ -1,7 +1,7 @@
 using ITensors: ITensor, ProjMPOSum, apply, array, inds, itensor, permute
 
 # Utilities for making it easier
-# to define solvers (like ODE solvers)
+# to define updaters (like ODE updaters)
 # for TDVP
 
 """

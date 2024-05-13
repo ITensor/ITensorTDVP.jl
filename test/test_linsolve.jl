@@ -33,9 +33,9 @@ using Random: Random
   nsweeps = 10
   cutoff = 1e-5
   maxdim = 20
-  solver_kwargs = (; tol=1e-4, maxiter=20, krylovdim=30, ishermitian=true)
-  @test_throws ErrorException linsolve(H, b, x0; cutoff, maxdim, solver_kwargs)
-  x = linsolve(H, b, x0; nsweeps, cutoff, maxdim, solver_kwargs)
+  updater_kwargs = (; tol=1e-4, maxiter=20, krylovdim=30, ishermitian=true)
+  @test_throws ErrorException linsolve(H, b, x0; cutoff, maxdim, updater_kwargs)
+  x = linsolve(H, b, x0; nsweeps, cutoff, maxdim, updater_kwargs)
   @test ITensors.scalartype(x) == elt
   @test norm(x - x_c) < 1e-2
 end

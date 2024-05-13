@@ -11,8 +11,8 @@ using ITensors:
   sim,
   siteinds
 
-function contractmpo_solver(; kwargs...)
-  function solver(reduced_operator, psi; kws...)
+function contractmpo_updater(; kwargs...)
+  function updater(reduced_operator, psi; kws...)
     reduced_state = ITensor(true)
     for j in (reduced_operator.lpos + 1):(reduced_operator.rpos - 1)
       reduced_state *= reduced_operator.input_state[j]
@@ -20,7 +20,7 @@ function contractmpo_solver(; kwargs...)
     reduced_state = contract(reduced_operator, reduced_state)
     return reduced_state, nothing
   end
-  return solver
+  return updater
 end
 
 # `init_mps` is for backwards compatibility.
@@ -60,7 +60,7 @@ function ITensors.contract(
   replace_siteinds!(init, ti)
   reduced_operator = ReducedContractProblem(input_state, operator)
   psi = alternating_update(
-    contractmpo_solver(; kwargs...), reduced_operator, init; kwargs...
+    reduced_operator, init; updater=contractmpo_updater(; kwargs...), kwargs...
   )
   return psi
 end
