@@ -1,8 +1,11 @@
 @eval module $(gensym())
-using ITensors: ITensors, Index, QN, randomITensor
-using ITensors.ITensorMPS: MPO, ProjMPO, ProjMPOSum, randomMPS, position!, siteinds
-using ITensorTDVP: ITensorTDVP, TimeDependentSum
+using ITensors: ITensors, Index, QN, contract, randomITensor
+using ITensors.ITensorMPS: MPO, MPS, ProjMPO, ProjMPOSum, randomMPS, position!, siteinds
+using ITensorTDVP: ITensorTDVP, TimeDependentSum, tdvp
+using LinearAlgebra: norm
 using Test: @test, @test_skip, @testset
+include(joinpath(pkgdir(ITensorTDVP), "examples", "03_models.jl"))
+include(joinpath(pkgdir(ITensorTDVP), "examples", "03_updaters.jl"))
 @testset "TDVP with ODE local updater" begin
   @testset "TimeDependentSum (eltype=$elt)" for elt in (
       Float32, Float64, Complex{Float32}, Complex{Float64}
@@ -29,8 +32,76 @@ using Test: @test, @test_skip, @testset
     @test eltype(Hψ) == elt
     @test Hψ ≈ sum(i -> α * f⃗ₜ[i](t₀) * H⃗ᵣ[i](ψᵣ), eachindex(H⃗))
   end
-  @testset "Time dependent TDVP" begin
-    include("tdvp_time_dependent.jl")
+  @testset "Time dependent Hamiltonian (eltype=$elt, conserve_qns=$conserve_qns)" for elt in
+                                                                                      (
+      Float32, Float64, Complex{Float32}, Complex{Float64}
+    ),
+    conserve_qns in [false, true]
+
+    n = 4
+    J₁ = elt(1)
+    J₂ = elt(0.1)
+    ω₁ = real(elt)(0.1)
+    ω₂ = real(elt)(0.2)
+    ω⃗ = (ω₁, ω₂)
+    f⃗ = map(ω -> (t -> cos(ω * t)), ω⃗)
+    time_step = real(elt)(0.1)
+    time_stop = real(elt)(1)
+    nsite = 2
+    maxdim = 100
+    cutoff = √(eps(real(elt)))
+    tol = √eps(real(elt))
+    s = siteinds("S=1/2", n)
+    ℋ₁₀ = heisenberg(n; J=J₁, J2=zero(elt))
+    ℋ₂₀ = heisenberg(n; J=zero(elt), J2=J₂)
+    ℋ⃗₀ = (ℋ₁₀, ℋ₂₀)
+    H⃗₀ = map(ℋ₀ -> MPO(elt, ℋ₀, s), ℋ⃗₀)
+    ψ₀ = complex.(MPS(elt, s, j -> isodd(j) ? "↑" : "↓"))
+    ψₜ_ode = tdvp(
+      -im * TimeDependentSum(f⃗, H⃗₀),
+      time_stop,
+      ψ₀;
+      updater=ode_updater,
+      updater_kwargs=(; reltol=tol, abstol=tol),
+      time_step,
+      maxdim,
+      cutoff,
+      nsite,
+    )
+    ψₜ_krylov = tdvp(
+      -im * TimeDependentSum(f⃗, H⃗₀),
+      time_stop,
+      ψ₀;
+      updater=krylov_updater,
+      updater_kwargs=(; tol, eager=true),
+      time_step,
+      maxdim,
+      cutoff,
+      nsite,
+    )
+    ψₜ_full, _ = ode_updater(
+      -im * TimeDependentSum(f⃗, contract.(H⃗₀)),
+      contract(ψ₀);
+      internal_kwargs=(; time_step=time_stop),
+      reltol=tol,
+      abstol=tol,
+    )
+
+    @test ITensors.scalartype(ψ₀) == complex(elt)
+    @test ITensors.scalartype(ψₜ_ode) == complex(elt)
+    @test ITensors.scalartype(ψₜ_krylov) == complex(elt)
+    @test ITensors.scalartype(ψₜ_full) == complex(elt)
+    @test norm(ψ₀) ≈ 1
+    @test norm(ψₜ_ode) ≈ 1
+    @test norm(ψₜ_krylov) ≈ 1 rtol = √(eps(real(elt)))
+    @test norm(ψₜ_full) ≈ 1
+
+    ode_err = norm(contract(ψₜ_ode) - ψₜ_full)
+    krylov_err = norm(contract(ψₜ_krylov) - ψₜ_full)
+
+    @test krylov_err > ode_err
+    @test ode_err < √(eps(real(elt))) * 10^4
+    @test krylov_err < √(eps(real(elt))) * 10^5
   end
 end
 end
