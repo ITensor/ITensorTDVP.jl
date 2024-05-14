@@ -1,6 +1,5 @@
+using ITensors: Algorithm, @Algorithm_str
 using ITensors.ITensorMPS: MPS
-# TODO: Reexport from `ITensors`?
-using ITensors.NDTensors.BackendSelection: Backend, @Backend_str
 using KrylovKit: exponentiate
 
 function exponentiate_updater(operator, init; internal_kwargs, kwargs...)
@@ -13,10 +12,10 @@ function applyexp_updater(operator, init; internal_kwargs, kwargs...)
   return state, (; info)
 end
 
-tdvp_updater(updater_backend::String) = tdvp_updater(Backend(updater_backend))
-tdvp_updater(::Backend"exponentiate") = exponentiate_updater
-tdvp_updater(::Backend"applyexp") = applyexp_updater
-function tdvp_updater(updater_backend::Backend)
+tdvp_updater(updater_backend::String) = tdvp_updater(Algorithm(updater_backend))
+tdvp_updater(::Algorithm"exponentiate") = exponentiate_updater
+tdvp_updater(::Algorithm"applyexp") = applyexp_updater
+function tdvp_updater(updater_backend::Algorithm)
   return error("`updater_backend=$(String(updater_backend))` not recognized.")
 end
 
