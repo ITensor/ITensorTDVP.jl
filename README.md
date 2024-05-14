@@ -90,7 +90,7 @@ tdvp(operator, t, init; updater_kwargs=(; tol=1e-5, krylovdim=20), kwargs...)
 ITensorTDVP.dmrg(operator, init; updater_kwargs=(; tol=1e-5, krylovdim=20), kwargs...)
 ```
 - In `linsolve`, the keyword argument `solver_kwargs` has been renamed to `updater_kwargs`.
-- In `ITensorTDVP.dmrg`, `dmrg_x`, and `linsolve`, the keyword argument `step_observer!` has been renamed to `sweep_observer!`. Either name is allowed in `tdvp`.
+- In `ITensorTDVP.dmrg`, `dmrg_x`, and `linsolve`, the keyword argument `step_observer!` has been renamed to `sweep_observer!`. Either name is allowed in `tdvp` but `step_observer!` is preferred and the name `sweep_observer!` may be deprecated in `tdvp` in future versions.
 - Support for `ITensors.AbstractObserver`-based observers has been removed, use `Observers.observer` instead.
 - In `contract(operator::MPO, state::MPS; alg="fit", kwargs...)`, and `apply(operator::MPO, state::MPS; kwargs...)`, the keyword argument for specifying an initial guess for the result is now called `init` instead of `init_mps`. Additionally, in `contract`, `init` should have primed site indices, or more generally should have site indices which are those that are not shared by the input operator and state.
 - In custom local updaters/solvers, the keyword arguments `time_step`, `current_time`, and `outputlevel` are now being passed as a NamedTuple in a new keyword argument `internal_kwargs`. Change local updaters/solvers from:
