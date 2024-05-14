@@ -1,29 +1,42 @@
-using ITensors: uniqueinds
+using ITensors: ITensors, uniqueinds
 using ITensors.ITensorMPS:
   ITensorMPS, MPS, isortho, orthocenter, orthogonalize!, position!, replacebond!, set_nsite!
 using LinearAlgebra: norm, normalize!, svd
 using Printf: @printf
 
 function sweep_update(
-  order::TDVPOrder, solver, PH, time_step::Number, psi::MPS; current_time=0, kwargs...
+  order::TDVPOrder,
+  reduce_operator,
+  state::MPS;
+  current_time=nothing,
+  time_step=nothing,
+  kwargs...,
 )
   order_orderings = orderings(order)
-  order_sub_time_steps = eltype(time_step).(sub_time_steps(order))
-  order_sub_time_steps *= time_step
+  order_sub_time_steps = sub_time_steps(order)
+  if !isnothing(time_step)
+    order_sub_time_steps = eltype(time_step).(order_sub_time_steps)
+    order_sub_time_steps *= time_step
+  end
   info = nothing
+  sub_time_step = nothing
   for substep in 1:length(order_sub_time_steps)
-    psi, PH, info = sub_sweep_update(
+    if !isnothing(time_step)
+      sub_time_step = order_sub_time_steps[substep]
+    end
+    state, reduce_operator, info = sub_sweep_update(
       order_orderings[substep],
-      solver,
-      PH,
-      order_sub_time_steps[substep],
-      psi;
+      reduce_operator,
+      state;
       current_time,
+      time_step=sub_time_step,
       kwargs...,
     )
-    current_time += order_sub_time_steps[substep]
+    if !isnothing(time_step)
+      current_time += sub_time_step
+    end
   end
-  return psi, PH, info
+  return state, reduce_operator, info
 end
 
 isforward(direction::Base.ForwardOrdering) = true
@@ -49,54 +62,56 @@ end
 
 function sub_sweep_update(
   direction::Base.Ordering,
-  solver,
-  PH,
-  time_step::Number,
-  psi::MPS;
+  reduce_operator,
+  state::MPS;
+  updater,
+  updater_kwargs,
   which_decomp=nothing,
   svd_alg=nothing,
   sweep=default_sweep(),
-  current_time=default_current_time(),
+  current_time=nothing,
+  time_step=nothing,
   nsite=default_nsite(),
   reverse_step=default_reverse_step(),
   normalize=default_normalize(),
-  (observer!)=default_observer!(),
+  (observer!)=default_observer(),
   outputlevel=default_outputlevel(),
   maxdim=default_maxdim(),
   mindim=default_mindim(),
-  cutoff=default_cutoff(time_step),
+  cutoff=default_cutoff(ITensors.scalartype(state)),
   noise=default_noise(),
 )
-  PH = copy(PH)
-  psi = copy(psi)
-  if length(psi) == 1
+  reduce_operator = copy(reduce_operator)
+  state = copy(state)
+  if length(state) == 1
     error(
       "`tdvp`, `dmrg`, `linsolve`, etc. currently does not support system sizes of 1. You can diagonalize the MPO tensor directly with tools like `LinearAlgebra.eigen`, `KrylovKit.exponentiate`, etc.",
     )
   end
-  N = length(psi)
-  set_nsite!(PH, nsite)
+  N = length(state)
+  set_nsite!(reduce_operator, nsite)
   if isforward(direction)
-    if !isortho(psi) || orthocenter(psi) != 1
-      orthogonalize!(psi, 1)
+    if !isortho(state) || orthocenter(state) != 1
+      orthogonalize!(state, 1)
     end
-    @assert isortho(psi) && orthocenter(psi) == 1
-    position!(PH, psi, 1)
+    @assert isortho(state) && orthocenter(state) == 1
+    position!(reduce_operator, state, 1)
   elseif isreverse(direction)
-    if !isortho(psi) || orthocenter(psi) != N - nsite + 1
-      orthogonalize!(psi, N - nsite + 1)
+    if !isortho(state) || orthocenter(state) != N - nsite + 1
+      orthogonalize!(state, N - nsite + 1)
     end
-    @assert(isortho(psi) && (orthocenter(psi) == N - nsite + 1))
-    position!(PH, psi, N - nsite + 1)
+    @assert(isortho(state) && (orthocenter(state) == N - nsite + 1))
+    position!(reduce_operator, state, N - nsite + 1)
   end
   maxtruncerr = 0.0
   info = nothing
   for b in sweep_bonds(direction, N; ncenter=nsite)
     current_time, maxtruncerr, spec, info = region_update!(
-      solver,
-      PH,
-      psi,
+      reduce_operator,
+      state,
       b;
+      updater,
+      updater_kwargs,
       nsite,
       reverse_step,
       current_time,
@@ -126,14 +141,14 @@ function sub_sweep_update(
       println()
       if spec != nothing
         @printf(
-          "  Trunc. err=%.2E, bond dimension %d\n", spec.truncerr, dim(linkind(psi, b))
+          "  Trunc. err=%.2E, bond dimension %d\n", spec.truncerr, dim(linkind(state, b))
         )
       end
       flush(stdout)
     end
     update_observer!(
       observer!;
-      psi,
+      state,
       bond=b,
       sweep,
       half_sweep=isforward(direction) ? 1 : 2,
@@ -145,15 +160,16 @@ function sub_sweep_update(
     )
   end
   # Just to be sure:
-  normalize && normalize!(psi)
-  return psi, PH, TDVPInfo(maxtruncerr)
+  normalize && normalize!(state)
+  return state, reduce_operator, (; maxtruncerr)
 end
 
 function region_update!(
-  solver,
-  PH,
-  psi,
+  reduce_operator,
+  state,
   b;
+  updater,
+  updater_kwargs,
   nsite,
   reverse_step,
   current_time,
@@ -172,10 +188,11 @@ function region_update!(
   return region_update!(
     Val(nsite),
     Val(reverse_step),
-    solver,
-    PH,
-    psi,
+    reduce_operator,
+    state,
     b;
+    updater,
+    updater_kwargs,
     current_time,
     outputlevel,
     time_step,
@@ -194,10 +211,11 @@ end
 function region_update!(
   nsite_val::Val{1},
   reverse_step_val::Val{false},
-  solver,
-  PH,
-  psi,
+  reduce_operator,
+  state,
   b;
+  updater,
+  updater_kwargs,
   current_time,
   outputlevel,
   time_step,
@@ -211,21 +229,26 @@ function region_update!(
   mindim,
   maxtruncerr,
 )
-  N = length(psi)
+  N = length(state)
   nsite = 1
   # Do 'forwards' evolution step
-  set_nsite!(PH, nsite)
-  position!(PH, psi, b)
-  phi1 = psi[b]
-  phi1, info = solver(PH, time_step, phi1; current_time, outputlevel)
-  current_time += time_step
-  normalize && (phi1 /= norm(phi1))
+  set_nsite!(reduce_operator, nsite)
+  position!(reduce_operator, state, b)
+  reduced_state = state[b]
+  internal_kwargs = (; current_time, time_step, outputlevel)
+  reduced_state, info = updater(
+    reduce_operator, reduced_state; internal_kwargs, updater_kwargs...
+  )
+  if !isnothing(time_step)
+    current_time += time_step
+  end
+  normalize && (reduced_state /= norm(reduced_state))
   spec = nothing
-  psi[b] = phi1
+  state[b] = reduced_state
   if !is_half_sweep_done(direction, b, N; ncenter=nsite)
     # Move ortho center
     Δ = (isforward(direction) ? +1 : -1)
-    orthogonalize!(psi, b + Δ)
+    orthogonalize!(state, b + Δ)
   end
   return current_time, maxtruncerr, spec, info
 end
@@ -233,10 +256,11 @@ end
 function region_update!(
   nsite_val::Val{1},
   reverse_step_val::Val{true},
-  solver,
-  PH,
-  psi,
+  reduce_operator,
+  state,
   b;
+  updater,
+  updater_kwargs,
   current_time,
   outputlevel,
   time_step,
@@ -250,42 +274,48 @@ function region_update!(
   mindim,
   maxtruncerr,
 )
-  N = length(psi)
+  N = length(state)
   nsite = 1
   # Do 'forwards' evolution step
-  set_nsite!(PH, nsite)
-  position!(PH, psi, b)
-  phi1 = psi[b]
-  phi1, info = solver(PH, time_step, phi1; current_time, outputlevel)
+  set_nsite!(reduce_operator, nsite)
+  position!(reduce_operator, state, b)
+  reduced_state = state[b]
+  internal_kwargs = (; current_time, time_step, outputlevel)
+  reduced_state, info = updater(
+    reduce_operator, reduced_state; internal_kwargs, updater_kwargs...
+  )
   current_time += time_step
-  normalize && (phi1 /= norm(phi1))
+  normalize && (reduced_state /= norm(reduced_state))
   spec = nothing
-  psi[b] = phi1
+  state[b] = reduced_state
   if !is_half_sweep_done(direction, b, N; ncenter=nsite)
     # Do backwards evolution step
     b1 = (isforward(direction) ? b + 1 : b)
     Δ = (isforward(direction) ? +1 : -1)
-    uinds = uniqueinds(phi1, psi[b + Δ])
-    U, S, V = svd(phi1, uinds)
-    psi[b] = U
-    phi0 = S * V
+    uinds = uniqueinds(reduced_state, state[b + Δ])
+    U, S, V = svd(reduced_state, uinds)
+    state[b] = U
+    bond_reduced_state = S * V
     if isforward(direction)
-      ITensorMPS.setleftlim!(psi, b)
+      ITensorMPS.setleftlim!(state, b)
     elseif isreverse(direction)
-      ITensorMPS.setrightlim!(psi, b)
+      ITensorMPS.setrightlim!(state, b)
     end
-    set_nsite!(PH, nsite - 1)
-    position!(PH, psi, b1)
-    phi0, info = solver(PH, -time_step, phi0; current_time, outputlevel)
+    set_nsite!(reduce_operator, nsite - 1)
+    position!(reduce_operator, state, b1)
+    internal_kwargs = (; current_time, time_step=-time_step, outputlevel)
+    bond_reduced_state, info = updater(
+      reduce_operator, bond_reduced_state; internal_kwargs, updater_kwargs...
+    )
     current_time -= time_step
-    normalize && (phi0 ./= norm(phi0))
-    psi[b + Δ] = phi0 * psi[b + Δ]
+    normalize && (bond_reduced_state ./= norm(bond_reduced_state))
+    state[b + Δ] = bond_reduced_state * state[b + Δ]
     if isforward(direction)
-      ITensorMPS.setrightlim!(psi, b + Δ + 1)
+      ITensorMPS.setrightlim!(state, b + Δ + 1)
     elseif isreverse(direction)
-      ITensorMPS.setleftlim!(psi, b + Δ - 1)
+      ITensorMPS.setleftlim!(state, b + Δ - 1)
     end
-    set_nsite!(PH, nsite)
+    set_nsite!(reduce_operator, nsite)
   end
   return current_time, maxtruncerr, spec, info
 end
@@ -293,13 +323,14 @@ end
 function region_update!(
   nsite_val::Val{2},
   reverse_step_val::Val{false},
-  solver,
-  PH,
-  psi,
+  reduce_operator,
+  state,
   b;
+  updater,
+  updater_kwargs,
   current_time,
-  outputlevel,
   time_step,
+  outputlevel,
   normalize,
   direction,
   noise,
@@ -310,25 +341,30 @@ function region_update!(
   mindim,
   maxtruncerr,
 )
-  N = length(psi)
+  N = length(state)
   nsite = 2
   # Do 'forwards' evolution step
-  set_nsite!(PH, nsite)
-  position!(PH, psi, b)
-  phi1 = psi[b] * psi[b + 1]
-  phi1, info = solver(PH, time_step, phi1; current_time, outputlevel)
-  current_time += time_step
-  normalize && (phi1 /= norm(phi1))
+  set_nsite!(reduce_operator, nsite)
+  position!(reduce_operator, state, b)
+  reduced_state = state[b] * state[b + 1]
+  internal_kwargs = (; current_time, time_step, outputlevel)
+  reduced_state, info = updater(
+    reduce_operator, reduced_state; internal_kwargs, updater_kwargs...
+  )
+  if !isnothing(time_step)
+    current_time += time_step
+  end
+  normalize && (reduced_state /= norm(reduced_state))
   spec = nothing
   ortho = isforward(direction) ? "left" : "right"
   drho = nothing
   if noise > 0.0 && isforward(direction)
-    drho = noise * noiseterm(PH, phi, ortho)
+    drho = noise * noiseterm(reduce_operator, reduced_state, ortho)
   end
   spec = replacebond!(
-    psi,
+    state,
     b,
-    phi1;
+    reduced_state;
     maxdim,
     mindim,
     cutoff,
@@ -345,13 +381,14 @@ end
 function region_update!(
   nsite_val::Val{2},
   reverse_step_val::Val{true},
-  solver,
-  PH,
-  psi,
+  reduce_operator,
+  state,
   b;
+  updater,
+  updater_kwargs,
   current_time,
-  outputlevel,
   time_step,
+  outputlevel,
   normalize,
   direction,
   noise,
@@ -362,25 +399,28 @@ function region_update!(
   mindim,
   maxtruncerr,
 )
-  N = length(psi)
+  N = length(state)
   nsite = 2
   # Do 'forwards' evolution step
-  set_nsite!(PH, nsite)
-  position!(PH, psi, b)
-  phi1 = psi[b] * psi[b + 1]
-  phi1, info = solver(PH, time_step, phi1; current_time, outputlevel)
+  set_nsite!(reduce_operator, nsite)
+  position!(reduce_operator, state, b)
+  reduced_state = state[b] * state[b + 1]
+  internal_kwargs = (; current_time, time_step, outputlevel)
+  reduced_state, info = updater(
+    reduce_operator, reduced_state; internal_kwargs, updater_kwargs...
+  )
   current_time += time_step
-  normalize && (phi1 /= norm(phi1))
+  normalize && (reduced_state /= norm(reduced_state))
   spec = nothing
   ortho = isforward(direction) ? "left" : "right"
   drho = nothing
   if noise > 0.0 && isforward(direction)
-    drho = noise * noiseterm(PH, phi, ortho)
+    drho = noise * noiseterm(reduce_operator, phi, ortho)
   end
   spec = replacebond!(
-    psi,
+    state,
     b,
-    phi1;
+    reduced_state;
     maxdim,
     mindim,
     cutoff,
@@ -395,14 +435,17 @@ function region_update!(
     # Do backwards evolution step
     b1 = (isforward(direction) ? b + 1 : b)
     Δ = (isforward(direction) ? +1 : -1)
-    phi0 = psi[b1]
-    set_nsite!(PH, nsite - 1)
-    position!(PH, psi, b1)
-    phi0, info = solver(PH, -time_step, phi0; current_time, outputlevel)
+    bond_reduced_state = state[b1]
+    set_nsite!(reduce_operator, nsite - 1)
+    position!(reduce_operator, state, b1)
+    internal_kwargs = (; current_time, time_step=-time_step, outputlevel)
+    bond_reduced_state, info = updater(
+      reduce_operator, bond_reduced_state; internal_kwargs, updater_kwargs...
+    )
     current_time -= time_step
-    normalize && (phi0 ./= norm(phi0))
-    psi[b1] = phi0
-    set_nsite!(PH, nsite)
+    normalize && (bond_reduced_state /= norm(bond_reduced_state))
+    state[b1] = bond_reduced_state
+    set_nsite!(reduce_operator, nsite)
   end
   return current_time, maxtruncerr, spec, info
 end
@@ -410,10 +453,11 @@ end
 function region_update!(
   ::Val{nsite},
   ::Val{reverse_step},
-  solver,
-  PH,
-  psi,
+  reduce_operator,
+  state,
   b;
+  updater,
+  updater_kwargs,
   current_time,
   outputlevel,
   time_step,

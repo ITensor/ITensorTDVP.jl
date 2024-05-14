@@ -1,4 +1,5 @@
-using ITensorMPS: MPO, OpSum, dmrg, inner, randomMPS, siteinds, tdvp
+using ITensors: MPO, OpSum, dmrg, inner, randomMPS, siteinds
+using ITensorTDVP: tdvp
 
 function main()
   n = 10
@@ -21,13 +22,13 @@ function main()
 
   ϕ = tdvp(
     H,
-    -1.0,
+    -20.0,
     ψ;
-    nsweeps=20,
-    reverse_step=false,
-    normalize=true,
+    time_step=-1.0,
     maxdim=30,
     cutoff=1e-10,
+    normalize=true,
+    reverse_step=false,
     outputlevel=1,
   )
   @show inner(ϕ', H, ϕ) / inner(ϕ, ϕ)

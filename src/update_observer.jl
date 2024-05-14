@@ -2,6 +2,9 @@ function update_observer!(observer; kwargs...)
   return error("Not implemented")
 end
 
+struct EmptyObserver end
+update_observer!(observer::EmptyObserver; kwargs...) = observer
+
 using ITensors.ITensorMPS: ITensorMPS
 function update_observer!(observer::ITensorMPS.AbstractObserver; kwargs...)
   return ITensorMPS.measure!(observer; kwargs...)

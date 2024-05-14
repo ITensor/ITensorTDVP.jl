@@ -2,7 +2,7 @@
 using ITensors: ITensors, MPO, MPS, OpSum, ProjMPO, inner, siteinds
 using ITensorTDVP: dmrg_x
 using Random: Random
-using Test: @test, @testset
+using Test: @test, @test_throws, @testset
 @testset "DMRG-X (eltype=$elt, conserve_qns=$conserve_qns)" for elt in (
     Float32, Float64, Complex{Float32}, Complex{Float64}
   ),
@@ -31,10 +31,9 @@ using Test: @test, @testset
   H = MPO(elt, heisenberg(n; h), s)
   initstate = rand(["↑", "↓"], n)
   ψ = MPS(elt, s, initstate)
-  dmrg_x_kwargs = (
-    nsweeps=20, reverse_step=false, normalize=true, maxdim=20, cutoff=1e-10, outputlevel=0
-  )
-  e, ϕ = dmrg_x(ProjMPO(H), ψ; nsite=2, dmrg_x_kwargs...)
+  @test_throws ErrorException dmrg_x(H, ψ; nsite=2, maxdim=20, cutoff=1e-10)
+  dmrg_x_kwargs = (; nsweeps=20, normalize=true, maxdim=20, cutoff=1e-10, outputlevel=0)
+  e, ϕ = dmrg_x(H, ψ; nsite=2, dmrg_x_kwargs...)
   @test ITensors.scalartype(ϕ) == elt
   @test inner(ϕ', H, ϕ) / inner(ϕ, ϕ) ≈ e
   @test inner(H, ψ, H, ψ) ≉ inner(ψ', H, ψ)^2 rtol = √eps(real(elt))

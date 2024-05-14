@@ -1,10 +1,11 @@
-using ITensors: @disable_warn_order
-using ITensorMPS: MPO, MPS, inner, randomMPS, siteinds, tdvp
+using ITensors: @disable_warn_order, contract
+using ITensors: MPO, MPS, inner, randomMPS, siteinds
+using ITensorTDVP: tdvp
 using LinearAlgebra: norm
 using Random: Random
 
 include("03_models.jl")
-include("03_solvers.jl")
+include("03_updaters.jl")
 
 function main()
   Random.seed!(1234)
@@ -20,7 +21,7 @@ function main()
   # How much information to output from TDVP
   # Set to 2 to get information about each bond/site
   # evolution, and 3 to get information about the
-  # solver.
+  # updater.
   outputlevel = 3
 
   # Frequency of time dependent terms
@@ -50,34 +51,24 @@ function main()
 
   tol = 1e-15
 
-  # ODE solver parameters
-  ode_alg = Tsit5()
-  ode_kwargs = (; reltol=tol, abstol=tol)
-
-  # Krylov solver parameters
-  krylov_kwargs = (; tol=tol, eager=true)
-
   @show n
   @show ω₁, ω₂
   @show J₁, J₂
   @show maxdim, cutoff, nsite
   @show start_linkdim
   @show time_step, time_stop
-  @show ode_alg
-  @show ode_kwargs
-  @show krylov_kwargs
 
-  ω⃗ = [ω₁, ω₂]
-  f⃗ = [t -> cos(ω * t) for ω in ω⃗]
+  ω⃗ = (ω₁, ω₂)
+  f⃗ = map(ω -> (t -> cos(ω * t)), ω⃗)
 
   # H₀ = H(0) = H₁(0) + H₂(0) + …
   ℋ₁₀ = heisenberg(n; J=J₁, J2=0.0)
   ℋ₂₀ = heisenberg(n; J=0.0, J2=J₂)
-  ℋ⃗₀ = [ℋ₁₀, ℋ₂₀]
+  ℋ⃗₀ = (ℋ₁₀, ℋ₂₀)
 
   s = siteinds("S=1/2", n)
 
-  H⃗₀ = [MPO(ℋ₀, s) for ℋ₀ in ℋ⃗₀]
+  H⃗₀ = map(ℋ₀ -> MPO(ℋ₀, s), ℋ⃗₀)
 
   # Initial state, ψ₀ = ψ(0)
   # Initialize as complex since that is what OrdinaryDiffEq.jl/DifferentialEquations.jl
@@ -88,60 +79,75 @@ function main()
 
   println()
   println("#"^100)
-  println("Running TDVP with ODE solver")
+  println("Running TDVP with ODE updater")
   println("#"^100)
   println()
-
-  function ode_solver_f⃗(H⃗₀, time_step, ψ₀; kwargs...)
-    return ode_solver(f⃗, H⃗₀, time_step, ψ₀; solver_alg=ode_alg, ode_kwargs..., kwargs...)
-  end
 
   ψₜ_ode = tdvp(
-    ode_solver_f⃗, H⃗₀, time_stop, ψ₀; time_step, maxdim, cutoff, nsite, outputlevel
+    -im * TimeDependentSum(f⃗, H⃗₀),
+    time_stop,
+    ψ₀;
+    updater=ode_updater,
+    updater_kwargs=(; reltol=tol, abstol=tol),
+    time_step,
+    maxdim,
+    cutoff,
+    nsite,
+    outputlevel,
   )
 
   println()
-  println("Finished running TDVP with ODE solver")
+  println("Finished running TDVP with ODE updater")
   println()
 
   println()
   println("#"^100)
-  println("Running TDVP with Krylov solver")
+  println("Running TDVP with Krylov updater")
   println("#"^100)
   println()
-
-  function krylov_solver_f⃗(H⃗₀, time_step, ψ₀; kwargs...)
-    return krylov_solver(f⃗, H⃗₀, time_step, ψ₀; krylov_kwargs..., kwargs...)
-  end
 
   ψₜ_krylov = tdvp(
-    krylov_solver_f⃗, H⃗₀, time_stop, ψ₀; time_step, cutoff, nsite, outputlevel
+    -im * TimeDependentSum(f⃗, H⃗₀),
+    time_stop,
+    ψ₀;
+    updater=krylov_updater,
+    updater_kwargs=(; tol, eager=true),
+    time_step,
+    cutoff,
+    nsite,
+    outputlevel,
   )
 
   println()
-  println("Finished running TDVP with Krylov solver")
+  println("Finished running TDVP with Krylov updater")
   println()
 
   println()
   println("#"^100)
-  println("Running full state evolution with ODE solver")
+  println("Running full state evolution with ODE updater")
   println("#"^100)
   println()
 
   @disable_warn_order begin
-    ψₜ_full, _ = ode_solver(f⃗, prod.(H⃗₀), time_stop, prod(ψ₀); outputlevel)
+    ψₜ_full, _ = ode_updater(
+      -im * TimeDependentSum(f⃗, contract.(H⃗₀)),
+      contract(ψ₀);
+      internal_kwargs=(; time_step=time_stop, outputlevel),
+      reltol=tol,
+      abstol=tol,
+    )
   end
 
   println()
-  println("Finished full state evolution with ODE solver")
+  println("Finished full state evolution with ODE updater")
   println()
 
   @show norm(ψₜ_ode)
   @show norm(ψₜ_krylov)
   @show norm(ψₜ_full)
 
-  @show 1 - abs(inner(prod(ψₜ_ode), ψₜ_full))
-  @show 1 - abs(inner(prod(ψₜ_krylov), ψₜ_full))
+  @show 1 - abs(inner(contract(ψₜ_ode), ψₜ_full))
+  @show 1 - abs(inner(contract(ψₜ_krylov), ψₜ_full))
   return nothing
 end
 

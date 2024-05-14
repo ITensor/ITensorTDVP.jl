@@ -1,4 +1,5 @@
-using ITensorMPS: MPO, MPS, OpSum, expect, inner, siteinds, tdvp
+using ITensors: MPO, MPS, OpSum, expect, inner, siteinds
+using ITensorTDVP: tdvp
 using Observers: observer
 
 function main()
@@ -13,70 +14,30 @@ function main()
   end
 
   N = 10
-  cutoff = 1e-12
-  tau = 0.1
-  ttotal = 1.0
-
   s = siteinds("S=1/2", N; conserve_qns=true)
   H = MPO(heisenberg(N), s)
 
-  function step(; sweep, bond, half_sweep)
-    if bond == 1 && half_sweep == 2
-      return sweep
-    end
-    return nothing
-  end
-
-  function current_time(; current_time, bond, half_sweep)
-    if bond == 1 && half_sweep == 2
-      return current_time
-    end
-    return nothing
-  end
-
-  function measure_sz(; psi, bond, half_sweep)
-    if bond == 1 && half_sweep == 2
-      return expect(psi, "Sz"; sites=N ÷ 2)
-    end
-    return nothing
-  end
-
-  function return_state(; psi, bond, half_sweep)
-    if bond == 1 && half_sweep == 2
-      return psi
-    end
-    return nothing
-  end
-
+  step(; sweep) = sweep
+  current_time(; current_time) = current_time
+  return_state(; state) = state
+  measure_sz(; state) = expect(state, "Sz"; sites=length(state) ÷ 2)
   obs = observer(
-    "steps" => step, "times" => current_time, "psis" => return_state, "Sz" => measure_sz
+    "steps" => step, "times" => current_time, "states" => return_state, "sz" => measure_sz
   )
 
-  psi = MPS(s, n -> isodd(n) ? "Up" : "Dn")
-  psi_f = tdvp(
-    H,
-    -im * ttotal,
-    psi;
-    time_step=-im * tau,
-    cutoff,
-    outputlevel=1,
-    normalize=false,
-    (observer!)=obs,
+  init = MPS(s, n -> isodd(n) ? "Up" : "Dn")
+  state = tdvp(
+    H, -1.0im, init; time_step=-0.1im, cutoff=1e-12, (step_observer!)=obs, outputlevel=1
   )
-
-  steps = obs.steps
-  times = obs.times
-  psis = obs.psis
-  Sz = obs.Sz
 
   println("\nResults")
   println("=======")
-  for n in 1:length(steps)
-    print("step = ", steps[n])
-    print(", time = ", round(times[n]; digits=3))
-    print(", |⟨ψⁿ|ψⁱ⟩| = ", round(abs(inner(psis[n], psi)); digits=3))
-    print(", |⟨ψⁿ|ψᶠ⟩| = ", round(abs(inner(psis[n], psi_f)); digits=3))
-    print(", ⟨Sᶻ⟩ = ", round(Sz[n]; digits=3))
+  for n in 1:length(obs.steps)
+    print("step = ", obs.steps[n])
+    print(", time = ", round(obs.times[n]; digits=3))
+    print(", |⟨ψⁿ|ψⁱ⟩| = ", round(abs(inner(obs.states[n], init)); digits=3))
+    print(", |⟨ψⁿ|ψᶠ⟩| = ", round(abs(inner(obs.states[n], state)); digits=3))
+    print(", ⟨Sᶻ⟩ = ", round(obs.sz[n]; digits=3))
     println()
   end
   return nothing

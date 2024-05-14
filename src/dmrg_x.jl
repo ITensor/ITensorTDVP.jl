@@ -1,23 +1,24 @@
-using ITensors: MPS, array, contract, dag, uniqueind, onehot
+using ITensors: array, contract, dag, uniqueind, onehot
+using ITensors.ITensorMPS: MPS
 using LinearAlgebra: eigen
 
-function dmrg_x_solver(PH, t, psi0; current_time, outputlevel)
-  H = contract(PH, ITensor(true))
-  D, U = eigen(H; ishermitian=true)
-  u = uniqueind(U, H)
-  u′ = uniqueind(D, U)
-  max_overlap, max_ind = findmax(abs, array(psi0 * dag(U)))
-  U_max = U * dag(onehot(eltype(U), u => max_ind))
-  D_max = D[u′ => max_ind, u => max_ind]
-  return U_max, (; eigval=D_max)
+function eigen_updater(operator, state; internal_kwargs)
+  contracted_operator = contract(operator, ITensor(true))
+  d, u = eigen(contracted_operator; ishermitian=true)
+  u_ind = uniqueind(u, contracted_operator)
+  u′_ind = uniqueind(d, u)
+  max_overlap, max_index = findmax(abs, array(state * dag(u)))
+  u_max = u * dag(onehot(eltype(u), u_ind => max_index))
+  d_max = d[u′_ind => max_index, u_ind => max_index]
+  return u_max, (; eigval=d_max)
 end
 
 function dmrg_x(
-  PH, psi0::MPS; reverse_step=false, (observer!)=default_observer!(), kwargs...
+  operator, state::MPS; updater=eigen_updater, (observer!)=default_observer(), kwargs...
 )
   info_ref = Ref{Any}()
-  info_observer! = values_observer(; info=info_ref)
-  observer! = compose_observers(observer!, info_observer!)
-  psi = alternating_update(dmrg_x_solver, PH, psi0; reverse_step, observer!, kwargs...)
-  return info_ref[].eigval, psi
+  info_observer = values_observer(; info=info_ref)
+  observer = compose_observers(observer!, info_observer)
+  eigvec = alternating_update(operator, state; updater, (observer!)=observer, kwargs...)
+  return info_ref[].eigval, eigvec
 end

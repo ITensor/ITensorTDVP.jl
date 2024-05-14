@@ -1,130 +1,93 @@
-using ITensors: Algorithm, MPO, MPS, @Algorithm_str
+using ITensors: Algorithm, @Algorithm_str
+using ITensors.ITensorMPS: MPS
 using KrylovKit: exponentiate
 
-# Select solver function
-solver_function(solver_backend::String) = solver_function(Algorithm(solver_backend))
-solver_function(::Algorithm"exponentiate") = exponentiate
-solver_function(::Algorithm"applyexp") = applyexp
-function solver_function(solver_backend::Algorithm)
-  return error(
-    "solver_backend=$(String(solver_backend)) not recognized (only \"exponentiate\" is supported)",
-  )
+function exponentiate_updater(operator, init; internal_kwargs, kwargs...)
+  state, info = exponentiate(operator, internal_kwargs.time_step, init; kwargs...)
+  return state, (; info)
 end
 
-function tdvp_solver(
-  f::Function;
-  ishermitian,
-  issymmetric,
-  solver_tol,
-  solver_krylovdim,
-  solver_maxiter,
-  solver_outputlevel,
-)
-  function solver(H, t, psi0; current_time, outputlevel)
-    psi, info = f(
-      H,
-      t,
-      psi0;
-      ishermitian,
-      issymmetric,
-      tol=solver_tol,
-      krylovdim=solver_krylovdim,
-      maxiter=solver_maxiter,
-      verbosity=solver_outputlevel,
-      eager=true,
-    )
-    return psi, info
+function applyexp_updater(operator, init; internal_kwargs, kwargs...)
+  state, info = applyexp(operator, internal_kwargs.time_step, init; kwargs...)
+  return state, (; info)
+end
+
+tdvp_updater(updater_backend::String) = tdvp_updater(Algorithm(updater_backend))
+tdvp_updater(::Algorithm"exponentiate") = exponentiate_updater
+tdvp_updater(::Algorithm"applyexp") = applyexp_updater
+function tdvp_updater(updater_backend::Algorithm)
+  return error("`updater_backend=$(String(updater_backend))` not recognized.")
+end
+
+function time_step_and_nsteps(t, time_step::Nothing, nsteps::Nothing)
+  # Default to 1 step.
+  nsteps = 1
+  return time_step_and_nsteps(t, time_step, nsteps)
+end
+
+function time_step_and_nsteps(t, time_step::Nothing, nsteps)
+  return t / nsteps, nsteps
+end
+
+function time_step_and_nsteps(t, time_step, nsteps::Nothing)
+  nsteps_float = t / time_step
+  nsteps_rounded = round(nsteps_float)
+  if abs(nsteps_float - nsteps_rounded) ≉ 0
+    return error("`t / time_step = $t / $time_step = $(t / time_step)` must be an integer.")
   end
-  return solver
+  return time_step, Int(nsteps_rounded)
 end
 
+function time_step_and_nsteps(t, time_step, nsteps)
+  if time_step * nsteps ≠ t
+    return error(
+      "Calling `tdvp(operator, t, state; time_step, nsteps, kwargs...)` with `t = $t`, `time_step = $time_step`, and `nsteps = $nsteps` must satisfy `time_step * nsteps == t`, while `time_step * nsteps = $time_step * $nsteps = $(time_step * nsteps)`.",
+    )
+  end
+  return time_step, nsteps
+end
+
+"""
+    tdvp(operator, t::Number, init::MPS; time_step, nsteps, kwargs...)
+
+Use the time dependent variational principle (TDVP) algorithm
+to compute `exp(t * operator) * init` using an efficient algorithm based
+on alternating optimization of the MPS tensors and local Krylov
+exponentiation of `operator`.
+
+Specify one of `time_step` or `nsteps`. If they are both specified, they
+must satisfy `time_step * nsteps == t`. If neither are specified, the
+default is `nsteps=1`, which means that `time_step == t`.
+
+Returns:
+* `state::MPS` - time-evolved MPS
+
+"""
 function tdvp(
-  H,
+  operator,
   t::Number,
-  psi0::MPS;
-  ishermitian=default_ishermitian(),
-  issymmetric=default_issymmetric(),
-  solver_backend=default_tdvp_solver_backend(),
-  solver_function=solver_function(solver_backend),
-  solver_tol=default_solver_tol(solver_function),
-  solver_krylovdim=default_solver_krylovdim(solver_function),
-  solver_maxiter=default_solver_maxiter(solver_function),
-  solver_outputlevel=default_solver_outputlevel(solver_function),
+  init::MPS;
+  updater_backend="exponentiate",
+  updater=tdvp_updater(updater_backend),
+  reverse_step=true,
+  time_step=nothing,
+  time_start=zero(t),
+  nsweeps=nothing,
+  nsteps=nsweeps,
+  (step_observer!)=default_sweep_observer(),
+  (sweep_observer!)=step_observer!,
   kwargs...,
 )
-  return tdvp(
-    tdvp_solver(
-      solver_function;
-      ishermitian,
-      issymmetric,
-      solver_tol,
-      solver_krylovdim,
-      solver_maxiter,
-      solver_outputlevel,
-    ),
-    H,
-    t,
-    psi0;
+  time_step, nsteps = time_step_and_nsteps(t, time_step, nsteps)
+  return alternating_update(
+    operator,
+    init;
+    updater,
+    reverse_step,
+    nsweeps=nsteps,
+    time_start,
+    time_step,
+    sweep_observer!,
     kwargs...,
   )
-end
-
-function tdvp(t::Number, H, psi0::MPS; kwargs...)
-  return tdvp(H, t, psi0; kwargs...)
-end
-
-function tdvp(H, psi0::MPS, t::Number; kwargs...)
-  return tdvp(H, t, psi0; kwargs...)
-end
-
-"""
-    tdvp(H::MPO,psi0::MPS,t::Number; kwargs...)
-    tdvp(H::MPO,psi0::MPS,t::Number; kwargs...)
-
-Use the time dependent variational principle (TDVP) algorithm
-to compute `exp(t*H)*psi0` using an efficient algorithm based
-on alternating optimization of the MPS tensors and local Krylov
-exponentiation of H.
-
-Returns:
-* `psi::MPS` - time-evolved MPS
-
-Optional keyword arguments:
-* `outputlevel::Int = 1` - larger outputlevel values resulting in printing more information and 0 means no output
-* `observer` - object implementing the [Observer](@ref observer) interface which can perform measurements and stop early
-* `write_when_maxdim_exceeds::Int` - when the allowed maxdim exceeds this value, begin saving tensors to disk to free memory in large calculations
-"""
-function tdvp(solver, H::MPO, t::Number, psi0::MPS; kwargs...)
-  return alternating_update(solver, H, t, psi0; kwargs...)
-end
-
-function tdvp(solver, t::Number, H, psi0::MPS; kwargs...)
-  return tdvp(solver, H, t, psi0; kwargs...)
-end
-
-function tdvp(solver, H, psi0::MPS, t::Number; kwargs...)
-  return tdvp(solver, H, t, psi0; kwargs...)
-end
-
-"""
-    tdvp(Hs::Vector{MPO},psi0::MPS,t::Number; kwargs...)
-    tdvp(Hs::Vector{MPO},psi0::MPS,t::Number, sweeps::Sweeps; kwargs...)
-
-Use the time dependent variational principle (TDVP) algorithm
-to compute `exp(t*H)*psi0` using an efficient algorithm based
-on alternating optimization of the MPS tensors and local Krylov
-exponentiation of H.
-
-This version of `tdvp` accepts a representation of H as a
-Vector of MPOs, Hs = [H1,H2,H3,...] such that H is defined
-as H = H1+H2+H3+...
-Note that this sum of MPOs is not actually computed; rather
-the set of MPOs [H1,H2,H3,..] is efficiently looped over at
-each step of the algorithm when optimizing the MPS.
-
-Returns:
-* `psi::MPS` - time-evolved MPS
-"""
-function tdvp(solver, Hs::Vector{MPO}, t::Number, psi0::MPS; kwargs...)
-  return alternating_update(solver, Hs, t, psi0; kwargs...)
 end

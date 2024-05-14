@@ -1,4 +1,5 @@
-using ITensorMPS: MPO, MPS, OpSum, dmrg_x, inner, siteinds
+using ITensors: MPO, MPS, OpSum, inner, siteinds
+using ITensorTDVP: dmrg_x
 using Random: Random
 
 function main()
@@ -30,12 +31,7 @@ function main()
 
   initstate = rand(["↑", "↓"], n)
   ψ = MPS(s, initstate)
-
-  dmrg_x_kwargs = (
-    nsweeps=10, reverse_step=false, normalize=true, maxdim=20, cutoff=1e-10, outputlevel=1
-  )
-
-  e, ϕ = dmrg_x(H, ψ; dmrg_x_kwargs...)
+  e, ϕ = dmrg_x(H, ψ; nsweeps=10, maxdim=20, cutoff=1e-10, normalize=true, outputlevel=1)
 
   @show inner(ψ', H, ψ) / inner(ψ, ψ)
   @show inner(H, ψ, H, ψ) - inner(ψ', H, ψ)^2

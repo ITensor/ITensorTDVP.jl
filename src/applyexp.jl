@@ -24,21 +24,7 @@ struct ApplyExpInfo
   converged::Int
 end
 
-function applyexp(
-  H,
-  tau::Number,
-  x0;
-  maxiter=30,
-  tol=1e-12,
-  outputlevel=0,
-  normcutoff=1e-7,
-  # Not used, just needed for compatibility with `KrylovKit.exponentiate`.
-  ishermitian=nothing,
-  issymmetric=nothing,
-  krylovdim=nothing,
-  verbosity=nothing,
-  eager=nothing,
-)
+function applyexp(H, tau::Number, x0; maxiter=30, tol=1e-12, outputlevel=0, normcutoff=1e-7)
   # Initialize Lanczos vectors
   v1 = copy(x0)
   nrm = norm(v1)
