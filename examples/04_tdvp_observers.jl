@@ -27,7 +27,7 @@ function main()
 
   init = MPS(s, n -> isodd(n) ? "Up" : "Dn")
   state = tdvp(
-    H, -1.0im, init; time_step=-0.1im, cutoff=1e-12, outputlevel=1, (step_observer!)=obs
+    H, -1.0im, init; time_step=-0.1im, cutoff=1e-12, (step_observer!)=obs, outputlevel=1
   )
 
   println("\nResults")

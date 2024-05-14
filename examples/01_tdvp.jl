@@ -25,10 +25,10 @@ function main()
     -20.0,
     ψ;
     time_step=-1.0,
-    reverse_step=false,
-    normalize=true,
     maxdim=30,
     cutoff=1e-10,
+    normalize=true,
+    reverse_step=false,
     outputlevel=1,
   )
   @show inner(ϕ', H, ϕ) / inner(ϕ, ϕ)
