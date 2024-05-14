@@ -32,9 +32,7 @@ tdvp(operator, -0.1im, init; nsweeps=10, kwargs...)
 ```
 to:
 ```julia
-t = -1.0im
-nsweeps = 10
-tdvp(operator, t, init; nsweeps, kwargs...)
+tdvp(operator, -1.0im, init; nsweeps=10, kwargs...)
 ```
 to evolve to time `1.0` over `10` steps with time steps of `0.1`. Also note that `ITensorTDVP.jl` v0.4 introduces `nsteps` as an alias for `nsweeps` in the `tdvp` function. `nsteps` is now the preferred syntax for specifying the number of time steps, and `nsweeps` may be deprecated in `tdvp` in the future. For example:
 ```julia
