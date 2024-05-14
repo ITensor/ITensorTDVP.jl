@@ -38,7 +38,7 @@ t = -1.0im
 nsweeps = 10
 tdvp(operator, t, init; nsweeps, kwargs...)
 ```
-to evolve to time `1.0` over `10` steps with time steps of `0.1`. Also note that `ITensorTDVP.jl` v0.4 instroduces `nsteps` as an alias for `nsweeps`, so you can also use:
+to evolve to time `1.0` over `10` steps with time steps of `0.1`. Also note that `ITensorTDVP.jl` v0.4 instroduces `nsteps` as an alias for `nsweeps` (and the recommended syntax), so you can also use:
 ```julia
 t = -1.0im
 nsteps = 10
@@ -58,7 +58,6 @@ must be changed to:
 ```julia
 tdvp(operator, t, init; updater=custom_updater, kwargs...)
 ```
-- In 
 - The keyword argument `psi` that was being passed to observers in `tdvp`, `linsolve`, etc. which stored the current state has been renamed to `state`. Change code like:
 ```julia
 measure_sz(; psi) = expect(psi, "Sz")
@@ -112,7 +111,7 @@ end
 
 #### New features
 
-- `nsteps` is now an alias for the `nsweeps` keyword argument in `tdvp`.
+- `nsteps` is now an alias for the `nsweeps` keyword argument in `tdvp` and the preferred syntax for setting the number of time steps of TDVP.
 - `TimeDependentSum` now accepts coefficients and terms that are Tuples, along with the previous interface which accepted Vectors.
 - Custom local updaters/solvers can be passed in a keyword argument `updater` to `ITensorTDVP.dmrg`, `dmrg_x`, and `linsolve`, which is consistent with the new syntax for `tdvp`.
 
