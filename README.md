@@ -26,7 +26,7 @@ However, as noted above we now recommend installing and loading `ITensorMPS` ins
 
 #### Breaking changes
 
-- When calling `tdvp(operator, t, init; kwargs...)`, `t` is now interpreted as the total evolution time, while in `ITensorTDVP.jl` it was being interpreted as the time step. To upgrade, change code like:
+- When calling `tdvp(operator, t, init; kwargs...)`, `t` is now interpreted as the total evolution time, while in `ITensorTDVP.jl` v0.3 and below it was being interpreted as the time step. To upgrade, change code like:
 ```julia
 t = -0.1im
 nsweeps = 10
