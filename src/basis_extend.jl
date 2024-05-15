@@ -1,7 +1,20 @@
 using ITensors:
-  ITensors, Index, ITensor, commonind, dag, delta, denseblocks, hasqns, prime, uniqueinds
-using ITensors.ITensorMPS: MPO, MPS, apply, dim, linkind, maxlinkdim, orthogonalize!
-using LinearAlgebra: normalize!, svd, tr
+  ITensors,
+  Algorithm,
+  Index,
+  ITensor,
+  @Algorithm_str,
+  δ,
+  commonind,
+  dag,
+  denseblocks,
+  directsum,
+  hasqns,
+  prime,
+  scalartype,
+  uniqueinds
+using ITensors.ITensorMPS: MPO, MPS, apply, dim, linkind, maxlinkdim, orthogonalize
+using LinearAlgebra: normalize, svd, tr
 
 #
 # Possible improvements
@@ -9,108 +22,82 @@ using LinearAlgebra: normalize!, svd, tr
 #    and through `basis_extend`
 #  - current behavior is letting bond dimension get too
 #    big when used in imaginary time evolution
-#  - come up with better names:
-#    > should `basis_extend` be called `krylov_extend`?
-#    > should `extend` be called `basis_extend`?
-#  - Use (1-tau*H)|psi> to generate "Krylov" vectors
-#    instead of H|psi>. Needed?
+#  - Use (1-tau*operator)|state> to generate "Krylov" vectors
+#    instead of operator|state>. Needed?
 #
 
-"""
-Given an MPS psi and a collection of MPS phis,
-returns an MPS which is equal to psi
-(has fidelity 1.0 with psi) but whose MPS basis
-is extended to contain a portion of the basis of
-the phis that is orthogonal to the MPS basis of psi.
-"""
-function extend(psi::MPS, phis::Vector{MPS}; kwargs...)
-  cutoff = get(kwargs, :cutoff, 1E-14)
-  N = length(psi)
-  psi = copy(psi)
-  phis = copy(phis)
-
-  orthogonalize!(psi, N)
-  for phi in phis
-    orthogonalize!(phi, N)
-  end
-
-  s = siteinds(psi)
-
-  for j in reverse(2:N)
-    # SVD psi[j] to compute B
-    linds = (s[j - 1], linkind(psi, j - 1))
-    _, S, B = svd(psi[j], linds; righttags="bψ_$j,Link")
-    rinds = uniqueinds(B, S)
-
-    # Make projector
-    Id = ITensor(1.0)
-    for r in rinds
-      Id *= denseblocks(delta(r', dag(r)))
-    end
-    P = Id - prime(B, rinds) * dag(B)
-
-    # Sum phi density matrices
-    rho = ITensor()
-    for phi in phis
-      rho += prime(phi[j], rinds) * dag(phi[j])
-    end
-    rho /= tr(rho)
-
-    # Apply projector
-    PrhoP = apply(apply(P, rho), P)
-
-    if norm(PrhoP) > 1E-12
-      # Diagonalize projected density matrix PrhoP
-      # to compute Bphi, which spans part of right basis 
-      # of phis which is orthogonal to right basis of psi
-      D, Bphi = eigen(PrhoP; cutoff, ishermitian=true, righttags="bϕ_$j,Link")
-
-      ## Test Bphi is ortho to B
-      #O = Bphi*B
-      #if norm(O) > 1E-10
-      #  @show norm(O)
-      #  error("Non-zero overlap of extended basis with original basis")
-      #end
-
-      # Form direct sum of B and Bphi over left index
-      bψ = commonind(B, S)
-      bϕ = commonind(Bphi, D)
-      if !hasqns(bψ)
-        bx = Index(dim(bψ) + dim(bϕ), "bx_$(j-1)")
-      else
-        bx = Index(vcat(space(bψ), space(bϕ)), "bx_$(j-1)")
-      end
-      D1, D2 = ITensors.directsum_itensors(bψ, bϕ, dag(bx))
-      Bx = D1 * B + D2 * Bphi
-    else
-      Bx = B
-    end
-
-    # Shift ortho center one site left using dag(Bx)
-    # and replace tensor at site j with Bx
-    psi[j - 1] = psi[j - 1] * (psi[j] * dag(Bx))
-    psi[j] = Bx
-    for phi in phis
-      phi[j - 1] = phi[j - 1] * (phi[j] * dag(Bx))
-      phi[j] = Bx
-    end
-  end
-
-  return psi
+function expand_basis(state, reference; alg, kwargs...)
+  return expand_basis(Algorithm(alg), state, reference; kwargs...)
 end
 
-function basis_extend(psi::MPS, H::MPO; kwargs...)
-  kdim = get(kwargs, :extension_krylovdim, 2)
-  maxdim = 1 + maxlinkdim(psi)
-
-  phis = Vector{MPS}(undef, kdim)
-  for k in 1:kdim
-    prev = k == 1 ? psi : phis[k - 1]
-    phis[k] = apply(H, prev; maxdim)
-    normalize!(phis[k])
+"""
+Given an MPS state and a collection of MPS references,
+returns an MPS which is equal to state
+(has fidelity 1.0 with state) but whose MPS basis
+is expanded to contain a portion of the basis of
+the references that is orthogonal to the MPS basis of state.
+"""
+function expand_basis(
+  ::Algorithm"orthogonalize",
+  state::MPS,
+  references::Vector{MPS};
+  cutoff=10^2 * eps(real(scalartype(state))),
+)
+  n = length(state)
+  state = orthogonalize(state, n)
+  references = map(reference -> orthogonalize(reference, n), references)
+  s = siteinds(state)
+  for j in reverse(2:n)
+    # SVD state[j] to compute basisⱼ
+    linds = [s[j - 1]; linkinds(state, j - 1)]
+    _, λⱼ, basisⱼ = svd(state[j], linds; righttags="bψ_$j,Link")
+    rinds = uniqueinds(basisⱼ, λⱼ)
+    # Make projectorⱼ
+    idⱼ = prod(r -> denseblocks(δ(r', dag(r))), rinds)
+    projectorⱼ = idⱼ - prime(basisⱼ, rinds) * dag(basisⱼ)
+    # Sum reference density matrices
+    ρⱼ = sum(reference -> prime(reference[j], rinds) * dag(reference[j]), references)
+    ρⱼ /= tr(ρⱼ)
+    # Apply projectorⱼ
+    ρⱼ_projected = apply(apply(projectorⱼ, ρⱼ), projectorⱼ)
+    expanded_basisⱼ = basisⱼ
+    if norm(ρⱼ_projected) > 10^3 * eps(real(scalartype(state)))
+      # Diagonalize projected density matrix ρⱼ_projected
+      # to compute reference_basisⱼ, which spans part of right basis
+      # of references which is orthogonal to right basis of state
+      dⱼ, reference_basisⱼ = eigen(
+        ρⱼ_projected; cutoff, ishermitian=true, righttags="bϕ_$j,Link"
+      )
+      state_indⱼ = only(commoninds(basisⱼ, λⱼ))
+      reference_indⱼ = only(commoninds(reference_basisⱼ, dⱼ))
+      expanded_basisⱼ, bx = directsum(
+        basisⱼ => state_indⱼ, reference_basisⱼ => reference_indⱼ
+      )
+    end
+    # Shift ortho center one site left using dag(expanded_basisⱼ)
+    # and replace tensor at site j with expanded_basisⱼ
+    state[j - 1] = state[j - 1] * (state[j] * dag(expanded_basisⱼ))
+    state[j] = expanded_basisⱼ
+    for reference in references
+      reference[j - 1] = reference[j - 1] * (reference[j] * dag(expanded_basisⱼ))
+      reference[j] = expanded_basisⱼ
+    end
   end
+  return state
+end
 
-  cutoff = get(kwargs, :extension_cutoff, 1E-8)
-  psix = extend(psi, phis; cutoff)
-  return psix
+function expand_basis(
+  ::Algorithm"global_krylov",
+  state::MPS,
+  operator::MPO;
+  krylovdim=2,
+  cutoff=(√(eps(scalartype(state)))),
+)
+  maxdim = maxlinkdim(state) + 1
+  references = Vector{MPS}(undef, krylovdim)
+  for k in 1:krylovdim
+    prev = k == 1 ? state : references[k - 1]
+    references[k] = normalize(apply(operator, prev; maxdim))
+  end
+  return expand_basis(state, references; alg="orthogonalize", cutoff)
 end
