@@ -1,4 +1,5 @@
-using ITensors: ITensors, Index, ITensor, commonind, dag, delta, denseblocks, hasqns, prime, uniqueinds
+using ITensors:
+  ITensors, Index, ITensor, commonind, dag, delta, denseblocks, hasqns, prime, uniqueinds
 using ITensors.ITensorMPS: MPO, MPS, apply, dim, linkind, maxlinkdim, orthogonalize!
 using LinearAlgebra: normalize!, svd, tr
 
