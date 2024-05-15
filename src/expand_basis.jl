@@ -53,11 +53,12 @@ function expand_basis(
     _, λⱼ, basisⱼ = svd(state[j], linds; righttags="bψ_$j,Link")
     rinds = uniqueinds(basisⱼ, λⱼ)
     # Make projectorⱼ
-    idⱼ = prod(r -> denseblocks(δ(r', dag(r))), rinds)
+    idⱼ = prod(r -> denseblocks(δ(scalartype(state), r', dag(r))), rinds)
     projectorⱼ = idⱼ - prime(basisⱼ, rinds) * dag(basisⱼ)
     # Sum reference density matrices
     ρⱼ = sum(reference -> prime(reference[j], rinds) * dag(reference[j]), references)
-    ρⱼ /= tr(ρⱼ)
+    # TODO: Fix bug that `tr` isn't preserving the element type.
+    ρⱼ /= scalartype(state)(tr(ρⱼ))
     # Apply projectorⱼ
     ρⱼ_projected = apply(apply(projectorⱼ, ρⱼ), projectorⱼ)
     expanded_basisⱼ = basisⱼ
@@ -91,7 +92,7 @@ function expand_basis(
   state::MPS,
   operator::MPO;
   krylovdim=2,
-  cutoff=(√(eps(scalartype(state)))),
+  cutoff=(√(eps(real(scalartype(state))))),
 )
   maxdim = maxlinkdim(state) + 1
   references = Vector{MPS}(undef, krylovdim)
