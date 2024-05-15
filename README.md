@@ -22,7 +22,7 @@ However, as noted above we now recommend installing and loading `ITensorMPS` ins
 
 ## News
 
-### ITensorTDVP.jl v0.4 Release Notes
+### ITensorTDVP.jl v0.4 release notes
 
 #### Breaking changes
 
