@@ -1,56 +1,93 @@
-function exponentiate_solver(; kwargs...)
-  function solver(H, t, psi0; kws...)
-    solver_kwargs = (;
-      ishermitian=get(kwargs, :ishermitian, true),
-      issymmetric=get(kwargs, :issymmetric, true),
-      tol=get(kwargs, :solver_tol, 1E-12),
-      krylovdim=get(kwargs, :solver_krylovdim, 30),
-      maxiter=get(kwargs, :solver_maxiter, 100),
-      verbosity=get(kwargs, :solver_outputlevel, 0),
-      eager=true,
-    )
-    psi, info = exponentiate(H, t, psi0; solver_kwargs...)
-    return psi, info
+using ITensors: Algorithm, @Algorithm_str
+using ITensors.ITensorMPS: MPS
+using KrylovKit: exponentiate
+
+function exponentiate_updater(operator, init; internal_kwargs, kwargs...)
+  state, info = exponentiate(operator, internal_kwargs.time_step, init; kwargs...)
+  return state, (; info)
+end
+
+function applyexp_updater(operator, init; internal_kwargs, kwargs...)
+  state, info = applyexp(operator, internal_kwargs.time_step, init; kwargs...)
+  return state, (; info)
+end
+
+tdvp_updater(updater_backend::String) = tdvp_updater(Algorithm(updater_backend))
+tdvp_updater(::Algorithm"exponentiate") = exponentiate_updater
+tdvp_updater(::Algorithm"applyexp") = applyexp_updater
+function tdvp_updater(updater_backend::Algorithm)
+  return error("`updater_backend=$(String(updater_backend))` not recognized.")
+end
+
+function time_step_and_nsteps(t, time_step::Nothing, nsteps::Nothing)
+  # Default to 1 step.
+  nsteps = 1
+  return time_step_and_nsteps(t, time_step, nsteps)
+end
+
+function time_step_and_nsteps(t, time_step::Nothing, nsteps)
+  return t / nsteps, nsteps
+end
+
+function time_step_and_nsteps(t, time_step, nsteps::Nothing)
+  nsteps_float = t / time_step
+  nsteps_rounded = round(nsteps_float)
+  if abs(nsteps_float - nsteps_rounded) ≉ 0
+    return error("`t / time_step = $t / $time_step = $(t / time_step)` must be an integer.")
   end
-  return solver
+  return time_step, Int(nsteps_rounded)
 end
 
-function applyexp_solver(; kwargs...)
-  function solver(H, t, psi0; kws...)
-    tol_per_unit_time = get(kwargs, :solver_tol, 1E-8)
-    solver_kwargs = (;
-      maxiter=get(kwargs, :solver_krylovdim, 30),
-      outputlevel=get(kwargs, :solver_outputlevel, 0),
-    )
-    #applyexp tol is absolute, compute from tol_per_unit_time:
-    tol = abs(t) * tol_per_unit_time
-    psi, info = applyexp(H, t, psi0; tol, solver_kwargs..., kws...)
-    return psi, info
-  end
-  return solver
-end
-
-function tdvp_solver(; kwargs...)
-  solver_backend = get(kwargs, :solver_backend, "exponentiate")
-  if solver_backend == "applyexp"
-    return applyexp_solver(; kwargs...)
-  elseif solver_backend == "exponentiate"
-    return exponentiate_solver(; kwargs...)
-  else
-    error(
-      "solver_backend=$solver_backend not recognized (options are \"applyexp\" or \"exponentiate\")",
+function time_step_and_nsteps(t, time_step, nsteps)
+  if time_step * nsteps ≠ t
+    return error(
+      "Calling `tdvp(operator, t, state; time_step, nsteps, kwargs...)` with `t = $t`, `time_step = $time_step`, and `nsteps = $nsteps` must satisfy `time_step * nsteps == t`, while `time_step * nsteps = $time_step * $nsteps = $(time_step * nsteps)`.",
     )
   end
+  return time_step, nsteps
 end
 
-function tdvp(H, t::Number, psi0::MPS; kwargs...)
-  return tdvp(tdvp_solver(; kwargs...), H, t, psi0; kwargs...)
-end
+"""
+    tdvp(operator, t::Number, init::MPS; time_step, nsteps, kwargs...)
 
-function tdvp(t::Number, H, psi0::MPS; kwargs...)
-  return tdvp(H, t, psi0; kwargs...)
-end
+Use the time dependent variational principle (TDVP) algorithm
+to compute `exp(t * operator) * init` using an efficient algorithm based
+on alternating optimization of the MPS tensors and local Krylov
+exponentiation of `operator`.
 
-function tdvp(H, psi0::MPS, t::Number; kwargs...)
-  return tdvp(H, t, psi0; kwargs...)
+Specify one of `time_step` or `nsteps`. If they are both specified, they
+must satisfy `time_step * nsteps == t`. If neither are specified, the
+default is `nsteps=1`, which means that `time_step == t`.
+
+Returns:
+* `state::MPS` - time-evolved MPS
+
+"""
+function tdvp(
+  operator,
+  t::Number,
+  init::MPS;
+  updater_backend="exponentiate",
+  updater=tdvp_updater(updater_backend),
+  reverse_step=true,
+  time_step=nothing,
+  time_start=zero(t),
+  nsweeps=nothing,
+  nsteps=nsweeps,
+  (step_observer!)=default_sweep_observer(),
+  (sweep_observer!)=step_observer!,
+  kwargs...,
+)
+  time_step, nsteps = time_step_and_nsteps(t, time_step, nsteps)
+  return alternating_update(
+    operator,
+    init;
+    updater,
+    reverse_step,
+    nsweeps=nsteps,
+    time_start,
+    time_step,
+    sweep_observer!,
+    kwargs...,
+  )
 end

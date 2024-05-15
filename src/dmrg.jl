@@ -1,24 +1,32 @@
-function eigsolve_solver(; kwargs...)
-  function solver(H, t, psi0; kws...)
-    howmany = 1
-    which = get(kwargs, :solver_which_eigenvalue, :SR)
-    solver_kwargs = (;
-      ishermitian=get(kwargs, :ishermitian, true),
-      tol=get(kwargs, :solver_tol, 1E-14),
-      krylovdim=get(kwargs, :solver_krylovdim, 3),
-      maxiter=get(kwargs, :solver_maxiter, 1),
-      verbosity=get(kwargs, :solver_verbosity, 0),
-    )
-    vals, vecs, info = eigsolve(H, psi0, howmany, which; solver_kwargs...)
-    psi = vecs[1]
-    return psi, info
-  end
-  return solver
+using ITensors: ITensors
+using ITensors.ITensorMPS: MPS
+using KrylovKit: eigsolve
+
+function eigsolve_updater(
+  operator,
+  init;
+  internal_kwargs,
+  which_eigval=:SR,
+  ishermitian=true,
+  tol=10^2 * eps(real(ITensors.scalartype(init))),
+  krylovdim=3,
+  maxiter=1,
+  verbosity=0,
+  eager=false,
+)
+  howmany = 1
+  eigvals, eigvecs, info = eigsolve(
+    operator, init, howmany, which_eigval; ishermitian, tol, krylovdim, maxiter, verbosity
+  )
+  return eigvecs[1], (; info, eigval=eigvals[1])
 end
 
-function dmrg(H, psi0::MPS; kwargs...)
-  t = Inf # DMRG is TDVP with an infinite timestep and no reverse step
-  reverse_step = false
-  psi = tdvp(eigsolve_solver(; kwargs...), H, t, psi0; reverse_step, kwargs...)
-  return psi
+function dmrg(
+  operator, init::MPS; updater=eigsolve_updater, (observer!)=default_observer(), kwargs...
+)
+  info_ref! = Ref{Any}()
+  info_observer! = values_observer(; info=info_ref!)
+  observer! = compose_observers(observer!, info_observer!)
+  state = alternating_update(operator, init; updater, observer!, kwargs...)
+  return info_ref![].eigval, state
 end

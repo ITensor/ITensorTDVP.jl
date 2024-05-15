@@ -1,45 +1,25 @@
 module ITensorTDVP
-
-using ITensors
-using KrylovKit: exponentiate, eigsolve
-using KrylovKit: KrylovKit
-import KrylovKit: linsolve
-using Printf
-using TimerOutputs
-using Observers
-
-using ITensors:
-  AbstractMPS,
-  @debug_check,
-  @timeit_debug,
-  check_hascommoninds,
-  orthocenter,
-  ProjMPS,
-  set_nsite!
-
-# Compatibility of ITensor observer and Observers
-include("update_observer.jl")
-
-# Utilities for making it easier
-# to define solvers (like ODE solvers)
-# for TDVP
-include("solver_utils.jl")
-
+export TimeDependentSum, basis_extend, dmrg_x, linsolve, tdvp, to_vec
+include("ITensorsExtensions.jl")
+using .ITensorsExtensions: to_vec
 include("applyexp.jl")
+include("defaults.jl")
+include("update_observer.jl")
+include("timedependentsum.jl")
 include("tdvporder.jl")
-include("tdvpinfo.jl")
-include("tdvp_step.jl")
-include("tdvp_generic.jl")
+include("sweep_update.jl")
+include("alternating_update.jl")
 include("tdvp.jl")
 include("dmrg.jl")
 include("dmrg_x.jl")
-include("projmpo_apply.jl")
-include("contract_mpo_mps.jl")
-include("projmps2.jl")
-include("projmpo_mps2.jl")
+include("reducedcontractproblem.jl")
+include("contract.jl")
+include("reducedconstantterm.jl")
+include("reducedlinearproblem.jl")
 include("linsolve.jl")
 include("basis_extend.jl")
-
-export tdvp, dmrg_x, to_vec, TimeDependentSum, linsolve, basis_extend
-
+using PackageExtensionCompat: @require_extensions
+function __init__()
+  @require_extensions
+end
 end

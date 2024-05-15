@@ -1,3 +1,6 @@
+using LinearAlgebra: dot
+using Printf: @printf
+
 #
 # To Do:
 # - implement assembleLanczosVectors
@@ -21,12 +24,7 @@ struct ApplyExpInfo
   converged::Int
 end
 
-function applyexp(H, tau::Number, x0; kwargs...)
-  maxiter = get(kwargs, :maxiter, 30)
-  tol = get(kwargs, :tol, 1E-12)
-  outputlevel = get(kwargs, :outputlevel, 0)
-  beta_tol = get(kwargs, :normcutoff, 1E-7)
-
+function applyexp(H, tau::Number, x0; maxiter=30, tol=1e-12, outputlevel=0, normcutoff=1e-7)
   # Initialize Lanczos vectors
   v1 = copy(x0)
   nrm = norm(v1)
@@ -62,7 +60,7 @@ function applyexp(H, tau::Number, x0; kwargs...)
     beta = norm(w)
 
     # check for Lanczos sequence exhaustion
-    if abs(beta) < beta_tol
+    if abs(beta) < normcutoff
       # Assemble the time evolved state
       tmat = bigTmat[1:tmat_size, 1:tmat_size]
       tmat_exp = exp(tau * tmat)
