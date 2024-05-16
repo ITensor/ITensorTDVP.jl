@@ -88,12 +88,12 @@ function expand(
   ::Algorithm"global_krylov",
   state::MPS,
   operator::MPO;
-  krylovdim=3,
+  krylovdim=2,
   cutoff=(√(eps(real(scalartype(state))))),
 )
   # TODO: Try replacing this logic with `Base.accumulate`.
-  references = Vector{MPS}(undef, krylovdim - 1)
-  for k in 1:(krylovdim - 1)
+  references = Vector{MPS}(undef, krylovdim)
+  for k in 1:krylovdim
     previous_reference = get(references, k - 1, state)
     references[k] = normalize(
       apply(operator, previous_reference; maxdim=maxlinkdim(state) + 1)
