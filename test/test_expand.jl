@@ -3,7 +3,7 @@ using ITensors: scalartype
 using ITensors.ITensorMPS: OpSum, MPO, MPS, inner, linkdims, maxlinkdim, randomMPS, siteinds
 using ITensorTDVP: dmrg, expand, tdvp
 using LinearAlgebra: normalize
-using Random: Random
+using StableRNGs: StableRNG
 using Test: @test, @testset
 const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
 @testset "expand (eltype=$elt)" for elt in elts
@@ -13,9 +13,9 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
   )
     n = 6
     s = siteinds("S=1/2", n; conserve_qns)
-    Random.seed!(1234)
-    state = randomMPS(elt, s, j -> isodd(j) ? "↑" : "↓"; linkdims=4)
-    reference = randomMPS(elt, s, j -> isodd(j) ? "↑" : "↓"; linkdims=2)
+    rng = StableRNG(1234)
+    state = randomMPS(rng, elt, s, j -> isodd(j) ? "↑" : "↓"; linkdims=4)
+    reference = randomMPS(rng, elt, s, j -> isodd(j) ? "↑" : "↓"; linkdims=2)
     state_expanded = expand(state, [reference]; alg="orthogonalize")
     @test scalartype(state_expanded) === elt
     @test inner(state_expanded, state) ≈ inner(state, state)
@@ -57,8 +57,8 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
       opsum += "Sz", j, "Sz", j + 2
     end
     operator = MPO(elt, opsum, s)
-    Random.seed!(1234)
-    init = randomMPS(elt, s; linkdims=30)
+    rng = StableRNG(1234)
+    init = randomMPS(rng, elt, s; linkdims=30)
     reference_energy, reference_state = dmrg(
       operator,
       init;
@@ -67,8 +67,8 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
       cutoff=(√(eps(real(elt)))),
       noise=(√(eps(real(elt)))),
     )
-    Random.seed!(1234)
-    state = randomMPS(elt, s)
+    rng = StableRNG(1234)
+    state = randomMPS(rng, elt, s)
     nexpansions = 10
     tau = elt(0.5)
     for step in 1:nexpansions
