@@ -1,25 +1,25 @@
 @eval module $(gensym())
 using ITensors: scalartype
 using ITensors.ITensorMPS: OpSum, MPO, MPS, inner, linkdims, maxlinkdim, randomMPS, siteinds
-using ITensorTDVP: dmrg, expand_basis, tdvp
+using ITensorTDVP: dmrg, expand, tdvp
 using LinearAlgebra: normalize
 using Test: @test, @testset
 const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
-@testset "expand_basis (eltype=$elt)" for elt in elts
-  @testset "expand_basis (alg=\"orthogonalize\", conserve_qns=$conserve_qns, eltype=$elt)" for conserve_qns in
-                                                                                               (
+@testset "expand (eltype=$elt)" for elt in elts
+  @testset "expand (alg=\"orthogonalize\", conserve_qns=$conserve_qns, eltype=$elt)" for conserve_qns in
+                                                                                         (
     false, true
   )
     n = 6
     s = siteinds("S=1/2", n; conserve_qns)
     state = randomMPS(elt, s, j -> isodd(j) ? "↑" : "↓"; linkdims=4)
     reference = randomMPS(elt, s, j -> isodd(j) ? "↑" : "↓"; linkdims=2)
-    state_expanded = expand_basis(state, [reference]; alg="orthogonalize")
+    state_expanded = expand(state, [reference]; alg="orthogonalize")
     @test scalartype(state_expanded) === elt
     @test inner(state_expanded, state) ≈ inner(state, state)
     @test inner(state_expanded, reference) ≈ inner(state, reference)
   end
-  @testset "basis_extend (alg=\"global_krylov\", conserve_qns=$conserve_qns, eltype=$elt)" for conserve_qns in
+  @testset "expand (alg=\"global_krylov\", conserve_qns=$conserve_qns, eltype=$elt)" for conserve_qns in
                                                                                                (
     false, true
   )
@@ -33,7 +33,7 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
     end
     operator = MPO(elt, opsum, s)
     state = MPS(elt, s, j -> isodd(j) ? "↑" : "↓")
-    state_expanded = expand_basis(state, operator; alg="global_krylov")
+    state_expanded = expand(state, operator; alg="global_krylov")
     @test scalartype(state_expanded) === elt
     @test maxlinkdim(state_expanded) > 1
     @test inner(state_expanded, state) ≈ inner(state, state)
@@ -68,7 +68,10 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
     nexpansions = 10
     tau = elt(0.5)
     for step in 1:nexpansions
-      state = expand_basis(state, operator; alg="global_krylov", cutoff=(∜(eps(real(elt)))))
+      # TODO: Use `∜` instead of `fourthroot` in Julia 1.10 and above.
+      state = expand(
+        state, operator; alg="global_krylov", krylovdim=3, cutoff=fourthroot(eps(real(elt)))
+      )
       state = tdvp(
         operator,
         -4tau,
@@ -80,7 +83,9 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
       state = normalize(state)
     end
     @test scalartype(state) === elt
-    @test inner(state', operator, state) ≈ reference_energy rtol = 2 * ∜(eps(real(elt)))
+    # TODO: Use `∜` instead of `fourthroot` in Julia 1.10 and above.
+    @test inner(state', operator, state) ≈ reference_energy rtol =
+      2 * fourthroot(eps(real(elt)))
   end
 end
 end

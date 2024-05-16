@@ -16,18 +16,15 @@ using ITensors:
 using ITensors.ITensorMPS: MPO, MPS, apply, dim, linkind, maxlinkdim, orthogonalize
 using LinearAlgebra: normalize, svd, tr
 
-#
-# Possible improvements
-#  - allow a maxdim argument to be passed to `extend`
-#    and through `basis_extend`
-#  - current behavior is letting bond dimension get too
-#    big when used in imaginary time evolution
+# Possible improvements:
+#  - Allow a maxdim argument to be passed to `expand`.
+#  - Current behavior is letting bond dimension get too
+#    big when used in imaginary time evolution.
 #  - Use (1-tau*operator)|state> to generate "Krylov" vectors
-#    instead of operator|state>. Needed?
-#
+#    instead of operator|state>. Is that needed?
 
-function expand_basis(state, reference; alg, kwargs...)
-  return expand_basis(Algorithm(alg), state, reference; kwargs...)
+function expand(state, reference; alg, kwargs...)
+  return expand(Algorithm(alg), state, reference; kwargs...)
 end
 
 """
@@ -37,7 +34,7 @@ returns an MPS which is equal to state
 is expanded to contain a portion of the basis of
 the references that is orthogonal to the MPS basis of state.
 """
-function expand_basis(
+function expand(
   ::Algorithm"orthogonalize",
   state::MPS,
   references::Vector{MPS};
@@ -71,7 +68,7 @@ function expand_basis(
       )
       state_indⱼ = only(commoninds(basisⱼ, λⱼ))
       reference_indⱼ = only(commoninds(reference_basisⱼ, dⱼ))
-      expanded_basisⱼ, bx = directsum(
+      expanded_basisⱼ, expanded_indⱼ = directsum(
         basisⱼ => state_indⱼ, reference_basisⱼ => reference_indⱼ
       )
     end
@@ -87,18 +84,20 @@ function expand_basis(
   return state
 end
 
-function expand_basis(
+function expand(
   ::Algorithm"global_krylov",
   state::MPS,
   operator::MPO;
-  krylovdim=2,
+  krylovdim=3,
   cutoff=(√(eps(real(scalartype(state))))),
 )
-  maxdim = maxlinkdim(state) + 1
-  references = Vector{MPS}(undef, krylovdim)
-  for k in 1:krylovdim
-    prev = k == 1 ? state : references[k - 1]
-    references[k] = normalize(apply(operator, prev; maxdim))
+  # TODO: Try replacing this logic with `Base.accumulate`.
+  references = Vector{MPS}(undef, krylovdim - 1)
+  for k in 1:(krylovdim - 1)
+    previous_reference = get(references, k - 1, state)
+    references[k] = normalize(
+      apply(operator, previous_reference; maxdim=maxlinkdim(state) + 1)
+    )
   end
-  return expand_basis(state, references; alg="orthogonalize", cutoff)
+  return expand(state, references; alg="orthogonalize", cutoff)
 end
