@@ -20,7 +20,7 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
     @test inner(state_expanded, reference) ≈ inner(state, reference)
   end
   @testset "expand (alg=\"global_krylov\", conserve_qns=$conserve_qns, eltype=$elt)" for conserve_qns in
-                                                                                               (
+                                                                                         (
     false, true
   )
     n = 10
