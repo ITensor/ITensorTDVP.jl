@@ -37,7 +37,7 @@ julia> ?
 help?> expand
 # ...
 ```
-Users are not given many customization options just yet as we gain more experience on the right balance between efficacy of the expansion and performance, and default values and keyword argument option are subject to change as we learn more about how to best use the method.
+Users are not given many customization options just yet as we gain more experience on the right balance between efficacy of the expansion and performance, and default values and keyword arguments are subject to change as we learn more about how to best use the method.
 
 ### ITensorTDVP.jl v0.4 release notes
 
