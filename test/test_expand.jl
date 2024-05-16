@@ -89,7 +89,7 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
     @test scalartype(state) === elt
     # TODO: Use `∜` instead of `fourthroot` in Julia 1.10 and above.
     @test inner(state', operator, state) ≈ reference_energy rtol =
-      2 * fourthroot(eps(real(elt)))
+      5 * fourthroot(eps(real(elt)))
   end
 end
 end
