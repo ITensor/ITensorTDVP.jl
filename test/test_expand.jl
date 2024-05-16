@@ -72,9 +72,9 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
     nexpansions = 10
     tau = elt(0.5)
     for step in 1:nexpansions
-      # TODO: Use `∜` instead of `fourthroot` in Julia 1.10 and above.
+      # TODO: Use `fourthroot`/`∜` in Julia 1.10 and above.
       state = expand(
-        state, operator; alg="global_krylov", krylovdim=3, cutoff=fourthroot(eps(real(elt)))
+        state, operator; alg="global_krylov", krylovdim=3, cutoff=eps(real(elt))^(1//4)
       )
       state = tdvp(
         operator,
@@ -87,9 +87,8 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
       state = normalize(state)
     end
     @test scalartype(state) === elt
-    # TODO: Use `∜` instead of `fourthroot` in Julia 1.10 and above.
-    @test inner(state', operator, state) ≈ reference_energy rtol =
-      5 * fourthroot(eps(real(elt)))
+    # TODO: Use `fourthroot`/`∜` in Julia 1.10 and above.
+    @test inner(state', operator, state) ≈ reference_energy rtol = 5 * eps(real(elt))^(1//4)
   end
 end
 end
