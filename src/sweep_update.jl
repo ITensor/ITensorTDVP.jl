@@ -1,6 +1,14 @@
 using ITensors: ITensors, uniqueinds
 using ITensors.ITensorMPS:
-  ITensorMPS, MPS, isortho, orthocenter, orthogonalize!, position!, replacebond!, set_nsite!
+  ITensorMPS,
+  MPS,
+  isortho,
+  noiseterm,
+  orthocenter,
+  orthogonalize!,
+  position!,
+  replacebond!,
+  set_nsite!
 using LinearAlgebra: norm, normalize!, svd
 using Printf: @printf
 
