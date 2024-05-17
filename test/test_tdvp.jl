@@ -13,7 +13,7 @@ using ITensors:
   noprime,
   op,
   prime,
-  randomMPS,
+  random_mps,
   scalar,
   siteinds
 using ITensorTDVP: ITensorTDVP, tdvp
@@ -35,7 +35,7 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
   end
   H = MPO(elt, os, s)
   rng = StableRNG(1234)
-  ψ0 = randomMPS(rng, elt, s; linkdims=10)
+  ψ0 = random_mps(rng, elt, s; linkdims=10)
   time_step = elt(0.1) * im
   # Time evolve forward:
   ψ1 = tdvp(H, -time_step, ψ0; cutoff, nsite=1)
@@ -74,7 +74,7 @@ end
   H2 = MPO(elt, os2, s)
   Hs = [H1, H2]
   rng = StableRNG(1234)
-  ψ0 = randomMPS(rng, elt, s; linkdims=10)
+  ψ0 = random_mps(rng, elt, s; linkdims=10)
   ψ1 = tdvp(Hs, -elt(0.1) * im, ψ0; cutoff, nsite=1)
   @test ITensors.scalartype(ψ1) === complex(elt)
   @test norm(ψ1) ≈ 1 rtol = √eps(real(elt))
@@ -102,7 +102,7 @@ end
   end
   H = MPO(os, s)
   rng = StableRNG(1234)
-  ψ0 = randomMPS(rng, s; linkdims=10)
+  ψ0 = random_mps(rng, s; linkdims=10)
   function updater(PH, state0; internal_kwargs, kwargs...)
     return exponentiate(PH, internal_kwargs.time_step, state0; kwargs...)
   end
@@ -257,7 +257,7 @@ end
   end
   H = MPO(os, s)
   rng = StableRNG(1234)
-  state = randomMPS(rng, s; linkdims=2)
+  state = random_mps(rng, s; linkdims=2)
   state2 = deepcopy(state)
   trange = 0.0:tau:ttotal
   for (step, t) in enumerate(trange)

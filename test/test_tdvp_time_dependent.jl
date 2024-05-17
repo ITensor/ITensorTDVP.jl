@@ -1,6 +1,6 @@
 @eval module $(gensym())
-using ITensors: ITensors, Index, QN, contract, randomITensor, scalartype
-using ITensors.ITensorMPS: MPO, MPS, ProjMPO, ProjMPOSum, randomMPS, position!, siteinds
+using ITensors: ITensors, Index, QN, contract, scalartype
+using ITensors.ITensorMPS: MPO, MPS, ProjMPO, ProjMPOSum, random_mps, position!, siteinds
 using ITensorTDVP: ITensorTDVP, TimeDependentSum, tdvp
 using LinearAlgebra: norm
 using StableRNGs: StableRNG
@@ -19,7 +19,7 @@ include(joinpath(pkgdir(ITensorTDVP), "examples", "03_updaters.jl"))
     H⃗ = (H, H)
     region = 2:3
     rng = StableRNG(1234)
-    ψ = randomMPS(rng, elt, s, j -> isodd(j) ? "↑" : "↓"; linkdims=2)
+    ψ = random_mps(rng, elt, s, j -> isodd(j) ? "↑" : "↓"; linkdims=2)
     H⃗ᵣ = ProjMPO.(H⃗)
     map(Hᵣ -> position!(Hᵣ, ψ, first(region)), H⃗ᵣ)
     ∑Hᵣ = ProjMPOSum(collect(H⃗))

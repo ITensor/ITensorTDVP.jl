@@ -1,6 +1,7 @@
 @eval module $(gensym())
 using ITensors: scalartype
-using ITensors.ITensorMPS: OpSum, MPO, MPS, inner, linkdims, maxlinkdim, randomMPS, siteinds
+using ITensors.ITensorMPS:
+  OpSum, MPO, MPS, inner, linkdims, maxlinkdim, random_mps, siteinds
 using ITensorTDVP: dmrg, expand, tdvp
 using LinearAlgebra: normalize
 using StableRNGs: StableRNG
@@ -14,8 +15,8 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
     n = 6
     s = siteinds("S=1/2", n; conserve_qns)
     rng = StableRNG(1234)
-    state = randomMPS(rng, elt, s, j -> isodd(j) ? "↑" : "↓"; linkdims=4)
-    reference = randomMPS(rng, elt, s, j -> isodd(j) ? "↑" : "↓"; linkdims=2)
+    state = random_mps(rng, elt, s, j -> isodd(j) ? "↑" : "↓"; linkdims=4)
+    reference = random_mps(rng, elt, s, j -> isodd(j) ? "↑" : "↓"; linkdims=2)
     state_expanded = expand(state, [reference]; alg="orthogonalize")
     @test scalartype(state_expanded) === elt
     @test inner(state_expanded, state) ≈ inner(state, state)
@@ -58,7 +59,7 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
     end
     operator = MPO(elt, opsum, s)
     rng = StableRNG(1234)
-    init = randomMPS(rng, elt, s; linkdims=30)
+    init = random_mps(rng, elt, s; linkdims=30)
     reference_energy, reference_state = dmrg(
       operator,
       init;
@@ -68,7 +69,7 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
       noise=(√(eps(real(elt)))),
     )
     rng = StableRNG(1234)
-    state = randomMPS(rng, elt, s)
+    state = random_mps(rng, elt, s)
     nexpansions = 10
     tau = elt(0.5)
     for step in 1:nexpansions

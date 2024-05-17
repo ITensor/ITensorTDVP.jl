@@ -1,5 +1,5 @@
 using ITensors: @disable_warn_order, contract
-using ITensors: MPO, MPS, inner, randomMPS, siteinds
+using ITensors: MPO, MPS, inner, random_mps, siteinds
 using ITensorTDVP: tdvp
 using LinearAlgebra: norm
 using Random: Random
@@ -73,7 +73,7 @@ function main()
   # Initial state, ψ₀ = ψ(0)
   # Initialize as complex since that is what OrdinaryDiffEq.jl/DifferentialEquations.jl
   # expects.
-  ψ₀ = complex.(randomMPS(s, j -> isodd(j) ? "↑" : "↓"; linkdims=start_linkdim))
+  ψ₀ = complex.(random_mps(s, j -> isodd(j) ? "↑" : "↓"; linkdims=start_linkdim))
 
   @show norm(ψ₀)
 

@@ -1,6 +1,6 @@
 @eval module $(gensym())
 using ITensors: scalartype
-using ITensors.ITensorMPS: MPO, OpSum, apply, randomMPS, siteinds
+using ITensors.ITensorMPS: MPO, OpSum, apply, random_mps, siteinds
 using ITensorTDVP: ITensorTDVP, dmrg
 using KrylovKit: linsolve
 using LinearAlgebra: norm
@@ -23,7 +23,7 @@ using Random: Random
   H = MPO(elt, os, s)
   state = [isodd(n) ? "Up" : "Dn" for n in 1:N]
   rng = StableRNG(1234)
-  x_c = randomMPS(rng, elt, s, state; linkdims=2)
+  x_c = random_mps(rng, elt, s, state; linkdims=2)
   e, x_c = dmrg(H, x_c; nsweeps=10, cutoff=1e-6, maxdim=20, outputlevel=0)
   @test scalartype(x_c) == elt
   # Compute `b = H * x_c`
@@ -31,7 +31,7 @@ using Random: Random
   @test scalartype(b) == elt
   # Starting guess
   rng = StableRNG(1234)
-  x0 = x_c + elt(0.05) * randomMPS(rng, elt, s, state; linkdims=2)
+  x0 = x_c + elt(0.05) * random_mps(rng, elt, s, state; linkdims=2)
   @test scalartype(x0) == elt
   nsweeps = 10
   cutoff = 1e-5

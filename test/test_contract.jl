@@ -1,6 +1,6 @@
 @eval module $(gensym())
 using ITensors: ITensors, dag, delta, denseblocks
-using ITensors: MPO, OpSum, apply, contract, inner, randomMPS, siteinds, truncate!
+using ITensors: MPO, OpSum, apply, contract, inner, random_mps, siteinds, truncate!
 using ITensorTDVP: ITensorTDVP
 using StableRNGs: StableRNG
 using Test: @test, @test_throws, @testset
@@ -12,7 +12,7 @@ using Test: @test, @test_throws, @testset
   N = 20
   s = siteinds("S=1/2", N; conserve_qns)
   rng = StableRNG(1234)
-  psi = randomMPS(rng, elt, s, j -> isodd(j) ? "↑" : "↓"; linkdims=8)
+  psi = random_mps(rng, elt, s, j -> isodd(j) ? "↑" : "↓"; linkdims=8)
   os = OpSum()
   for j in 1:(N - 1)
     os += 0.5, "S+", j, "S-", j + 1
