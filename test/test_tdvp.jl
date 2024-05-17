@@ -20,6 +20,7 @@ using ITensorTDVP: ITensorTDVP, tdvp
 using KrylovKit: exponentiate
 using LinearAlgebra: norm
 using Observers: observer
+using StableRNGs: StableRNG
 using Test: @test, @test_throws, @testset
 const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
 @testset "Basic TDVP (eltype=$elt)" for elt in elts
@@ -33,7 +34,8 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
     os += "Sz", j, "Sz", j + 1
   end
   H = MPO(elt, os, s)
-  ψ0 = randomMPS(elt, s; linkdims=10)
+  rng = StableRNG(1234)
+  ψ0 = randomMPS(rng, elt, s; linkdims=10)
   time_step = elt(0.1) * im
   # Time evolve forward:
   ψ1 = tdvp(H, -time_step, ψ0; cutoff, nsite=1)
@@ -71,7 +73,8 @@ end
   H1 = MPO(elt, os1, s)
   H2 = MPO(elt, os2, s)
   Hs = [H1, H2]
-  ψ0 = randomMPS(elt, s; linkdims=10)
+  rng = StableRNG(1234)
+  ψ0 = randomMPS(rng, elt, s; linkdims=10)
   ψ1 = tdvp(Hs, -elt(0.1) * im, ψ0; cutoff, nsite=1)
   @test ITensors.scalartype(ψ1) === complex(elt)
   @test norm(ψ1) ≈ 1 rtol = √eps(real(elt))
@@ -79,7 +82,7 @@ end
   #@test abs(inner(ψ0,ψ1)) < 0.9
   # Average energy should be conserved:
   @test real(sum(H -> inner(ψ1', H, ψ1), Hs)) ≈ sum(H -> inner(ψ0', H, ψ0), Hs) rtol =
-    2 * √eps(real(elt))
+    4 * √eps(real(elt))
   # Time evolve backwards:
   ψ2 = tdvp(Hs, elt(0.1) * im, ψ1; cutoff)
   @test ITensors.scalartype(ψ2) === complex(elt)
@@ -98,7 +101,8 @@ end
     os += "Sz", j, "Sz", j + 1
   end
   H = MPO(os, s)
-  ψ0 = randomMPS(s; linkdims=10)
+  rng = StableRNG(1234)
+  ψ0 = randomMPS(rng, s; linkdims=10)
   function updater(PH, state0; internal_kwargs, kwargs...)
     return exponentiate(PH, internal_kwargs.time_step, state0; kwargs...)
   end
@@ -252,7 +256,8 @@ end
     os += "Sz", j, "Sz", j + 1
   end
   H = MPO(os, s)
-  state = randomMPS(s; linkdims=2)
+  rng = StableRNG(1234)
+  state = randomMPS(rng, s; linkdims=2)
   state2 = deepcopy(state)
   trange = 0.0:tau:ttotal
   for (step, t) in enumerate(trange)

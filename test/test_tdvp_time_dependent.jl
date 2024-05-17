@@ -1,8 +1,9 @@
 @eval module $(gensym())
-using ITensors: ITensors, Index, QN, contract, randomITensor
+using ITensors: ITensors, Index, QN, contract, randomITensor, scalartype
 using ITensors.ITensorMPS: MPO, MPS, ProjMPO, ProjMPOSum, randomMPS, position!, siteinds
 using ITensorTDVP: ITensorTDVP, TimeDependentSum, tdvp
 using LinearAlgebra: norm
+using StableRNGs: StableRNG
 using Test: @test, @test_skip, @testset
 include(joinpath(pkgdir(ITensorTDVP), "examples", "03_models.jl"))
 include(joinpath(pkgdir(ITensorTDVP), "examples", "03_updaters.jl"))
@@ -17,7 +18,8 @@ include(joinpath(pkgdir(ITensorTDVP), "examples", "03_updaters.jl"))
     H = MPO(elt, s, "I")
     H⃗ = (H, H)
     region = 2:3
-    ψ = randomMPS(elt, s, j -> isodd(j) ? "↑" : "↓"; linkdims=2)
+    rng = StableRNG(1234)
+    ψ = randomMPS(rng, elt, s, j -> isodd(j) ? "↑" : "↓"; linkdims=2)
     H⃗ᵣ = ProjMPO.(H⃗)
     map(Hᵣ -> position!(Hᵣ, ψ, first(region)), H⃗ᵣ)
     ∑Hᵣ = ProjMPOSum(collect(H⃗))
@@ -87,10 +89,10 @@ include(joinpath(pkgdir(ITensorTDVP), "examples", "03_updaters.jl"))
       abstol=tol,
     )
 
-    @test ITensors.scalartype(ψ₀) == complex(elt)
-    @test ITensors.scalartype(ψₜ_ode) == complex(elt)
-    @test ITensors.scalartype(ψₜ_krylov) == complex(elt)
-    @test ITensors.scalartype(ψₜ_full) == complex(elt)
+    @test scalartype(ψ₀) == complex(elt)
+    @test scalartype(ψₜ_ode) == complex(elt)
+    @test scalartype(ψₜ_krylov) == complex(elt)
+    @test scalartype(ψₜ_full) == complex(elt)
     @test norm(ψ₀) ≈ 1
     @test norm(ψₜ_ode) ≈ 1
     @test norm(ψₜ_krylov) ≈ 1 rtol = √(eps(real(elt)))

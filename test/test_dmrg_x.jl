@@ -2,6 +2,7 @@
 using ITensors: ITensors, MPO, MPS, OpSum, ProjMPO, inner, siteinds
 using ITensorTDVP: dmrg_x
 using Random: Random
+using StableRNGs: StableRNG
 using Test: @test, @test_throws, @testset
 @testset "DMRG-X (eltype=$elt, conserve_qns=$conserve_qns)" for elt in (
     Float32, Float64, Complex{Float32}, Complex{Float64}
@@ -27,9 +28,10 @@ using Test: @test, @test_throws, @testset
   Random.seed!(12)
   W = 12
   # Random fields h ∈ [-W, W]
-  h = W * (2 * rand(real(elt), n) .- 1)
+  rng = StableRNG(1234)
+  h = W * (2 * rand(rng, real(elt), n) .- 1)
   H = MPO(elt, heisenberg(n; h), s)
-  initstate = rand(["↑", "↓"], n)
+  initstate = rand(rng, ["↑", "↓"], n)
   ψ = MPS(elt, s, initstate)
   @test_throws ErrorException dmrg_x(H, ψ; nsite=2, maxdim=20, cutoff=1e-10)
   dmrg_x_kwargs = (; nsweeps=20, normalize=true, maxdim=20, cutoff=1e-10, outputlevel=0)
