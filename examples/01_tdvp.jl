@@ -1,4 +1,4 @@
-using ITensors: MPO, OpSum, dmrg, inner, randomMPS, siteinds
+using ITensors: MPO, OpSum, dmrg, inner, random_mps, siteinds
 using ITensorTDVP: tdvp
 
 function main()
@@ -16,7 +16,7 @@ function main()
   end
 
   H = MPO(heisenberg(n), s)
-  ψ = randomMPS(s, "↑"; linkdims=10)
+  ψ = random_mps(s, "↑"; linkdims=10)
 
   @show inner(ψ', H, ψ) / inner(ψ, ψ)
 

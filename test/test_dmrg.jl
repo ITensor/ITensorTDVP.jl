@@ -1,5 +1,5 @@
 @eval module $(gensym())
-using ITensors: ITensors, MPO, OpSum, inner, randomMPS, siteinds
+using ITensors: ITensors, MPO, OpSum, inner, random_mps, siteinds
 using ITensorTDVP: ITensorTDVP
 using StableRNGs: StableRNG
 using Test: @test, @test_throws, @testset
@@ -20,7 +20,7 @@ using Test: @test, @test_throws, @testset
   end
   H = MPO(elt, os, s)
   rng = StableRNG(1234)
-  psi = randomMPS(rng, elt, s, j -> isodd(j) ? "↑" : "↓"; linkdims=20)
+  psi = random_mps(rng, elt, s, j -> isodd(j) ? "↑" : "↓"; linkdims=20)
   nsweeps = 10
   maxdim = [10, 20, 40, 100]
   @test_throws ErrorException ITensorTDVP.dmrg(H, psi; maxdim, cutoff, nsite)
