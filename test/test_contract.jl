@@ -2,6 +2,7 @@
 using ITensors: ITensors, dag, delta, denseblocks
 using ITensors: MPO, OpSum, apply, contract, inner, randomMPS, siteinds, truncate!
 using ITensorTDVP: ITensorTDVP
+using StableRNGs: StableRNG
 using Test: @test, @test_throws, @testset
 @testset "Contract MPO (eltype=$elt, conserve_qns=$conserve_qns)" for elt in (
     Float32, Float64, Complex{Float32}, Complex{Float64}
@@ -10,7 +11,8 @@ using Test: @test, @test_throws, @testset
 
   N = 20
   s = siteinds("S=1/2", N; conserve_qns)
-  psi = randomMPS(elt, s, j -> isodd(j) ? "↑" : "↓"; linkdims=8)
+  rng = StableRNG(1234)
+  psi = randomMPS(rng, elt, s, j -> isodd(j) ? "↑" : "↓"; linkdims=8)
   os = OpSum()
   for j in 1:(N - 1)
     os += 0.5, "S+", j, "S-", j + 1
