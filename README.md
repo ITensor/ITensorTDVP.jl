@@ -24,8 +24,6 @@ However, as noted above we now recommend installing and loading `ITensorMPS` ins
 
 ### ITensorTDVP.jl v0.4.1 release notes
 
-#### Breaking changes
-
 #### New features
 
 - A new (experimental) `expand` function has been introduced for performing global Krylov expansion based on [arXiv:2005.06104](https://arxiv.org/abs/2005.06104), which can help with the accuracy of TDVP evolution in certain cases. See the docstrings of `expand` for more details:
