@@ -90,8 +90,7 @@ function expand(
     projectorⱼ = idⱼ - prime(basisⱼ, rinds) * dag(basisⱼ)
     # Sum reference density matrices
     ρⱼ = sum(reference -> prime(reference[j], rinds) * dag(reference[j]), references)
-    # TODO: Fix bug that `tr` isn't preserving the element type.
-    ρⱼ /= scalartype(state)(tr(ρⱼ))
+    ρⱼ /= tr(ρⱼ)
     # Apply projectorⱼ
     ρⱼ_projected = apply(apply(projectorⱼ, ρⱼ), projectorⱼ)
     expanded_basisⱼ = basisⱼ
