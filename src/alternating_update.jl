@@ -81,11 +81,11 @@ function alternating_update(
         sweep,
         observer!,
         normalize,
+        outputlevel,
         maxdim=maxdim[sweep],
         mindim=mindim[sweep],
         cutoff=cutoff[sweep],
         noise=noise[sweep],
-        outputlevel=outputlevel,
       )
     end
     if !isnothing(time_step)
