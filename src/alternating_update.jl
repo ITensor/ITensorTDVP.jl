@@ -81,6 +81,7 @@ function alternating_update(
         sweep,
         observer!,
         normalize,
+        outputlevel,
         maxdim=maxdim[sweep],
         mindim=mindim[sweep],
         cutoff=cutoff[sweep],
