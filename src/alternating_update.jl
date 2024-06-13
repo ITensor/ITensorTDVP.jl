@@ -85,6 +85,7 @@ function alternating_update(
         mindim=mindim[sweep],
         cutoff=cutoff[sweep],
         noise=noise[sweep],
+        outputlevel=outputlevel,
       )
     end
     if !isnothing(time_step)
