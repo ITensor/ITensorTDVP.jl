@@ -1,3 +1,4 @@
+using Adapt: adapt
 using ITensors:
   ITensors,
   Algorithm,
@@ -15,6 +16,7 @@ using ITensors:
   uniqueinds
 using ITensors.ITensorMPS: MPO, MPS, apply, dim, linkind, maxlinkdim, orthogonalize
 using LinearAlgebra: normalize, svd, tr
+using NDTensors: unwrap_array_type
 
 # Possible improvements:
 #  - Allow a maxdim argument to be passed to `expand`.
@@ -86,7 +88,9 @@ function expand(
     _, λⱼ, basisⱼ = svd(state[j], linds; righttags="bψ_$j,Link")
     rinds = uniqueinds(basisⱼ, λⱼ)
     # Make projectorⱼ
-    idⱼ = prod(r -> denseblocks(δ(scalartype(state), r', dag(r))), rinds)
+    idⱼ = prod(rinds) do r
+      return adapt(unwrap_array_type(basisⱼ), denseblocks(δ(scalartype(state), r', dag(r))))
+    end
     projectorⱼ = idⱼ - prime(basisⱼ, rinds) * dag(basisⱼ)
     # Sum reference density matrices
     ρⱼ = sum(reference -> prime(reference[j], rinds) * dag(reference[j]), references)
