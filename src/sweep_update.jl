@@ -14,7 +14,7 @@ using Printf: @printf
 
 function sweep_update(
   order::TDVPOrder,
-  reduce_operator,
+  reduced_operator,
   state::MPS;
   current_time=nothing,
   time_step=nothing,
@@ -32,9 +32,9 @@ function sweep_update(
     if !isnothing(time_step)
       sub_time_step = order_sub_time_steps[substep]
     end
-    state, reduce_operator, info = sub_sweep_update(
+    state, reduced_operator, info = sub_sweep_update(
       order_orderings[substep],
-      reduce_operator,
+      reduced_operator,
       state;
       current_time,
       time_step=sub_time_step,
@@ -44,7 +44,7 @@ function sweep_update(
       current_time += sub_time_step
     end
   end
-  return state, reduce_operator, info
+  return state, reduced_operator, info
 end
 
 isforward(direction::Base.ForwardOrdering) = true
@@ -70,7 +70,7 @@ end
 
 function sub_sweep_update(
   direction::Base.Ordering,
-  reduce_operator,
+  reduced_operator,
   state::MPS;
   updater,
   updater_kwargs,
@@ -89,7 +89,7 @@ function sub_sweep_update(
   cutoff=default_cutoff(ITensors.scalartype(state)),
   noise=default_noise(),
 )
-  reduce_operator = copy(reduce_operator)
+  reduced_operator = copy(reduced_operator)
   state = copy(state)
   if length(state) == 1
     error(
@@ -97,25 +97,25 @@ function sub_sweep_update(
     )
   end
   N = length(state)
-  set_nsite!(reduce_operator, nsite)
+  set_nsite!(reduced_operator, nsite)
   if isforward(direction)
     if !isortho(state) || orthocenter(state) != 1
       orthogonalize!(state, 1)
     end
     @assert isortho(state) && orthocenter(state) == 1
-    position!(reduce_operator, state, 1)
+    position!(reduced_operator, state, 1)
   elseif isreverse(direction)
     if !isortho(state) || orthocenter(state) != N - nsite + 1
       orthogonalize!(state, N - nsite + 1)
     end
     @assert(isortho(state) && (orthocenter(state) == N - nsite + 1))
-    position!(reduce_operator, state, N - nsite + 1)
+    position!(reduced_operator, state, N - nsite + 1)
   end
   maxtruncerr = 0.0
   info = nothing
   for b in sweep_bonds(direction, N; ncenter=nsite)
     current_time, maxtruncerr, spec, info = region_update!(
-      reduce_operator,
+      reduced_operator,
       state,
       b;
       updater,
@@ -157,6 +157,7 @@ function sub_sweep_update(
     update_observer!(
       observer!;
       state,
+      reduced_operator,
       bond=b,
       sweep,
       half_sweep=isforward(direction) ? 1 : 2,
@@ -169,11 +170,11 @@ function sub_sweep_update(
   end
   # Just to be sure:
   normalize && normalize!(state)
-  return state, reduce_operator, (; maxtruncerr)
+  return state, reduced_operator, (; maxtruncerr)
 end
 
 function region_update!(
-  reduce_operator,
+  reduced_operator,
   state,
   b;
   updater,
@@ -196,7 +197,7 @@ function region_update!(
   return region_update!(
     Val(nsite),
     Val(reverse_step),
-    reduce_operator,
+    reduced_operator,
     state,
     b;
     updater,
@@ -219,7 +220,7 @@ end
 function region_update!(
   nsite_val::Val{1},
   reverse_step_val::Val{false},
-  reduce_operator,
+  reduced_operator,
   state,
   b;
   updater,
@@ -240,12 +241,12 @@ function region_update!(
   N = length(state)
   nsite = 1
   # Do 'forwards' evolution step
-  set_nsite!(reduce_operator, nsite)
-  position!(reduce_operator, state, b)
+  set_nsite!(reduced_operator, nsite)
+  position!(reduced_operator, state, b)
   reduced_state = state[b]
   internal_kwargs = (; current_time, time_step, outputlevel)
   reduced_state, info = updater(
-    reduce_operator, reduced_state; internal_kwargs, updater_kwargs...
+    reduced_operator, reduced_state; internal_kwargs, updater_kwargs...
   )
   if !isnothing(time_step)
     current_time += time_step
@@ -264,7 +265,7 @@ end
 function region_update!(
   nsite_val::Val{1},
   reverse_step_val::Val{true},
-  reduce_operator,
+  reduced_operator,
   state,
   b;
   updater,
@@ -285,12 +286,12 @@ function region_update!(
   N = length(state)
   nsite = 1
   # Do 'forwards' evolution step
-  set_nsite!(reduce_operator, nsite)
-  position!(reduce_operator, state, b)
+  set_nsite!(reduced_operator, nsite)
+  position!(reduced_operator, state, b)
   reduced_state = state[b]
   internal_kwargs = (; current_time, time_step, outputlevel)
   reduced_state, info = updater(
-    reduce_operator, reduced_state; internal_kwargs, updater_kwargs...
+    reduced_operator, reduced_state; internal_kwargs, updater_kwargs...
   )
   current_time += time_step
   normalize && (reduced_state /= norm(reduced_state))
@@ -309,11 +310,11 @@ function region_update!(
     elseif isreverse(direction)
       ITensorMPS.setrightlim!(state, b)
     end
-    set_nsite!(reduce_operator, nsite - 1)
-    position!(reduce_operator, state, b1)
+    set_nsite!(reduced_operator, nsite - 1)
+    position!(reduced_operator, state, b1)
     internal_kwargs = (; current_time, time_step=-time_step, outputlevel)
     bond_reduced_state, info = updater(
-      reduce_operator, bond_reduced_state; internal_kwargs, updater_kwargs...
+      reduced_operator, bond_reduced_state; internal_kwargs, updater_kwargs...
     )
     current_time -= time_step
     normalize && (bond_reduced_state ./= norm(bond_reduced_state))
@@ -323,7 +324,7 @@ function region_update!(
     elseif isreverse(direction)
       ITensorMPS.setleftlim!(state, b + Δ - 1)
     end
-    set_nsite!(reduce_operator, nsite)
+    set_nsite!(reduced_operator, nsite)
   end
   return current_time, maxtruncerr, spec, info
 end
@@ -331,7 +332,7 @@ end
 function region_update!(
   nsite_val::Val{2},
   reverse_step_val::Val{false},
-  reduce_operator,
+  reduced_operator,
   state,
   b;
   updater,
@@ -352,12 +353,12 @@ function region_update!(
   N = length(state)
   nsite = 2
   # Do 'forwards' evolution step
-  set_nsite!(reduce_operator, nsite)
-  position!(reduce_operator, state, b)
+  set_nsite!(reduced_operator, nsite)
+  position!(reduced_operator, state, b)
   reduced_state = state[b] * state[b + 1]
   internal_kwargs = (; current_time, time_step, outputlevel)
   reduced_state, info = updater(
-    reduce_operator, reduced_state; internal_kwargs, updater_kwargs...
+    reduced_operator, reduced_state; internal_kwargs, updater_kwargs...
   )
   if !isnothing(time_step)
     current_time += time_step
@@ -367,7 +368,7 @@ function region_update!(
   ortho = isforward(direction) ? "left" : "right"
   drho = nothing
   if noise > 0.0 && isforward(direction)
-    drho = noise * noiseterm(reduce_operator, reduced_state, ortho)
+    drho = noise * noiseterm(reduced_operator, reduced_state, ortho)
   end
   spec = replacebond!(
     state,
@@ -389,7 +390,7 @@ end
 function region_update!(
   nsite_val::Val{2},
   reverse_step_val::Val{true},
-  reduce_operator,
+  reduced_operator,
   state,
   b;
   updater,
@@ -410,12 +411,12 @@ function region_update!(
   N = length(state)
   nsite = 2
   # Do 'forwards' evolution step
-  set_nsite!(reduce_operator, nsite)
-  position!(reduce_operator, state, b)
+  set_nsite!(reduced_operator, nsite)
+  position!(reduced_operator, state, b)
   reduced_state = state[b] * state[b + 1]
   internal_kwargs = (; current_time, time_step, outputlevel)
   reduced_state, info = updater(
-    reduce_operator, reduced_state; internal_kwargs, updater_kwargs...
+    reduced_operator, reduced_state; internal_kwargs, updater_kwargs...
   )
   current_time += time_step
   normalize && (reduced_state /= norm(reduced_state))
@@ -423,7 +424,7 @@ function region_update!(
   ortho = isforward(direction) ? "left" : "right"
   drho = nothing
   if noise > 0.0 && isforward(direction)
-    drho = noise * noiseterm(reduce_operator, phi, ortho)
+    drho = noise * noiseterm(reduced_operator, phi, ortho)
   end
   spec = replacebond!(
     state,
@@ -444,24 +445,24 @@ function region_update!(
     b1 = (isforward(direction) ? b + 1 : b)
     Δ = (isforward(direction) ? +1 : -1)
     bond_reduced_state = state[b1]
-    set_nsite!(reduce_operator, nsite - 1)
-    position!(reduce_operator, state, b1)
+    set_nsite!(reduced_operator, nsite - 1)
+    position!(reduced_operator, state, b1)
     internal_kwargs = (; current_time, time_step=-time_step, outputlevel)
     bond_reduced_state, info = updater(
-      reduce_operator, bond_reduced_state; internal_kwargs, updater_kwargs...
+      reduced_operator, bond_reduced_state; internal_kwargs, updater_kwargs...
     )
     current_time -= time_step
     normalize && (bond_reduced_state /= norm(bond_reduced_state))
     state[b1] = bond_reduced_state
-    set_nsite!(reduce_operator, nsite)
+    set_nsite!(reduced_operator, nsite)
   end
   return current_time, maxtruncerr, spec, info
 end
 
-function region_update!(
+function region_!(
   ::Val{nsite},
   ::Val{reverse_step},
-  reduce_operator,
+  reduced_operator,
   state,
   b;
   updater,
