@@ -91,7 +91,9 @@ function alternating_update(
     if !isnothing(time_step)
       current_time += time_step
     end
-    update_observer!(sweep_observer!; state, sweep, outputlevel, current_time)
+    update_observer!(
+      sweep_observer!; state, reduced_operator, sweep, outputlevel, current_time
+    )
     if outputlevel >= 1
       print("After sweep ", sweep, ":")
       print(" maxlinkdim=", maxlinkdim(state))
