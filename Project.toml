@@ -1,7 +1,7 @@
 name = "ITensorTDVP"
 uuid = "25707e16-a4db-4a07-99d9-4d67b7af0342"
 authors = ["Matthew Fishman <mfishman@flatironinstitute.org> and contributors"]
-version = "0.4.9"
+version = "0.4.10"
 
 [deps]
 Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
