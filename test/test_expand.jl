@@ -29,7 +29,7 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
     n = 10
     s = siteinds("S=1/2", n; conserve_qns)
     opsum = OpSum()
-    for j in 1:(n - 1)
+    for j in 1:(n-1)
       opsum += 0.5, "S+", j, "S-", j + 1
       opsum += 0.5, "S-", j, "S+", j + 1
       opsum += "Sz", j, "Sz", j + 1
@@ -47,12 +47,12 @@ const elts = (Float32, Float64, Complex{Float32}, Complex{Float64})
     n = nx * ny
     s = siteinds("S=1/2", n)
     opsum = OpSum()
-    for j in 1:2:(n - 2)
+    for j in 1:2:(n-2)
       opsum += 1 / 2, "S+", j, "S-", j + 2
       opsum += 1 / 2, "S-", j, "S+", j + 2
       opsum += "Sz", j, "Sz", j + 2
     end
-    for j in 2:2:(n - 2)
+    for j in 2:2:(n-2)
       opsum += 1 / 2, "S+", j, "S-", j + 2
       opsum += 1 / 2, "S-", j, "S+", j + 2
       opsum += "Sz", j, "Sz", j + 2
