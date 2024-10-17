@@ -52,7 +52,7 @@ isforward(direction::Base.ReverseOrdering) = false
 isreverse(direction) = !isforward(direction)
 
 function sweep_bonds(direction::Base.ForwardOrdering, n::Int; ncenter::Int)
-  return 1:(n - ncenter + 1)
+  return 1:(n-ncenter+1)
 end
 
 function sweep_bonds(direction::Base.ReverseOrdering, n::Int; ncenter::Int)
@@ -312,7 +312,7 @@ function region_update!(
     end
     set_nsite!(reduced_operator, nsite - 1)
     position!(reduced_operator, state, b1)
-    internal_kwargs = (; current_time, time_step=-time_step, outputlevel)
+    internal_kwargs = (; current_time, time_step=(-time_step), outputlevel)
     bond_reduced_state, info = updater(
       reduced_operator, bond_reduced_state; internal_kwargs, updater_kwargs...
     )
@@ -447,7 +447,7 @@ function region_update!(
     bond_reduced_state = state[b1]
     set_nsite!(reduced_operator, nsite - 1)
     position!(reduced_operator, state, b1)
-    internal_kwargs = (; current_time, time_step=-time_step, outputlevel)
+    internal_kwargs = (; current_time, time_step=(-time_step), outputlevel)
     bond_reduced_state, info = updater(
       reduced_operator, bond_reduced_state; internal_kwargs, updater_kwargs...
     )
